@@ -1,0 +1,114 @@
+import { useState, useEffect } from 'react'
+import { Plus, Trash2, Check } from 'lucide-react'
+import styles from './TaskWidget.module.css'
+
+interface Task {
+  id: string
+  text: string
+  completed: boolean
+  createdAt: number
+}
+
+const STORAGE_KEY = 'dayboard_tasks'
+
+export function TaskWidget() {
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [input, setInput] = useState('')
+
+  // Load tasks from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    if (saved) {
+      try {
+        setTasks(JSON.parse(saved))
+      } catch {
+        console.error('Failed to load tasks')
+      }
+    }
+  }, [])
+
+  // Save tasks to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+  }, [tasks])
+
+  const addTask = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim()) return
+
+    const newTask: Task = {
+      id: Date.now().toString(),
+      text: input.trim(),
+      completed: false,
+      createdAt: Date.now(),
+    }
+    setTasks([newTask, ...tasks])
+    setInput('')
+  }
+
+  const toggleTask = (id: string) => {
+    setTasks(tasks.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)))
+  }
+
+  const deleteTask = (id: string) => {
+    setTasks(tasks.filter(t => t.id !== id))
+  }
+
+  const completedCount = tasks.filter(t => t.completed).length
+  const totalCount = tasks.length
+
+  return (
+    <div className={styles.widget}>
+      <div className={styles.header}>
+        <h2>Tasks</h2>
+        {totalCount > 0 && (
+          <span className={styles.counter}>
+            {completedCount}/{totalCount}
+          </span>
+        )}
+      </div>
+
+      <form onSubmit={addTask} className={styles.inputForm}>
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          placeholder="Add a task..."
+          className={styles.input}
+          maxLength={100}
+        />
+        <button type="submit" className={styles.addBtn} aria-label="Add task">
+          <Plus size={18} />
+        </button>
+      </form>
+
+      <div className={styles.list}>
+        {tasks.length === 0 ? (
+          <p className={styles.empty}>No tasks yet</p>
+        ) : (
+          tasks.map(task => (
+            <div key={task.id} className={styles.taskItem}>
+              <button
+                className={`${styles.checkBtn} ${task.completed ? styles.checked : ''}`}
+                onClick={() => toggleTask(task.id)}
+                aria-label={`Mark "${task.text}" as ${task.completed ? 'incomplete' : 'complete'}`}
+              >
+                {task.completed && <Check size={16} />}
+              </button>
+              <span className={`${styles.taskText} ${task.completed ? styles.completed : ''}`}>
+                {task.text}
+              </span>
+              <button
+                className={styles.deleteBtn}
+                onClick={() => deleteTask(task.id)}
+                aria-label={`Delete "${task.text}"`}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}

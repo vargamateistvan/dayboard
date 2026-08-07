@@ -27,26 +27,65 @@
   color: var(--color-text);
 }
 
+/* Focus mode button */
+.focusModeBtn {
+  position: fixed;
+  top: 1.25rem;
+  right: calc(1.5rem + 2.5rem);
+  z-index: 200;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  opacity: 0.3;
+  padding: 0.25rem;
+  border-radius: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 200ms ease, color 150ms ease, background 150ms ease;
+  line-height: 1;
+}
+
+.focusModeBtn:hover {
+  opacity: 1;
+  color: var(--color-text);
+}
+
+.focusModeBtn.active {
+  opacity: 1;
+  color: var(--accent-primary);
+  background: rgba(var(--accent-primary-rgb), 0.1);
+}
+
 /*
-  3 rows that together fill 100dvh:
-  - Clock row gets 2 shares (dominant)
-  - Weather/Calendar row gets 1 share
-  - Timer row gets 1.5 shares
+  5-cell grid: 2 columns, 2 rows
+  - Clock: full width top row (2 shares height)
+  - Weather, Calendar: middle row
+  - Timer, Tasks: bottom row (1.5 shares height)
 */
 .main {
   flex: 1;
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 2fr 1.2fr 1.5fr;
+  grid-template-rows: 2fr 1.5fr;
   padding: clamp(1rem, 2.5vh, 2.5rem) clamp(2rem, 5vw, 8rem);
   column-gap: clamp(2rem, 4vw, 6rem);
   row-gap: clamp(0.5rem, 1.5vh, 1.5rem);
-  max-width: 1800px;
+  max-width: 2400px;
   width: 100%;
   margin: 0 auto;
   box-sizing: border-box;
   overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+/* Focus mode: minimal distraction layout */
+.app.focusMode .main {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto;
+  padding: clamp(2rem, 5vh, 5rem);
+  max-width: 600px;
+  row-gap: clamp(2rem, 3vh, 3rem);
 }
 
 /* Clock: full width top row — content sticks to bottom of cell */
@@ -58,7 +97,12 @@
   overflow: hidden;
 }
 
-/* Weather + Calendar share row 2 */
+.app.focusMode .cellClock {
+  justify-content: center;
+  min-height: 15rem;
+}
+
+/* Weather and Calendar share middle row */
 .cellWeather,
 .cellCalendar {
   overflow: visible;
@@ -67,13 +111,39 @@
   justify-content: flex-start;
 }
 
-/* Timer: full width bottom row */
-.cellTimer {
-  grid-column: 1 / -1;
+/* Timer and Tasks share bottom row */
+.cellTimer,
+.cellTasks {
   overflow: hidden;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+.app.focusMode .cellTimer {
+  grid-column: 1 / -1;
+  min-height: 18rem;
+}
+
+.app.focusMode .cellTasks {
+  grid-column: 1 / -1;
+  min-height: 20rem;
+}
+
+@media (max-width: 1200px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 2fr 1.2fr 1.2fr;
+  }
+
+  .cellClock {
+    grid-column: 1 / -1;
+  }
+
+  .cellTimer,
+  .cellTasks {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 700px) {
@@ -90,7 +160,11 @@
   }
 
   .cellClock,
-  .cellTimer {
+  .cellTimer,
+  .cellNotes,
+  .cellWeather,
+  .cellCalendar,
+  .cellTasks {
     grid-column: 1;
   }
 }

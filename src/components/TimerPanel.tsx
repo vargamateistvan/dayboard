@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTimer } from '../lib/useTimer'
 import { useSettings } from '../lib/useSettings'
+import { usePomodoroStats } from '../lib/usePomodoroStats'
+import { requestNotificationPermission, showPomodoroNotification } from '../lib/notifications'
 import {
   Play, Pause, RotateCcw, Timer, AlarmClock, Coffee,
-  Target, Hourglass, StopCircle, ChevronRight,
+  Target, Hourglass, StopCircle, ChevronRight, BarChart3,
 } from 'lucide-react'
 import { beep } from '../lib/beep'
+import { PomodoroStats } from './PomodoroStats'
 import styles from './TimerPanel.module.css'
 
 type Mode = 'stopwatch' | 'countdown' | 'pomodoro'
@@ -122,15 +125,31 @@ type PomodoroPhase = 'work' | 'break'
 
 function Pomodoro() {
   const { settings } = useSettings()
+  const { recordSession } = usePomodoroStats()
   const [phase, setPhase] = useState<PomodoroPhase>('work')
   const [sessions, setSessions] = useState(0)
   const [waitingNext, setWaitingNext] = useState(false)
+  const [autoCycle, setAutoCycle] = useState(true)
+  const [showStats, setShowStats] = useState(false)
 
   const workMs = settings.pomodoroWorkMinutes * 60_000
   const breakMs = settings.pomodoroBreakMinutes * 60_000
   const durationMs = phase === 'work' ? workMs : breakMs
 
-  const handleComplete = () => { setWaitingNext(true); beep('done') }
+  const handleComplete = () => {
+    beep('done')
+    showPomodoroNotification(phase, autoCycle)
+    recordSession(phase === 'work' ? settings.pomodoroWorkMinutes : 0)
+    
+    if (autoCycle) {
+      // Auto-start next phase after 1 second
+      setTimeout(() => {
+        startNext()
+      }, 1000)
+    } else {
+      setWaitingNext(true)
+    }
+  }
 
   const { elapsedMs, state, start, pause, resume, reset } = useTimer({ durationMs, onComplete: handleComplete })
   const remaining = Math.max(0, durationMs - elapsedMs)
@@ -146,12 +165,18 @@ function Pomodoro() {
     }
   }, [remaining, state])
 
+  // Request notification permission on mount
+  useEffect(() => {
+    requestNotificationPermission()
+  }, [])
+
   const startNext = () => {
     if (phase === 'work') setSessions((s) => s + 1)
     setPhase((p) => (p === 'work' ? 'break' : 'work'))
     setWaitingNext(false)
     lastTickRef.current = -1
     reset()
+    start()
   }
 
   const handleReset = () => {
@@ -195,7 +220,29 @@ function Pomodoro() {
         {state !== 'idle' && (
           <button className={styles.btnGhost} onClick={handleReset}><RotateCcw size={14} />Reset</button>
         )}
+        <button
+          className={styles.btnGhost}
+          onClick={() => setShowStats(!showStats)}
+          title="Show/hide stats"
+        >
+          <BarChart3 size={14} />
+        </button>
       </div>
+      
+      {/* Auto-cycle toggle */}
+      <div className={styles.autoCycleToggle}>
+        <label className={styles.toggleLabel}>
+          <input
+            type="checkbox"
+            checked={autoCycle}
+            onChange={(e) => setAutoCycle(e.target.checked)}
+          />
+          Auto-cycle breaks
+        </label>
+      </div>
+
+      {/* Stats section */}
+      {showStats && <PomodoroStats />}
     </div>
   )
 }

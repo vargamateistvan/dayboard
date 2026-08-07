@@ -1,0 +1,234 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-primary);
+}
+
+.addBtn {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--accent-text);
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.addBtn:hover {
+  opacity: 0.9;
+  transform: scale(1.05);
+}
+
+.addBtn:active {
+  transform: scale(0.95);
+}
+
+.colorPicker {
+  display: flex;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.colorBtn {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.colorBtn.yellow {
+  background: #fcd34d;
+}
+
+.colorBtn.pink {
+  background: #f472b6;
+}
+
+.colorBtn.blue {
+  background: #60a5fa;
+}
+
+.colorBtn.green {
+  background: #4ade80;
+}
+
+.colorBtn:hover {
+  transform: scale(1.1);
+}
+
+.colorBtn.active {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 2px var(--bg-surface);
+}
+
+.notesGrid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.empty {
+  grid-column: 1 / -1;
+  color: var(--text-tertiary);
+  font-size: 0.825rem;
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+
+.note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+}
+
+.note:hover {
+  transform: translateY(-2px);
+}
+
+.note.yellow {
+  background: #fef3c7;
+  border-left: 4px solid #fcd34d;
+}
+
+.note.pink {
+  background: #fbf1f7;
+  border-left: 4px solid #f472b6;
+}
+
+.note.blue {
+  background: #eff6ff;
+  border-left: 4px solid #60a5fa;
+}
+
+.note.green {
+  background: #f0fdf4;
+  border-left: 4px solid #4ade80;
+}
+
+.textarea {
+  flex: 1;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  resize: none;
+  overflow-y: auto;
+  outline: none;
+  min-height: 4rem;
+}
+
+.textarea::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.noteFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.noteColors {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.colorOption {
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.colorOption.yellow {
+  background: #fcd34d;
+}
+
+.colorOption.pink {
+  background: #f472b6;
+}
+
+.colorOption.blue {
+  background: #60a5fa;
+}
+
+.colorOption.green {
+  background: #4ade80;
+}
+
+.colorOption:hover {
+  transform: scale(1.15);
+}
+
+.colorOption.selected {
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+
+.deleteBtn:hover {
+  opacity: 1;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
+import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme } from '../lib/settings'
-import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
+import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -19,12 +20,21 @@ const COLOR_SCHEMES: { id: ColorScheme; label: string; icon: React.ReactNode }[]
   { id: 'dark',   label: 'Dark',   icon: <Moon size={14} /> },
 ]
 
+const WIDGETS: { id: 'clock' | 'weather' | 'calendar' | 'timer' | 'tasks'; label: string }[] = [
+  { id: 'clock', label: 'Clock' },
+  { id: 'weather', label: 'Weather' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'timer', label: 'Timer' },
+  { id: 'tasks', label: 'Tasks' },
+]
+
 interface Props {
   onClose: () => void
 }
 
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings()
+  const { visibility, toggleWidget } = useWidgetVisibility()
   const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
@@ -115,6 +125,24 @@ export function SettingsDialog({ onClose }: Props) {
                 </button>
               ))}
             </div>
+          </section>
+
+          {/* Widgets */}
+          <section className={styles.section}>
+           <h3 className={styles.sectionTitle}>Widgets</h3>
+           <div className={styles.widgetGrid}>
+             {WIDGETS.map((widget) => (
+               <button
+                 key={widget.id}
+                 className={[styles.widgetToggle, visibility[widget.id] ? styles.widgetVisible : ''].join(' ')}
+                 onClick={() => toggleWidget(widget.id)}
+                 title={`Toggle ${widget.label} widget`}
+               >
+                 {visibility[widget.id] ? <Eye size={14} /> : <EyeOff size={14} />}
+                 <span>{widget.label}</span>
+               </button>
+             ))}
+           </div>
           </section>
 
           {/* Calendar */}

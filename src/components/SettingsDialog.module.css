@@ -335,3 +335,37 @@
 .btnGhost:hover {
   color: var(--color-text);
 }
+
+/* Widget toggles */
+.widgetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+}
+
+.widgetToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.825rem;
+  transition: all 0.2s;
+}
+
+.widgetToggle:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.widgetToggle.widgetVisible {
+  background: rgba(var(--accent-primary-rgb, 59 130 246), 0.1);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  font-weight: 600;
+}
