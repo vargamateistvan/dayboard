@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fetchCalendarFeed, fetchCalendarFeeds, getCalendarFeedRequestUrls } from '../fetchCalendarFeed'
+import { DEFAULT_CALENDAR_COLORS } from '../settings'
 
 describe('getCalendarFeedRequestUrls', () => {
   it('uses the local proxy first on localhost', () => {
@@ -106,9 +107,18 @@ describe('fetchCalendarFeeds', () => {
         .mockResolvedValueOnce({ ok: true, text: async () => 'BEGIN:VCALENDAR\nSUMMARY:B' }),
     )
 
-    await expect(fetchCalendarFeeds(['https://example.com/one.ics', 'https://example.com/two.ics'])).resolves.toEqual([
-      'BEGIN:VCALENDAR\nSUMMARY:A',
-      'BEGIN:VCALENDAR\nSUMMARY:B',
+    await expect(fetchCalendarFeeds([
+      { url: 'https://example.com/one.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+      { url: 'https://example.com/two.ics', color: DEFAULT_CALENDAR_COLORS[1] },
+    ])).resolves.toEqual([
+      {
+        feed: { url: 'https://example.com/one.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+        text: 'BEGIN:VCALENDAR\nSUMMARY:A',
+      },
+      {
+        feed: { url: 'https://example.com/two.ics', color: DEFAULT_CALENDAR_COLORS[1] },
+        text: 'BEGIN:VCALENDAR\nSUMMARY:B',
+      },
     ])
   })
 
@@ -121,8 +131,15 @@ describe('fetchCalendarFeeds', () => {
         .mockResolvedValueOnce({ ok: true, text: async () => 'BEGIN:VCALENDAR\nSUMMARY:B' }),
     )
 
-    await expect(fetchCalendarFeeds(['https://example.com/one.ics', 'https://example.com/two.ics'])).resolves.toEqual([
-      'BEGIN:VCALENDAR\nSUMMARY:B',
+    await expect(fetchCalendarFeeds([
+      { url: 'https://example.com/one.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+      { url: 'https://example.com/two.ics', color: DEFAULT_CALENDAR_COLORS[1] },
+      { url: 'https://example.com/three.ics', color: DEFAULT_CALENDAR_COLORS[2] },
+    ])).resolves.toEqual([
+      {
+        feed: { url: 'https://example.com/three.ics', color: DEFAULT_CALENDAR_COLORS[2] },
+        text: 'BEGIN:VCALENDAR\nSUMMARY:B',
+      },
     ])
   })
 })

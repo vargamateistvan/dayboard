@@ -235,8 +235,36 @@
 
 .calendarRow {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--space-2);
+}
+
+.calendarUrlInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.calendarColorField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.calendarColorLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.calendarColorInput {
+  width: 64px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  cursor: pointer;
 }
 
 .addCalendarBtn,

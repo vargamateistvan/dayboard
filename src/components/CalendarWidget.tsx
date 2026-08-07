@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchCalendarFeeds } from '../lib/fetchCalendarFeed'
 import { parseCalendarFeed, type CalendarEvent } from '../lib/parseCalendarFeed'
+import { DEFAULT_CALENDAR_COLOR } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
 
@@ -13,24 +14,28 @@ export function CalendarWidget() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const hasCalendarUrls = settings.calendarUrls.length > 0
+  const hasCalendarFeeds = settings.calendarFeeds.length > 0
 
   useEffect(() => {
-    if (settings.calendarUrls.length === 0) {
+   if (settings.calendarFeeds.length === 0) {
       setEvents([])
       setError(null)
-      return
-    }
+     setLoading(false)
+     return
+   }
 
     let cancelled = false
     setLoading(true)
     setError(null)
 
-    fetchCalendarFeeds(settings.calendarUrls)
-      .then((texts) => {
+    fetchCalendarFeeds(settings.calendarFeeds)
+      .then((feeds) => {
         if (cancelled) return
-        const nextEvents = texts
-          .flatMap((text) => parseCalendarFeed(text))
+        const nextEvents = feeds
+          .flatMap(({ feed, text }) => parseCalendarFeed(text).map((event) => ({
+            ...event,
+            calendarColor: feed.color || DEFAULT_CALENDAR_COLOR,
+          })))
           .sort((a, b) => a.start.getTime() - b.start.getTime())
         setEvents(nextEvents)
         setLoading(false)
@@ -44,7 +49,7 @@ export function CalendarWidget() {
     return () => {
       cancelled = true
     }
-  }, [settings.calendarUrls])
+  }, [settings.calendarFeeds])
 
   const now = new Date()
   const nextEvent = events.find((e) => e.end > now)
@@ -55,18 +60,18 @@ export function CalendarWidget() {
         <span className={styles.title}>Today's Events</span>
       </div>
 
-      {!hasCalendarUrls && (
+      {!hasCalendarFeeds && (
         <div className={styles.empty}>
           No calendars connected.{' '}
           <span className={styles.hint}>Add one or more calendar links in settings.</span>
         </div>
       )}
 
-      {hasCalendarUrls && loading && (
+      {hasCalendarFeeds && loading && (
         <div className={styles.loading} aria-label="Loading events">Loading…</div>
       )}
 
-      {hasCalendarUrls && !loading && error && (
+      {hasCalendarFeeds && !loading && error && (
         <div className={styles.error}>
           <p>Could not load calendar: {error}</p>
           <p className={styles.hint}>
@@ -75,11 +80,11 @@ export function CalendarWidget() {
         </div>
       )}
 
-      {hasCalendarUrls && !loading && !error && events.length === 0 && (
+      {hasCalendarFeeds && !loading && !error && events.length === 0 && (
         <div className={styles.empty}>No events today ✓</div>
       )}
 
-      {hasCalendarUrls && !loading && !error && events.length > 0 && (
+      {hasCalendarFeeds && !loading && !error && events.length > 0 && (
         <ul className={styles.list}>
           {events.map((event, i) => {
             const isNext = event === nextEvent
@@ -92,6 +97,7 @@ export function CalendarWidget() {
                   isNext ? styles.next : '',
                   isPast ? styles.past : '',
                 ].join(' ')}
+                style={{ color: event.calendarColor ?? DEFAULT_CALENDAR_COLOR }}
               >
                 <div className={styles.eventTime}>
                   {event.allDay ? 'All day' : `${formatTime(event.start)} – ${formatTime(event.end)}`}

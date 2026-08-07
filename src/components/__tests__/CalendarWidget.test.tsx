@@ -2,10 +2,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { CalendarWidget } from '../CalendarWidget'
 import { SettingsProvider } from '../../lib/useSettings'
-import { saveSettings, DEFAULT_SETTINGS } from '../../lib/settings'
+import { saveSettings, DEFAULT_SETTINGS, DEFAULT_CALENDAR_COLORS } from '../../lib/settings'
 
-function renderWithSettings(calendarUrls: string[] = []) {
-  saveSettings({ ...DEFAULT_SETTINGS, calendarUrls })
+function hexToRgb(hex: string) {
+  const value = hex.slice(1)
+  const r = Number.parseInt(value.slice(0, 2), 16)
+  const g = Number.parseInt(value.slice(2, 4), 16)
+  const b = Number.parseInt(value.slice(4, 6), 16)
+  return `rgb(${r}, ${g}, ${b})`
+}
+
+function renderWithSettings(calendarFeeds: { url: string; color: string }[] = []) {
+  saveSettings({ ...DEFAULT_SETTINGS, calendarFeeds })
   return render(
     <SettingsProvider>
       <CalendarWidget />
@@ -66,7 +74,7 @@ describe('CalendarWidget', () => {
 
   it('shows loading while fetching', () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => {})))
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     expect(screen.getByLabelText('Loading events')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
@@ -76,7 +84,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS }),
     )
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Team Standup')).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -87,10 +95,13 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => ALL_DAY_ICS }),
     )
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[1] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Focus Day')).toBeInTheDocument()
     expect(screen.getByText('All day')).toBeInTheDocument()
+    expect(window.getComputedStyle(screen.getByText('Focus Day').closest('li') as HTMLElement).color).toBe(
+      hexToRgb(DEFAULT_CALENDAR_COLORS[1]),
+    )
     vi.unstubAllGlobals()
   })
 
@@ -99,7 +110,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => RECURRING_ICS }),
     )
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[2] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Recurring Team Sync')).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -108,7 +119,12 @@ describe('CalendarWidget', () => {
   it('normalizes Google Calendar share links before fetching', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS })
     vi.stubGlobal('fetch', fetchMock)
-    renderWithSettings(['https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ'])
+    renderWithSettings([
+      {
+        url: 'https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ',
+        color: DEFAULT_CALENDAR_COLORS[0],
+      },
+    ])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/calendar?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
@@ -123,7 +139,7 @@ describe('CalendarWidget', () => {
       .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '' })
       .mockResolvedValueOnce({ ok: true, text: async () => TODAY_ICS })
     vi.stubGlobal('fetch', fetchMock)
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/calendar?url=https%3A%2F%2Fexample.com%2Fcal.ics')
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/cal.ics')
@@ -137,7 +153,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => emptyIcs }),
     )
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/No events today/)).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -145,7 +161,7 @@ describe('CalendarWidget', () => {
 
   it('shows error state when fetch fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')))
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/Could not load calendar/)).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -156,7 +172,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => '' }),
     )
-    renderWithSettings(['https://example.com/cal.ics'])
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/Could not load calendar/)).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -178,7 +194,10 @@ END:VCALENDAR`
         .mockResolvedValueOnce({ ok: true, text: async () => TODAY_ICS })
         .mockResolvedValueOnce({ ok: true, text: async () => laterIcs }),
     )
-    renderWithSettings(['https://example.com/one.ics', 'https://example.com/two.ics'])
+    renderWithSettings([
+      { url: 'https://example.com/one.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+      { url: 'https://example.com/two.ics', color: DEFAULT_CALENDAR_COLORS[1] },
+    ])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Team Standup')).toBeInTheDocument()
     expect(screen.getByText('Client Call')).toBeInTheDocument()

@@ -3,6 +3,11 @@ export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 's
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 export type WeatherUnitSystem = 'metric' | 'imperial'
 
+export interface CalendarFeed {
+  url: string
+  color: string
+}
+
 export interface CustomColors {
   primary: string
   primaryHover: string
@@ -17,7 +22,7 @@ export interface Settings {
   colorScheme: ColorScheme
   fontPreset: FontPreset
   showBuyMeACoffeeWidget: boolean
-  calendarUrls: string[]
+  calendarFeeds: CalendarFeed[]
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
@@ -33,6 +38,17 @@ export const DEFAULT_CUSTOM_COLORS: CustomColors = {
   fontColor: '#f5f5f5',
   secondaryFontColor: '#999999',
 }
+
+export const DEFAULT_CALENDAR_COLORS = [
+  '#4f46e5',
+  '#0ea5e9',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#ec4899',
+] as const
+
+export const DEFAULT_CALENDAR_COLOR = DEFAULT_CALENDAR_COLORS[0]
 
 export const FONT_PRESET_OPTIONS: ReadonlyArray<{
   id: FontPreset
@@ -89,7 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
   colorScheme: 'system',
   fontPreset: 'space-grotesk',
   showBuyMeACoffeeWidget: true,
-  calendarUrls: [],
+  calendarFeeds: [],
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
@@ -107,24 +123,60 @@ const CUSTOM_THEME_VARIABLES = [
   '--color-custom-text-muted',
 ] as const
 
-interface StoredSettings extends Partial<Omit<Settings, 'calendarUrls'>> {
+interface StoredSettings extends Partial<Omit<Settings, 'calendarFeeds'>> {
   calendarUrl?: unknown
   calendarUrls?: unknown
+  calendarFeeds?: unknown
 }
 
-function normalizeCalendarUrls(calendarUrls: unknown, legacyCalendarUrl?: unknown): string[] {
-  const candidateUrls = Array.isArray(calendarUrls)
-    ? calendarUrls
-    : typeof legacyCalendarUrl === 'string'
-      ? [legacyCalendarUrl]
-      : []
+function isHexColor(color: unknown): color is string {
+  return typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color.trim())
+}
 
-  return [...new Set(
-    candidateUrls
-      .filter((calendarUrl): calendarUrl is string => typeof calendarUrl === 'string')
-      .map((calendarUrl) => calendarUrl.trim())
-      .filter(Boolean),
-  )]
+function normalizeCalendarColor(color: unknown, fallback: string): string {
+  return isHexColor(color) ? color.trim() : fallback
+}
+
+function defaultCalendarColor(index: number): string {
+  return DEFAULT_CALENDAR_COLORS[index % DEFAULT_CALENDAR_COLORS.length]
+}
+
+function normalizeCalendarFeeds(calendarFeeds: unknown, legacyCalendarUrls?: unknown, legacyCalendarUrl?: unknown): CalendarFeed[] {
+  const candidateFeeds = Array.isArray(calendarFeeds)
+    ? calendarFeeds
+    : Array.isArray(legacyCalendarUrls)
+      ? legacyCalendarUrls
+      : typeof legacyCalendarUrl === 'string'
+        ? [legacyCalendarUrl]
+        : []
+
+  const normalizedFeeds: CalendarFeed[] = []
+  const seenUrls = new Set<string>()
+
+  candidateFeeds.forEach((candidateFeed, index) => {
+    const url =
+      typeof candidateFeed === 'string'
+        ? candidateFeed.trim()
+        : candidateFeed && typeof candidateFeed === 'object' && typeof (candidateFeed as { url?: unknown }).url === 'string'
+          ? (candidateFeed as { url: string }).url.trim()
+          : ''
+
+    if (!url || seenUrls.has(url)) {
+      return
+    }
+
+    const color =
+      typeof candidateFeed === 'string'
+        ? defaultCalendarColor(index)
+        : candidateFeed && typeof candidateFeed === 'object'
+          ? normalizeCalendarColor((candidateFeed as { color?: unknown }).color, defaultCalendarColor(index))
+          : defaultCalendarColor(index)
+
+    seenUrls.add(url)
+    normalizedFeeds.push({ url, color })
+  })
+
+  return normalizedFeeds
 }
 
 function normalizeFontPreset(fontPreset: unknown): FontPreset {
@@ -169,15 +221,21 @@ export function loadSettings(): Settings {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_SETTINGS }
     const parsed = JSON.parse(raw) as StoredSettings
+    const {
+      calendarUrl,
+      calendarUrls,
+      calendarFeeds,
+      ...rest
+    } = parsed
     return {
       ...DEFAULT_SETTINGS,
-      ...parsed,
-      fontPreset: normalizeFontPreset((parsed as { fontPreset?: unknown }).fontPreset),
-      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget((parsed as { showBuyMeACoffeeWidget?: unknown }).showBuyMeACoffeeWidget),
-      calendarUrls: normalizeCalendarUrls(parsed.calendarUrls, parsed.calendarUrl),
-      weatherRefreshMinutes: normalizeWeatherRefreshMinutes((parsed as { weatherRefreshMinutes?: unknown }).weatherRefreshMinutes),
-      weatherUnitSystem: normalizeWeatherUnitSystem((parsed as { weatherUnitSystem?: unknown }).weatherUnitSystem),
-      weatherShowExtraDetails: normalizeWeatherShowExtraDetails((parsed as { weatherShowExtraDetails?: unknown }).weatherShowExtraDetails),
+      ...rest,
+      fontPreset: normalizeFontPreset(rest.fontPreset),
+      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
+      calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
+      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
+      weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
+      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
@@ -189,7 +247,7 @@ export function saveSettings(settings: Settings): void {
     STORAGE_KEY,
     JSON.stringify({
       ...settings,
-      calendarUrls: normalizeCalendarUrls(settings.calendarUrls),
+      calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
     }),
   )
 }

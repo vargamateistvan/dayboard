@@ -1,4 +1,5 @@
 import { normalizeCalendarUrl } from './calendarUrl'
+import type { CalendarFeed } from './settings'
 
 const LOCAL_PROXY_PATH = '/api/calendar'
 const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
@@ -87,9 +88,18 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
   throw lastError ?? new Error('Could not load calendar.')
 }
 
-export async function fetchCalendarFeeds(rawCalendarUrls: string[]): Promise<string[]> {
-  const results = await Promise.allSettled(rawCalendarUrls.map((calendarUrl) => fetchCalendarFeed(calendarUrl)))
-  const successfulFeeds = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : [])
+export interface FetchedCalendarFeed {
+  feed: CalendarFeed
+  text: string
+}
+
+export async function fetchCalendarFeeds(rawCalendarFeeds: CalendarFeed[]): Promise<FetchedCalendarFeed[]> {
+  const results = await Promise.allSettled(
+    rawCalendarFeeds.map((feed) => fetchCalendarFeed(feed.url)),
+  )
+  const successfulFeeds = results.flatMap((result, index) => result.status === 'fulfilled'
+    ? [{ feed: rawCalendarFeeds[index], text: result.value }]
+    : [])
 
   if (successfulFeeds.length > 0) {
     return successfulFeeds

@@ -5,6 +5,7 @@ export interface CalendarEvent {
   start: Date
   end: Date
   allDay: boolean
+  calendarColor?: string
 }
 
 function todayRange(): { startOfDay: Date; endOfDay: Date } {

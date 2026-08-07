@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { loadSettings, saveSettings, resolveColorScheme, DEFAULT_SETTINGS } from '../settings'
+import {
+  loadSettings,
+  saveSettings,
+  resolveColorScheme,
+  DEFAULT_SETTINGS,
+  DEFAULT_CALENDAR_COLORS,
+} from '../settings'
 
 describe('settings persistence', () => {
   beforeEach(() => localStorage.clear())
@@ -32,9 +38,11 @@ describe('settings persistence', () => {
     expect(loaded).toEqual(DEFAULT_SETTINGS)
   })
 
-  it('migrates a legacy single calendarUrl setting into calendarUrls', () => {
+  it('migrates a legacy single calendarUrl setting into calendarFeeds', () => {
     localStorage.setItem('dayboard:settings', JSON.stringify({ calendarUrl: 'https://example.com/cal.ics' }))
-    expect(loadSettings().calendarUrls).toEqual(['https://example.com/cal.ics'])
+    expect(loadSettings().calendarFeeds).toEqual([
+      { url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+    ])
   })
 
   it('round-trips all fields correctly', () => {
@@ -43,7 +51,10 @@ describe('settings persistence', () => {
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
       showBuyMeACoffeeWidget: false,
-      calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
+      calendarFeeds: [
+        { url: 'https://example.com/cal.ics', color: '#123456' },
+        { url: 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics', color: '#654321' },
+      ],
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,

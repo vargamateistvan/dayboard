@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import {
+  DEFAULT_CALENDAR_COLORS,
   DEFAULT_CUSTOM_COLORS,
   FONT_PRESET_OPTIONS,
+  type CalendarFeed,
   type Theme,
   type ColorScheme,
   type CustomColors,
@@ -48,7 +50,11 @@ interface Props {
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings()
   const { visibility, toggleWidget } = useWidgetVisibility()
-  const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
+  const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>(
+    settings.calendarFeeds.length > 0
+      ? settings.calendarFeeds
+      : [{ url: '', color: DEFAULT_CALENDAR_COLORS[0] }],
+  )
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(settings.weatherRefreshMinutes)
   const [weatherUnitSystem, setWeatherUnitSystem] = useState<WeatherUnitSystem>(settings.weatherUnitSystem)
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(settings.weatherShowExtraDetails)
@@ -59,24 +65,30 @@ export function SettingsDialog({ onClose }: Props) {
     settings.customColors || DEFAULT_CUSTOM_COLORS
   )
 
-  const updateCalendarUrl = (index: number, value: string) => {
-    setCalendarUrls((prev) => prev.map((calendarUrl, currentIndex) => currentIndex === index ? value : calendarUrl))
+  const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
+    setCalendarFeeds((prev) => prev.map((calendarFeed, currentIndex) => currentIndex === index ? { ...calendarFeed, ...patch } : calendarFeed))
   }
 
-  const addCalendarUrl = () => {
-    setCalendarUrls((prev) => [...prev, ''])
+  const addCalendarFeed = () => {
+    setCalendarFeeds((prev) => [
+      ...prev,
+      {
+        url: '',
+        color: DEFAULT_CALENDAR_COLORS[prev.length % DEFAULT_CALENDAR_COLORS.length],
+      },
+    ])
   }
 
-  const removeCalendarUrl = (index: number) => {
-    setCalendarUrls((prev) => {
-      const next = prev.filter((_calendarUrl, currentIndex) => currentIndex !== index)
-      return next.length > 0 ? next : ['']
+  const removeCalendarFeed = (index: number) => {
+    setCalendarFeeds((prev) => {
+      const next = prev.filter((_calendarFeed, currentIndex) => currentIndex !== index)
+      return next.length > 0 ? next : [{ url: '', color: DEFAULT_CALENDAR_COLORS[0] }]
     })
   }
 
   const save = () => {
     updateSettings({
-      calendarUrls,
+      calendarFeeds,
       weatherRefreshMinutes: weatherRefreshMin,
       weatherUnitSystem,
       weatherShowExtraDetails,
@@ -269,29 +281,40 @@ export function SettingsDialog({ onClose }: Props) {
           <section className={styles.section}>
             <div className={styles.sectionHeader}>
               <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
-              <button className={styles.addCalendarBtn} onClick={addCalendarUrl} type="button">
+              <button className={styles.addCalendarBtn} onClick={addCalendarFeed} type="button">
                 <Plus size={14} />
                 Add link
               </button>
             </div>
             <p className={styles.hint}>
               Paste one or more ICS or CSV calendar URLs. Google share links, Outlook published
-              calendar links, and webcal:// feeds are supported too.
+              calendar links, and webcal:// feeds are supported too. Choose a color for each
+              calendar and its events will use that color in the calendar widget.
             </p>
             <div className={styles.calendarList}>
-              {calendarUrls.map((calendarUrl, index) => (
+              {calendarFeeds.map((calendarFeed, index) => (
                 <div className={styles.calendarRow} key={index}>
                   <input
-                    className={styles.input}
+                    className={[styles.input, styles.calendarUrlInput].join(' ')}
                     type="url"
                     placeholder={index === 0 ? 'https://calendar.example.com/feed.ics' : 'https://outlook.office.com/calendar/.../calendar.ics'}
-                    value={calendarUrl}
-                    onChange={(e) => updateCalendarUrl(index, e.target.value)}
+                    value={calendarFeed.url}
+                    onChange={(e) => updateCalendarFeed(index, { url: e.target.value })}
                   />
+                  <label className={styles.calendarColorField}>
+                    <span className={styles.calendarColorLabel}>Color</span>
+                    <input
+                      aria-label={`Calendar color ${index + 1}`}
+                      className={styles.calendarColorInput}
+                      type="color"
+                      value={calendarFeed.color}
+                      onChange={(e) => updateCalendarFeed(index, { color: e.target.value })}
+                    />
+                  </label>
                   <button
                     aria-label={`Remove calendar link ${index + 1}`}
                     className={styles.removeCalendarBtn}
-                    onClick={() => removeCalendarUrl(index)}
+                    onClick={() => removeCalendarFeed(index)}
                     type="button"
                   >
                     <Trash2 size={14} />
