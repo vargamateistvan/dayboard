@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react'
+import {
+  Sun, Cloud, CloudSun, CloudRain, CloudSnow, CloudLightning,
+  CloudDrizzle, Wind, MapPin, RefreshCw, Thermometer,
+} from 'lucide-react'
 import styles from './WeatherWidget.module.css'
 
 interface WeatherData {
@@ -7,34 +11,43 @@ interface WeatherData {
   location: string
 }
 
-const WMO_CODES: Record<number, { label: string; emoji: string }> = {
-  0: { label: 'Clear sky', emoji: '☀️' },
-  1: { label: 'Mainly clear', emoji: '🌤️' },
-  2: { label: 'Partly cloudy', emoji: '⛅' },
-  3: { label: 'Overcast', emoji: '☁️' },
-  45: { label: 'Fog', emoji: '🌫️' },
-  48: { label: 'Icy fog', emoji: '🌫️' },
-  51: { label: 'Light drizzle', emoji: '🌦️' },
-  53: { label: 'Drizzle', emoji: '🌦️' },
-  55: { label: 'Dense drizzle', emoji: '🌧️' },
-  61: { label: 'Slight rain', emoji: '🌧️' },
-  63: { label: 'Rain', emoji: '🌧️' },
-  65: { label: 'Heavy rain', emoji: '🌧️' },
-  71: { label: 'Slight snow', emoji: '🌨️' },
-  73: { label: 'Snow', emoji: '❄️' },
-  75: { label: 'Heavy snow', emoji: '❄️' },
-  80: { label: 'Rain showers', emoji: '🌦️' },
-  81: { label: 'Rain showers', emoji: '🌦️' },
-  82: { label: 'Violent showers', emoji: '⛈️' },
-  95: { label: 'Thunderstorm', emoji: '⛈️' },
-  99: { label: 'Thunderstorm + hail', emoji: '⛈️' },
+type WeatherIconName = 'Sun' | 'CloudSun' | 'Cloud' | 'CloudDrizzle' | 'CloudRain' | 'CloudSnow' | 'CloudLightning' | 'Wind' | 'Thermometer'
+
+const WMO_CODES: Record<number, { label: string; icon: WeatherIconName }> = {
+  0:  { label: 'Clear sky',          icon: 'Sun' },
+  1:  { label: 'Mainly clear',       icon: 'CloudSun' },
+  2:  { label: 'Partly cloudy',      icon: 'CloudSun' },
+  3:  { label: 'Overcast',           icon: 'Cloud' },
+  45: { label: 'Fog',                icon: 'Wind' },
+  48: { label: 'Icy fog',            icon: 'Wind' },
+  51: { label: 'Light drizzle',      icon: 'CloudDrizzle' },
+  53: { label: 'Drizzle',            icon: 'CloudDrizzle' },
+  55: { label: 'Dense drizzle',      icon: 'CloudRain' },
+  61: { label: 'Slight rain',        icon: 'CloudRain' },
+  63: { label: 'Rain',               icon: 'CloudRain' },
+  65: { label: 'Heavy rain',         icon: 'CloudRain' },
+  71: { label: 'Slight snow',        icon: 'CloudSnow' },
+  73: { label: 'Snow',               icon: 'CloudSnow' },
+  75: { label: 'Heavy snow',         icon: 'CloudSnow' },
+  80: { label: 'Rain showers',       icon: 'CloudRain' },
+  81: { label: 'Rain showers',       icon: 'CloudRain' },
+  82: { label: 'Violent showers',    icon: 'CloudLightning' },
+  95: { label: 'Thunderstorm',       icon: 'CloudLightning' },
+  99: { label: 'Thunderstorm + hail',icon: 'CloudLightning' },
+}
+
+const ICON_MAP = { Sun, CloudSun, Cloud, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, Wind, Thermometer }
+
+function WeatherIcon({ name, size }: { name: WeatherIconName; size: number }) {
+  const Icon = ICON_MAP[name]
+  return <Icon size={size} />
 }
 
 function getWeatherInfo(code: number) {
-  return WMO_CODES[code] ?? { label: 'Unknown', emoji: '🌡️' }
+  return WMO_CODES[code] ?? { label: 'Unknown', icon: 'Thermometer' as WeatherIconName }
 }
 
-async function fetchWeather(lat: number, lon: number): Promise<WeatherData & { location: string }> {
+async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius`
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
 
@@ -85,7 +98,7 @@ export function WeatherWidget() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const { label, emoji } = data ? getWeatherInfo(data.weatherCode) : { label: '', emoji: '' }
+  const info = data ? getWeatherInfo(data.weatherCode) : null
 
   return (
     <div className={styles.widget}>
@@ -93,20 +106,20 @@ export function WeatherWidget() {
         <span className={styles.title}>Weather</span>
         {!loading && (
           <button className={styles.refresh} onClick={load} title="Refresh weather" aria-label="Refresh weather">
-            ↻
+            <RefreshCw size={14} />
           </button>
         )}
       </div>
       {loading && <div className={styles.loading} aria-label="Loading weather">Loading…</div>}
       {!loading && error && <div className={styles.error}>{error}</div>}
-      {!loading && !error && data && (
+      {!loading && !error && data && info && (
         <div className={styles.content}>
           <div className={styles.temp}>
-            <span className={styles.emoji}>{emoji}</span>
+            <span className={styles.weatherIcon}><WeatherIcon name={info.icon} size={48} /></span>
             <span className={styles.degrees}>{data.temperature}°C</span>
           </div>
-          <div className={styles.condition}>{label}</div>
-          <div className={styles.location}>📍 {data.location}</div>
+          <div className={styles.condition}>{info.label}</div>
+          <div className={styles.location}><MapPin size={12} />{data.location}</div>
         </div>
       )}
     </div>

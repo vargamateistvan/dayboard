@@ -109,7 +109,10 @@
 }
 
 .themeEmoji {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
+  display: flex;
+  align-items: center;
+  color: var(--color-text-muted);
 }
 
 .themeLabel {
@@ -128,6 +131,9 @@
 }
 
 .segment {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-5);
   font-size: var(--font-size-sm);
   font-weight: 500;

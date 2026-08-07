@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { type Theme, type ColorScheme } from '../lib/settings'
+import { Globe, Monitor, Zap, Leaf, Sun, Moon, SunMoon, X } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
-const THEMES: { id: Theme; label: string; preview: string }[] = [
-  { id: 'default', label: 'Default', preview: '🌐' },
-  { id: 'retro', label: 'Retro', preview: '📟' },
-  { id: 'futuristic', label: 'Futuristic', preview: '🚀' },
-  { id: 'nature', label: 'Nature', preview: '🌿' },
+const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
+  { id: 'default',    label: 'Default',    icon: <Globe size={16} /> },
+  { id: 'retro',      label: 'Retro',      icon: <Monitor size={16} /> },
+  { id: 'futuristic', label: 'Futuristic', icon: <Zap size={16} /> },
+  { id: 'nature',     label: 'Nature',     icon: <Leaf size={16} /> },
 ]
 
-const COLOR_SCHEMES: { id: ColorScheme; label: string }[] = [
-  { id: 'system', label: 'System' },
-  { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
+const COLOR_SCHEMES: { id: ColorScheme; label: string; icon: React.ReactNode }[] = [
+  { id: 'system', label: 'System', icon: <SunMoon size={14} /> },
+  { id: 'light',  label: 'Light',  icon: <Sun size={14} /> },
+  { id: 'dark',   label: 'Dark',   icon: <Moon size={14} /> },
 ]
 
 interface Props {
@@ -40,7 +41,7 @@ export function SettingsDialog({ onClose }: Props) {
       <div className={styles.dialog} role="dialog" aria-modal="true" aria-label="Settings">
         <div className={styles.header}>
           <h2 className={styles.title}>Settings</h2>
-          <button className={styles.close} onClick={onClose} aria-label="Close settings">✕</button>
+          <button className={styles.close} onClick={onClose} aria-label="Close settings"><X size={16} /></button>
         </div>
 
         <div className={styles.body}>
@@ -55,7 +56,7 @@ export function SettingsDialog({ onClose }: Props) {
                   onClick={() => updateSettings({ theme: t.id })}
                   aria-pressed={settings.theme === t.id}
                 >
-                  <span className={styles.themeEmoji}>{t.preview}</span>
+                  <span className={styles.themeEmoji}>{t.icon}</span>
                   <span className={styles.themeLabel}>{t.label}</span>
                 </button>
               ))}
@@ -73,7 +74,7 @@ export function SettingsDialog({ onClose }: Props) {
                   onClick={() => updateSettings({ colorScheme: s.id })}
                   aria-pressed={settings.colorScheme === s.id}
                 >
-                  {s.label}
+                  {s.icon}{s.label}
                 </button>
               ))}
             </div>

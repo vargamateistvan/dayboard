@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useTimer } from '../lib/useTimer'
 import { useSettings } from '../lib/useSettings'
+import {
+  Play, Pause, RotateCcw, Timer, AlarmClock, Coffee,
+  Target, Hourglass, StopCircle, ChevronRight,
+} from 'lucide-react'
 import styles from './TimerPanel.module.css'
 
 type Mode = 'stopwatch' | 'countdown' | 'pomodoro'
@@ -27,19 +31,19 @@ function Stopwatch() {
       <div className={styles.display}>{formatMs(elapsedMs, true)}</div>
       <div className={styles.controls}>
         {state === 'idle' && (
-          <button className={styles.btnPrimary} onClick={start}>Start</button>
+          <button className={styles.btnPrimary} onClick={start}><Play size={14} />Start</button>
         )}
         {state === 'running' && (
-          <button className={styles.btnSecondary} onClick={pause}>Pause</button>
+          <button className={styles.btnSecondary} onClick={pause}><Pause size={14} />Pause</button>
         )}
         {state === 'paused' && (
           <>
-            <button className={styles.btnPrimary} onClick={resume}>Resume</button>
-            <button className={styles.btnGhost} onClick={reset}>Reset</button>
+            <button className={styles.btnPrimary} onClick={resume}><Play size={14} />Resume</button>
+            <button className={styles.btnGhost} onClick={reset}><RotateCcw size={14} />Reset</button>
           </>
         )}
         {state === 'running' && (
-          <button className={styles.btnGhost} onClick={reset}>Reset</button>
+          <button className={styles.btnGhost} onClick={reset}><RotateCcw size={14} />Reset</button>
         )}
       </div>
     </div>
@@ -78,22 +82,22 @@ function Countdown() {
         </div>
       )}
       <div className={[styles.display, done ? styles.done : ''].join(' ')}>
-        {done ? '⏰ Done!' : formatMs(remaining)}
+        {done ? 'Done!' : formatMs(remaining)}
       </div>
       <div className={styles.controls}>
         {state === 'idle' && (
-          <button className={styles.btnPrimary} onClick={start}>Start</button>
+          <button className={styles.btnPrimary} onClick={start}><Play size={14} />Start</button>
         )}
         {state === 'running' && (
-          <button className={styles.btnSecondary} onClick={pause}>Pause</button>
+          <button className={styles.btnSecondary} onClick={pause}><Pause size={14} />Pause</button>
         )}
         {(state === 'paused' || state === 'done') && (
           <button className={styles.btnPrimary} onClick={resume} disabled={state === 'done'}>
-            Resume
+            <Play size={14} />Resume
           </button>
         )}
         {state !== 'idle' && (
-          <button className={styles.btnGhost} onClick={handleReset}>Reset</button>
+          <button className={styles.btnGhost} onClick={handleReset}><RotateCcw size={14} />Reset</button>
         )}
       </div>
     </div>
@@ -135,29 +139,35 @@ function Pomodoro() {
   return (
     <div className={styles.timerBody}>
       <div className={styles.phaseBadge} data-phase={phase}>
-        {phase === 'work' ? '🎯 Work' : '☕ Break'}
+        {phase === 'work'
+          ? <><Target size={12} />Work</>
+          : <><Coffee size={12} />Break</>}
       </div>
       <div className={styles.display}>{formatMs(remaining)}</div>
       {sessions > 0 && (
-        <div className={styles.sessions}>Sessions completed: {sessions}</div>
+        <div className={styles.sessions}>
+          <StopCircle size={11} />
+          {sessions} session{sessions !== 1 ? 's' : ''} completed
+        </div>
       )}
       <div className={styles.controls}>
         {state === 'idle' && !waitingNext && (
-          <button className={styles.btnPrimary} onClick={start}>Start</button>
+          <button className={styles.btnPrimary} onClick={start}><Play size={14} />Start</button>
         )}
         {state === 'running' && (
-          <button className={styles.btnSecondary} onClick={pause}>Pause</button>
+          <button className={styles.btnSecondary} onClick={pause}><Pause size={14} />Pause</button>
         )}
         {state === 'paused' && (
-          <button className={styles.btnPrimary} onClick={resume}>Resume</button>
+          <button className={styles.btnPrimary} onClick={resume}><Play size={14} />Resume</button>
         )}
         {waitingNext && (
           <button className={styles.btnPrimary} onClick={startNext}>
+            <ChevronRight size={14} />
             Start {phase === 'work' ? 'Break' : 'Work'}
           </button>
         )}
         {state !== 'idle' && (
-          <button className={styles.btnGhost} onClick={handleReset}>Reset</button>
+          <button className={styles.btnGhost} onClick={handleReset}><RotateCcw size={14} />Reset</button>
         )}
       </div>
     </div>
@@ -165,10 +175,10 @@ function Pomodoro() {
 }
 
 // ---------- TimerPanel ----------
-const TABS: { id: Mode; label: string }[] = [
-  { id: 'stopwatch', label: '⏱ Stopwatch' },
-  { id: 'countdown', label: '⏳ Countdown' },
-  { id: 'pomodoro', label: '🍅 Pomodoro' },
+const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
+  { id: 'stopwatch', label: 'Stopwatch', icon: <Timer size={14} /> },
+  { id: 'countdown', label: 'Countdown', icon: <Hourglass size={14} /> },
+  { id: 'pomodoro',  label: 'Pomodoro',  icon: <AlarmClock size={14} /> },
 ]
 
 export function TimerPanel() {
@@ -185,7 +195,7 @@ export function TimerPanel() {
             className={[styles.tab, mode === t.id ? styles.activeTab : ''].join(' ')}
             onClick={() => setMode(t.id)}
           >
-            {t.label}
+            {t.icon}{t.label}
           </button>
         ))}
       </div>

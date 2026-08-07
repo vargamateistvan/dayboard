@@ -77,7 +77,7 @@ export function CalendarWidget() {
       )}
 
       {settings.calendarUrl && !loading && !error && events.length === 0 && (
-        <div className={styles.empty}>No events today 🎉</div>
+        <div className={styles.empty}>No events today ✓</div>
       )}
 
       {settings.calendarUrl && !loading && !error && events.length > 0 && (

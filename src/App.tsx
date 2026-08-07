@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Settings } from 'lucide-react'
 import { SettingsProvider } from './lib/useSettings'
 import { ClockWidget } from './components/ClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
@@ -23,7 +24,7 @@ function Dashboard() {
         aria-label="Open settings"
         title="Settings"
       >
-        ⚙
+        <Settings size={18} />
       </button>
 
       <main className={styles.main}>

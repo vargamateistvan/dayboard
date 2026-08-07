@@ -17,6 +17,9 @@
 }
 
 .tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   padding-bottom: var(--space-2);
   font-size: var(--font-size-sm);
   font-weight: 500;
@@ -48,17 +51,16 @@
 .timerBody {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.4rem, 1vh, 1rem);
+  gap: clamp(0.3rem, 0.8vh, 0.75rem);
 }
 
 /*
-  Display font: must fit inside timer row together with tabs (~56px) and button (~48px).
-  Timer row ≈ 1.5/4.5 × (100dvh - padding - gaps).
-  At 1080px that's ~310px. Reserve 110px for tabs+button → 200px for display.
-  18dvh of 1080 = 194px — safe. Hard cap at 12rem (192px) as a backstop.
+  Display font: fits inside timer row (tabs ~44px, optional input ~44px, button ~36px, gaps).
+  At 1080px, timer row ≈ 310px. Worst case (countdown): 44+8+44+8+display+8+36 = 148+display.
+  So display max ≈ 162px → 15dvh of 1080 = 162px. Cap at 9rem as backstop.
 */
 .display {
-  font-size: clamp(2rem, 18dvh, 12rem);
+  font-size: clamp(2rem, 13dvh, 9rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-family-mono);
@@ -89,6 +91,9 @@
 .btnPrimary,
 .btnSecondary,
 .btnGhost {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -166,6 +171,9 @@
 
 /* Pomodoro phase label */
 .phaseBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
@@ -182,6 +190,9 @@
 }
 
 .sessions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--font-size-xs);
   text-transform: uppercase;
   letter-spacing: 0.08em;

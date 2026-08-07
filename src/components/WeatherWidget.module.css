@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  margin-bottom: clamp(0.5rem, 1vw, 1rem);
+  margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem);
 }
 
 .title {
@@ -49,17 +49,20 @@
 
 .temp {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
 }
 
-.emoji {
-  font-size: clamp(1.5rem, 3vw, 2.5rem);
+.weatherIcon {
+  color: var(--color-text-muted);
+  opacity: 0.75;
   line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .degrees {
-  font-size: clamp(2.5rem, 8vw, 10rem);
+  font-size: clamp(2.5rem, min(8vw, 10dvh), 8rem);
   font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--color-text);
@@ -74,6 +77,9 @@
 }
 
 .location {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--font-size-sm);
   color: var(--color-text-muted);
   opacity: 0.7;
