@@ -12,6 +12,16 @@ function hexToRgb(hex: string) {
   return `rgb(${r}, ${g}, ${b})`
 }
 
+function formatIcsUtc(date: Date) {
+  const year = date.getUTCFullYear()
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(date.getUTCDate()).padStart(2, '0')
+  const hours = String(date.getUTCHours()).padStart(2, '0')
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(date.getUTCSeconds()).padStart(2, '0')
+  return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
+}
+
 function renderWithSettings(calendarFeeds: { url: string; color: string }[] = []) {
   saveSettings({ ...DEFAULT_SETTINGS, calendarFeeds })
   return render(
@@ -113,6 +123,66 @@ describe('CalendarWidget', () => {
     renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[2] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Recurring Team Sync')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('highlights the ongoing event', async () => {
+    const now = new Date()
+    const start = new Date(now.getTime() - 30 * 60_000)
+    const end = new Date(now.getTime() + 30 * 60_000)
+    const ongoingIcs = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Ongoing Meeting
+DTSTART:${formatIcsUtc(start)}
+DTEND:${formatIcsUtc(end)}
+END:VEVENT
+END:VCALENDAR`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => ongoingIcs }),
+    )
+
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    expect(screen.getByText('Now')).toBeInTheDocument()
+    expect(screen.getByText('Ongoing Meeting')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('highlights every ongoing event', async () => {
+    const now = new Date()
+    const firstStart = new Date(now.getTime() - 45 * 60_000)
+    const firstEnd = new Date(now.getTime() + 15 * 60_000)
+    const secondStart = new Date(now.getTime() - 10 * 60_000)
+    const secondEnd = new Date(now.getTime() + 50 * 60_000)
+    const overlappingIcs = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:First Ongoing
+DTSTART:${formatIcsUtc(firstStart)}
+DTEND:${formatIcsUtc(firstEnd)}
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:Second Ongoing
+DTSTART:${formatIcsUtc(secondStart)}
+DTEND:${formatIcsUtc(secondEnd)}
+END:VEVENT
+END:VCALENDAR`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => overlappingIcs }),
+    )
+
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    expect(screen.getAllByText('Now')).toHaveLength(2)
+    expect(screen.getByText('First Ongoing')).toBeInTheDocument()
+    expect(screen.getByText('Second Ongoing')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 

@@ -52,7 +52,8 @@ export function CalendarWidget() {
   }, [settings.calendarFeeds])
 
   const now = new Date()
-  const nextEvent = events.find((e) => e.end > now)
+  const currentEvents = events.filter((e) => e.start <= now && e.end > now)
+  const nextEvent = events.find((e) => e.start > now)
 
   return (
     <div className={styles.widget}>
@@ -87,6 +88,7 @@ export function CalendarWidget() {
       {hasCalendarFeeds && !loading && !error && events.length > 0 && (
         <ul className={styles.list}>
           {events.map((event, i) => {
+            const isCurrent = currentEvents.includes(event)
             const isNext = event === nextEvent
             const isPast = event.end < now
             return (
@@ -94,6 +96,7 @@ export function CalendarWidget() {
                 key={i}
                 className={[
                   styles.event,
+                  isCurrent ? styles.current : '',
                   isNext ? styles.next : '',
                   isPast ? styles.past : '',
                 ].join(' ')}
@@ -103,6 +106,7 @@ export function CalendarWidget() {
                   {event.allDay ? 'All day' : `${formatTime(event.start)} – ${formatTime(event.end)}`}
                 </div>
                 <div className={styles.eventTitle}>
+                  {isCurrent && <span className={styles.currentBadge}>Now</span>}
                   {isNext && <span className={styles.nextBadge}>Next</span>}
                   {event.title}
                 </div>

@@ -66,7 +66,15 @@
 }
 
 .next {
-  /* highlighted with accent color text instead of a border/badge */
+  opacity: 1;
+}
+
+.current {
+  border-left-width: 4px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 0.35rem;
+  padding-bottom: var(--space-2);
 }
 
 .past {
@@ -96,6 +104,16 @@
   font-weight: 600;
   color: currentColor;
   opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.currentBadge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: currentColor;
+  opacity: 0.95;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
