@@ -18,6 +18,7 @@ import {
   StopCircle,
   ChevronRight,
   BarChart3,
+  Check,
 } from "lucide-react";
 import { beep } from "../lib/beep";
 import { PomodoroStats } from "./PomodoroStats";
@@ -314,8 +315,15 @@ function Pomodoro() {
               type="checkbox"
               checked={autoCycle}
               onChange={(e) => setAutoCycle(e.target.checked)}
+              className={styles.toggleCheckboxInput}
             />
-            Auto-cycle breaks
+            <span
+              className={`${styles.toggleCheckbox} ${autoCycle ? styles.toggleCheckboxChecked : ""}`}
+              aria-hidden="true"
+            >
+              {autoCycle && <Check size={14} />}
+            </span>
+            <span>Auto-cycle breaks</span>
           </label>
         </div>
       </div>

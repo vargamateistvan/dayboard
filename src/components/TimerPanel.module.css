@@ -211,20 +211,55 @@
 .toggleLabel {
   display: flex;
   align-items: center;
+  width: fit-content;
   gap: 0.5rem;
   font-size: 0.825rem;
   color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
+  position: relative;
 }
 
-.toggleLabel input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
+.toggleCheckboxInput {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggleCheckbox {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1.5px solid var(--color-text-muted);
+  border-radius: 0.25rem;
+  color: transparent;
   cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+  padding: 0;
+  opacity: 0.8;
+}
+
+.toggleCheckbox:hover {
+  border-color: var(--color-accent);
+  opacity: 1;
+}
+
+.toggleCheckboxChecked {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
+}
+
+.toggleCheckboxInput:focus-visible + .toggleCheckbox {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 .toggleLabel:hover {
-  color: var(--text-primary);
+  color: var(--color-text);
 }
