@@ -301,6 +301,9 @@ export function WeatherWidget() {
         <span className={styles.title}>Weather</span>
         {!loading && (
           <div className={styles.refreshGroup}>
+            {lastRefreshLabel && (
+              <span className={styles.refreshHint}>{lastRefreshLabel}</span>
+            )}
             <button
               className={styles.refresh}
               onClick={load}
@@ -309,9 +312,6 @@ export function WeatherWidget() {
             >
               <RefreshCw size={14} />
             </button>
-            {lastRefreshLabel && (
-              <span className={styles.refreshHint}>{lastRefreshLabel}</span>
-            )}
           </div>
         )}
       </div>
@@ -326,7 +326,7 @@ export function WeatherWidget() {
           <div className={styles.summary}>
             <div className={styles.temp}>
               <span className={styles.weatherIcon}>
-                <WeatherIcon name={info.icon} size={48} />
+                <WeatherIcon name={info.icon} size={40} />
               </span>
               <span className={styles.degrees}>{data.temperature}°C</span>
             </div>
