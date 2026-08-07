@@ -25,3 +25,15 @@
   color: var(--color-text-muted);
   letter-spacing: -0.01em;
 }
+
+/* Mobile optimizations */
+@media (max-width: 700px) {
+  .time {
+    font-size: clamp(2.5rem, 12vw, 4rem);
+  }
+
+  .date {
+    font-size: clamp(0.85rem, 3vw, 1rem);
+    margin-top: 0.3rem;
+  }
+}

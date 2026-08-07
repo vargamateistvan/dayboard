@@ -12,25 +12,34 @@ interface Task {
 const STORAGE_KEY = 'dayboard_tasks'
 
 export function TaskWidget() {
-  const [tasks, setTasks] = useState<Task[]>([])
-  const [input, setInput] = useState('')
-
-  // Load tasks from localStorage on mount
-  useEffect(() => {
+  // Initialize from localStorage to avoid hydration mismatch
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    if (typeof window === 'undefined') return []
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
-        setTasks(JSON.parse(saved))
+        return JSON.parse(saved)
       } catch {
-        console.error('Failed to load tasks')
+        console.error('Failed to load tasks from localStorage')
+        return []
       }
     }
+    return []
+  })
+  const [input, setInput] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  // Mark component as mounted to avoid hydration issues
+  useEffect(() => {
+    setMounted(true)
   }, [])
 
-  // Save tasks to localStorage whenever they change
+  // Save tasks to localStorage whenever they change (only after mount)
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
-  }, [tasks])
+    if (mounted) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+    }
+  }, [tasks, mounted])
 
   const addTask = (e: React.FormEvent) => {
     e.preventDefault()
