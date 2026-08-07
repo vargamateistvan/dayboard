@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { WeatherWidget } from '../WeatherWidget'
+import { SettingsProvider } from '../../lib/useSettings'
+import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 
 const mockGeolocation = {
   getCurrentPosition: vi.fn(),
@@ -8,19 +10,30 @@ const mockGeolocation = {
 
 beforeEach(() => {
   vi.stubGlobal('navigator', { geolocation: mockGeolocation })
+  localStorage.clear()
 })
 
 afterEach(() => {
+  localStorage.clear()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
 })
+
+function renderWithSettings(settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
+  saveSettings({ ...DEFAULT_SETTINGS, ...settingsPatch })
+  return render(
+    <SettingsProvider>
+      <WeatherWidget />
+    </SettingsProvider>,
+  )
+}
 
 describe('WeatherWidget', () => {
   it('shows loading state while fetching', () => {
     mockGeolocation.getCurrentPosition.mockImplementation(() => {
       // never resolves
     })
-    render(<WeatherWidget />)
+    renderWithSettings()
     expect(screen.getByLabelText('Loading weather')).toBeInTheDocument()
   })
 
@@ -51,13 +64,14 @@ describe('WeatherWidget', () => {
         }),
     )
 
-    render(<WeatherWidget />)
+    renderWithSettings()
     await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
 
     expect(screen.getByText(/22°C/)).toBeInTheDocument()
     expect(screen.getByText(/Budapest/)).toBeInTheDocument()
     expect(screen.getByText(/Today forecast:/)).toBeInTheDocument()
     expect(screen.getByText(/H 27°C · L 18°C · Rain 35%/)).toBeInTheDocument()
+    expect(screen.getByText(/Updated just now/)).toBeInTheDocument()
   })
 
   it('shows error message when geolocation is denied', async () => {
@@ -66,7 +80,7 @@ describe('WeatherWidget', () => {
         error({ code: 1, message: 'denied' } as GeolocationPositionError)
       },
     )
-    render(<WeatherWidget />)
+    renderWithSettings()
     await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
     expect(screen.getByText(/Location access denied/)).toBeInTheDocument()
   })
@@ -77,8 +91,19 @@ describe('WeatherWidget', () => {
     })
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')))
 
-    render(<WeatherWidget />)
+    renderWithSettings()
     await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
     expect(screen.getByText(/Could not load weather data/)).toBeInTheDocument()
+  })
+
+  it('uses the configured refresh interval', () => {
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+    mockGeolocation.getCurrentPosition.mockImplementation(() => {
+      // no-op
+    })
+
+    renderWithSettings({ weatherRefreshMinutes: 3 })
+
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 3 * 60 * 1000)
   })
 })

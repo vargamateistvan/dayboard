@@ -22,6 +22,7 @@ describe('settings persistence', () => {
     const loaded = loadSettings()
     expect(loaded.theme).toBe('nature')
     expect(loaded.pomodoroWorkMinutes).toBe(DEFAULT_SETTINGS.pomodoroWorkMinutes)
+    expect(loaded.weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
   })
 
   it('returns defaults when localStorage contains invalid JSON', () => {
@@ -41,8 +42,10 @@ describe('settings persistence', () => {
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
       calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
+      weatherRefreshMinutes: 15,
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
+      customColors: DEFAULT_SETTINGS.customColors,
     }
     saveSettings(custom)
     expect(loadSettings()).toEqual(custom)
@@ -51,6 +54,11 @@ describe('settings persistence', () => {
   it('falls back to default font preset when saved value is invalid', () => {
     localStorage.setItem('dayboard:settings', JSON.stringify({ fontPreset: 'not-a-font' }))
     expect(loadSettings().fontPreset).toBe(DEFAULT_SETTINGS.fontPreset)
+  })
+
+  it('falls back to default weather refresh minutes when saved value is invalid', () => {
+    localStorage.setItem('dayboard:settings', JSON.stringify({ weatherRefreshMinutes: 'fast' }))
+    expect(loadSettings().weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
   })
 })
 

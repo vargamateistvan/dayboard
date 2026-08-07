@@ -16,6 +16,7 @@ export interface Settings {
   colorScheme: ColorScheme
   fontPreset: FontPreset
   calendarUrls: string[]
+  weatherRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -84,6 +85,7 @@ export const DEFAULT_SETTINGS: Settings = {
   colorScheme: 'system',
   fontPreset: 'space-grotesk',
   calendarUrls: [],
+  weatherRefreshMinutes: 10,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -127,6 +129,14 @@ function normalizeFontPreset(fontPreset: unknown): FontPreset {
   return matched?.id ?? DEFAULT_SETTINGS.fontPreset
 }
 
+function normalizeWeatherRefreshMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.weatherRefreshMinutes
+  }
+
+  return Math.max(1, Math.round(value))
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -137,6 +147,7 @@ export function loadSettings(): Settings {
       ...parsed,
       fontPreset: normalizeFontPreset((parsed as { fontPreset?: unknown }).fontPreset),
       calendarUrls: normalizeCalendarUrls(parsed.calendarUrls, parsed.calendarUrl),
+      weatherRefreshMinutes: normalizeWeatherRefreshMinutes((parsed as { weatherRefreshMinutes?: unknown }).weatherRefreshMinutes),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

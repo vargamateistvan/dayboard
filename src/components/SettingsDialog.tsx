@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme, type CustomColors } from '../lib/settings'
+import { DEFAULT_CUSTOM_COLORS, FONT_PRESET_OPTIONS, type Theme, type ColorScheme, type CustomColors } from '../lib/settings'
 import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
@@ -37,10 +37,11 @@ export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings()
   const { visibility, toggleWidget } = useWidgetVisibility()
   const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
+  const [weatherRefreshMin, setWeatherRefreshMin] = useState(settings.weatherRefreshMinutes)
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
   const [customColors, setCustomColors] = useState<CustomColors>(
-    settings.customColors || { primary: '#4f46e5', primaryHover: '#4338ca', background: '#0f172a', fontColor: '#f5f5f5', secondaryFontColor: '#999999' }
+    settings.customColors || DEFAULT_CUSTOM_COLORS
   )
 
   const updateCalendarUrl = (index: number, value: string) => {
@@ -61,6 +62,7 @@ export function SettingsDialog({ onClose }: Props) {
   const save = () => {
     updateSettings({
       calendarUrls,
+      weatherRefreshMinutes: weatherRefreshMin,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
       ...(settings.theme === 'custom' && { customColors }),
@@ -264,6 +266,25 @@ export function SettingsDialog({ onClose }: Props) {
                 </div>
               ))}
             </div>
+          </section>
+
+          {/* Pomodoro */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Weather Refresh</h3>
+            <div className={styles.intervalRow}>
+              <label className={styles.intervalLabel}>
+                Refresh every (min)
+                <input
+                  className={styles.numberInput}
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={weatherRefreshMin}
+                  onChange={(e) => setWeatherRefreshMin(Math.max(1, parseInt(e.target.value) || 1))}
+                />
+              </label>
+            </div>
+            <p className={styles.hint}>Weather updates automatically using this interval. You can still refresh it manually anytime.</p>
           </section>
 
           {/* Pomodoro */}

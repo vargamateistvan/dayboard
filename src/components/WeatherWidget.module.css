@@ -18,6 +18,19 @@
   color: var(--color-text-muted);
 }
 
+.refreshGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.refreshHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
 .refresh {
   font-size: var(--font-size-base);
   color: var(--color-text-muted);
