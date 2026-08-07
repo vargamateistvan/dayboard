@@ -184,13 +184,13 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: calc(env(safe-area-inset-top, 0px) + 2.75rem) 1rem calc(env(safe-area-inset-bottom, 0px) + 6rem);
-    row-gap: 0.75rem;
-    gap: 0.75rem;
+    padding: calc(env(safe-area-inset-top, 0px) + 2.25rem) 0.9rem calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    row-gap: 0.6rem;
+    gap: 0.6rem;
   }
 
   .cellClock {
-    min-height: 7rem;
+    min-height: clamp(5.5rem, 16vh, 7rem);
     overflow: visible;
   }
 
@@ -198,7 +198,7 @@
   .cellCalendar,
   .cellTimer,
   .cellTasks {
-    min-height: 12rem;
+    min-height: 10.5rem;
     overflow: visible;
   }
 

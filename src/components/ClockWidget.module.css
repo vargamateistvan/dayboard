@@ -37,11 +37,12 @@
 /* Mobile optimizations */
 @media (max-width: 700px) {
   .time {
-    font-size: clamp(2.25rem, 10vw, 3.5rem);
+    font-size: clamp(2.2rem, 9.6vw, 3.3rem);
+    line-height: 0.88;
   }
 
   .date {
-    font-size: clamp(0.75rem, 2.5vw, 0.95rem);
-    margin-top: 0.2rem;
+    font-size: clamp(0.7rem, 2.1vw, 0.85rem);
+    margin-top: 0.1rem;
   }
 }
