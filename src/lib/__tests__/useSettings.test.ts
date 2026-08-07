@@ -23,6 +23,7 @@ describe('settings persistence', () => {
     expect(loaded.theme).toBe('nature')
     expect(loaded.pomodoroWorkMinutes).toBe(DEFAULT_SETTINGS.pomodoroWorkMinutes)
     expect(loaded.weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
+    expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
   })
 
   it('returns defaults when localStorage contains invalid JSON', () => {
@@ -41,6 +42,7 @@ describe('settings persistence', () => {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
+      showBuyMeACoffeeWidget: false,
       calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
@@ -66,11 +68,16 @@ describe('settings persistence', () => {
   it('falls back to default weather preferences when saved values are invalid', () => {
     localStorage.setItem(
       'dayboard:settings',
-      JSON.stringify({ weatherUnitSystem: 'kelvin', weatherShowExtraDetails: 'nope' }),
+      JSON.stringify({
+        weatherUnitSystem: 'kelvin',
+        weatherShowExtraDetails: 'nope',
+        showBuyMeACoffeeWidget: 'sometimes',
+      }),
     )
     const loaded = loadSettings()
     expect(loaded.weatherUnitSystem).toBe(DEFAULT_SETTINGS.weatherUnitSystem)
     expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
+    expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
   })
 })
 

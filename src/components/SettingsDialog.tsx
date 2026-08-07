@@ -52,6 +52,7 @@ export function SettingsDialog({ onClose }: Props) {
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(settings.weatherRefreshMinutes)
   const [weatherUnitSystem, setWeatherUnitSystem] = useState<WeatherUnitSystem>(settings.weatherUnitSystem)
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(settings.weatherShowExtraDetails)
+  const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(settings.showBuyMeACoffeeWidget)
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
   const [customColors, setCustomColors] = useState<CustomColors>(
@@ -79,6 +80,7 @@ export function SettingsDialog({ onClose }: Props) {
       weatherRefreshMinutes: weatherRefreshMin,
       weatherUnitSystem,
       weatherShowExtraDetails,
+      showBuyMeACoffeeWidget,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
       ...(settings.theme === 'custom' && { customColors }),
@@ -246,6 +248,21 @@ export function SettingsDialog({ onClose }: Props) {
                </button>
              ))}
            </div>
+          </section>
+
+          <section className={styles.section}>
+           <h3 className={styles.sectionTitle}>Support</h3>
+           <div className={styles.widgetGrid}>
+             <button
+               className={[styles.widgetToggle, showBuyMeACoffeeWidget ? styles.widgetVisible : ''].join(' ')}
+               onClick={() => setShowBuyMeACoffeeWidget((value) => !value)}
+               type="button"
+             >
+               {showBuyMeACoffeeWidget ? <Eye size={14} /> : <EyeOff size={14} />}
+               <span>Show Buy Me a Coffee button</span>
+             </button>
+           </div>
+           <p className={styles.hint}>Hide the floating support button anytime without affecting the rest of your layout.</p>
           </section>
 
           {/* Calendar */}

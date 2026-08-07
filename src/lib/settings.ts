@@ -16,6 +16,7 @@ export interface Settings {
   theme: Theme
   colorScheme: ColorScheme
   fontPreset: FontPreset
+  showBuyMeACoffeeWidget: boolean
   calendarUrls: string[]
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
@@ -87,6 +88,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'default',
   colorScheme: 'system',
   fontPreset: 'space-grotesk',
+  showBuyMeACoffeeWidget: true,
   calendarUrls: [],
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
@@ -154,6 +156,14 @@ function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   return value
 }
 
+function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    return DEFAULT_SETTINGS.showBuyMeACoffeeWidget
+  }
+
+  return value
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -163,6 +173,7 @@ export function loadSettings(): Settings {
       ...DEFAULT_SETTINGS,
       ...parsed,
       fontPreset: normalizeFontPreset((parsed as { fontPreset?: unknown }).fontPreset),
+      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget((parsed as { showBuyMeACoffeeWidget?: unknown }).showBuyMeACoffeeWidget),
       calendarUrls: normalizeCalendarUrls(parsed.calendarUrls, parsed.calendarUrl),
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes((parsed as { weatherRefreshMinutes?: unknown }).weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem((parsed as { weatherUnitSystem?: unknown }).weatherUnitSystem),

@@ -9,6 +9,7 @@ import { WeatherWidget } from './components/WeatherWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
 import { TaskWidget } from './components/TaskWidget'
+import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
 import './themes/base.css'
@@ -82,6 +83,7 @@ function Dashboard() {
       </main>
 
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
+      <BuyMeCoffeeWidget />
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   )
