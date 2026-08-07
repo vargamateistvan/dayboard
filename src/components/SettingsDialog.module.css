@@ -373,7 +373,7 @@
 /* Color picker styles */
 .colorPickerGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--space-4);
 }
 
@@ -424,4 +424,47 @@
   color: var(--color-text-muted);
   text-transform: uppercase;
   flex: 1;
+}
+
+.colorPickerSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.colorOptionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.colorOptionLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.colorSwatchGrid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: var(--space-2);
+}
+
+.colorSwatch {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 0;
+  background: transparent;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.15);
+}
+
+.colorSwatch:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-accent);
 }
