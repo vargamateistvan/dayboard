@@ -14,7 +14,7 @@
     Keep the clock visually dominant, but compact enough to leave room for
     the weather/calendar/tasks rows beneath it.
   */
-  font-size: clamp(4rem, max(16vw, 23dvh), 18rem);
+  font-size: clamp(4rem, max(16vw, 23dvh), 20rem);
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 0.8;
