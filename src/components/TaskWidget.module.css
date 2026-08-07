@@ -140,10 +140,39 @@
   transition: all 0.2s;
 }
 
-.taskText.completed {
+.taskTextButton {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.taskTextButton:hover .taskText {
+  color: var(--color-accent);
+}
+
+.taskTextButton.completed .taskText {
   color: var(--color-text-muted);
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+.taskEditInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-accent);
+  border-radius: 0;
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-family: inherit;
+}
+
+.taskEditInput:focus {
+  outline: none;
 }
 
 .deleteBtn {

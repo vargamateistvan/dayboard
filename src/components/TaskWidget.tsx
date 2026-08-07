@@ -28,6 +28,8 @@ export function TaskWidget() {
   })
   const [input, setInput] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editingText, setEditingText] = useState('')
 
   // Mark component as mounted to avoid hydration issues
   useEffect(() => {
@@ -61,6 +63,29 @@ export function TaskWidget() {
 
   const deleteTask = (id: string) => {
     setTasks(tasks.filter(t => t.id !== id))
+  }
+
+  const startEditingTask = (task: Task) => {
+    setEditingTaskId(task.id)
+    setEditingText(task.text)
+  }
+
+  const cancelEditingTask = () => {
+    setEditingTaskId(null)
+    setEditingText('')
+  }
+
+  const saveEditingTask = (id: string) => {
+    const nextText = editingText.trim()
+
+    if (!nextText) {
+      cancelEditingTask()
+      return
+    }
+
+    setTasks(tasks.map(task => (task.id === id ? { ...task, text: nextText } : task)))
+    setEditingTaskId(null)
+    setEditingText('')
   }
 
   const completedCount = tasks.filter(t => t.completed).length
@@ -98,16 +123,43 @@ export function TaskWidget() {
           tasks.map(task => (
             <div key={task.id} className={styles.taskItem}>
               <button
+                type="button"
                 className={`${styles.checkBtn} ${task.completed ? styles.checked : ''}`}
                 onClick={() => toggleTask(task.id)}
                 aria-label={`Mark "${task.text}" as ${task.completed ? 'incomplete' : 'complete'}`}
               >
                 {task.completed && <Check size={16} />}
               </button>
-              <span className={`${styles.taskText} ${task.completed ? styles.completed : ''}`}>
-                {task.text}
-              </span>
+              {editingTaskId === task.id ? (
+                <input
+                  type="text"
+                  value={editingText}
+                  onChange={e => setEditingText(e.target.value)}
+                  onBlur={() => saveEditingTask(task.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      saveEditingTask(task.id)
+                    } else if (e.key === 'Escape') {
+                      cancelEditingTask()
+                    }
+                  }}
+                  className={styles.taskEditInput}
+                  maxLength={100}
+                  autoFocus
+                  aria-label={`Edit "${task.text}"`}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.taskTextButton} ${task.completed ? styles.completed : ''}`}
+                  onClick={() => startEditingTask(task)}
+                  aria-label={`Edit "${task.text}"`}
+                >
+                  <span className={styles.taskText}>{task.text}</span>
+                </button>
+              )}
               <button
+                type="button"
                 className={styles.deleteBtn}
                 onClick={() => deleteTask(task.id)}
                 aria-label={`Delete "${task.text}"`}
