@@ -22,8 +22,11 @@ function formatIcsUtc(date: Date) {
   return `${year}${month}${day}T${hours}${minutes}${seconds}Z`
 }
 
-function renderWithSettings(calendarFeeds: { url: string; color: string }[] = []) {
-  saveSettings({ ...DEFAULT_SETTINGS, calendarFeeds })
+function renderWithSettings(
+  calendarFeeds: { url: string; color: string }[] = [],
+  overrides: Partial<typeof DEFAULT_SETTINGS> = {},
+) {
+  saveSettings({ ...DEFAULT_SETTINGS, ...overrides, calendarFeeds })
   return render(
     <SettingsProvider>
       <CalendarWidget />
@@ -115,6 +118,20 @@ describe('CalendarWidget', () => {
     vi.unstubAllGlobals()
   })
 
+  it('hides all-day events when disabled in settings', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => ALL_DAY_ICS }),
+    )
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[1] }], {
+      calendarShowAllDayEvents: false,
+    })
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText(/No events today/)).toBeInTheDocument()
+    expect(screen.queryByText('Focus Day')).not.toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
   it('renders recurring events for today', async () => {
     vi.stubGlobal(
       'fetch',
@@ -183,6 +200,27 @@ END:VCALENDAR`
     expect(screen.getAllByText('Now')).toHaveLength(2)
     expect(screen.getByText('First Ongoing')).toBeInTheDocument()
     expect(screen.getByText('Second Ongoing')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('hides past events when disabled in settings', async () => {
+    const pastIcs = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Old Meeting
+DTSTART:${Y}${M}${D}T070000Z
+DTEND:${Y}${M}${D}T073000Z
+END:VEVENT
+END:VCALENDAR`
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => pastIcs }))
+
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }], {
+      calendarHidePastEvents: true,
+    })
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText(/No events today/)).toBeInTheDocument()
+    expect(screen.queryByText('Old Meeting')).not.toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 

@@ -52,8 +52,19 @@ export function CalendarWidget() {
   }, [settings.calendarFeeds])
 
   const now = new Date()
-  const currentEvents = events.filter((e) => e.start <= now && e.end > now)
-  const nextEvent = events.find((e) => e.start > now)
+  const visibleEvents = events.filter((event) => {
+    if (!settings.calendarShowAllDayEvents && event.allDay) {
+      return false
+    }
+
+    if (settings.calendarHidePastEvents && event.end <= now) {
+      return false
+    }
+
+    return true
+  })
+  const currentEvents = visibleEvents.filter((e) => e.start <= now && e.end > now)
+  const nextEvent = visibleEvents.find((e) => e.start > now)
 
   return (
     <div className={styles.widget}>
@@ -81,13 +92,13 @@ export function CalendarWidget() {
         </div>
       )}
 
-      {hasCalendarFeeds && !loading && !error && events.length === 0 && (
+      {hasCalendarFeeds && !loading && !error && visibleEvents.length === 0 && (
         <div className={styles.empty}>No events today ✓</div>
       )}
 
-      {hasCalendarFeeds && !loading && !error && events.length > 0 && (
+      {hasCalendarFeeds && !loading && !error && visibleEvents.length > 0 && (
         <ul className={styles.list}>
-          {events.map((event, i) => {
+          {visibleEvents.map((event, i) => {
             const isCurrent = currentEvents.includes(event)
             const isNext = event === nextEvent
             const isPast = event.end < now

@@ -59,6 +59,8 @@ export function SettingsDialog({ onClose }: Props) {
   const [weatherUnitSystem, setWeatherUnitSystem] = useState<WeatherUnitSystem>(settings.weatherUnitSystem)
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(settings.weatherShowExtraDetails)
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(settings.showBuyMeACoffeeWidget)
+  const [calendarHidePastEvents, setCalendarHidePastEvents] = useState(settings.calendarHidePastEvents)
+  const [calendarShowAllDayEvents, setCalendarShowAllDayEvents] = useState(settings.calendarShowAllDayEvents)
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
   const [customColors, setCustomColors] = useState<CustomColors>(
@@ -93,6 +95,8 @@ export function SettingsDialog({ onClose }: Props) {
       weatherUnitSystem,
       weatherShowExtraDetails,
       showBuyMeACoffeeWidget,
+      calendarHidePastEvents,
+      calendarShowAllDayEvents,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
       ...(settings.theme === 'custom' && { customColors }),
@@ -321,6 +325,28 @@ export function SettingsDialog({ onClose }: Props) {
                   </button>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Calendar Display</h3>
+            <div className={styles.widgetGrid}>
+              <button
+                className={[styles.widgetToggle, calendarHidePastEvents ? styles.widgetVisible : ''].join(' ')}
+                onClick={() => setCalendarHidePastEvents((value) => !value)}
+                type="button"
+              >
+                {calendarHidePastEvents ? <Eye size={14} /> : <EyeOff size={14} />}
+                <span>Hide past events</span>
+              </button>
+              <button
+                className={[styles.widgetToggle, calendarShowAllDayEvents ? styles.widgetVisible : ''].join(' ')}
+                onClick={() => setCalendarShowAllDayEvents((value) => !value)}
+                type="button"
+              >
+                {calendarShowAllDayEvents ? <Eye size={14} /> : <EyeOff size={14} />}
+                <span>Show all-day events</span>
+              </button>
             </div>
           </section>
 

@@ -23,6 +23,8 @@ export interface Settings {
   fontPreset: FontPreset
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
+  calendarHidePastEvents: boolean
+  calendarShowAllDayEvents: boolean
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
@@ -106,6 +108,8 @@ export const DEFAULT_SETTINGS: Settings = {
   fontPreset: 'space-grotesk',
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
+  calendarHidePastEvents: false,
+  calendarShowAllDayEvents: true,
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
@@ -216,6 +220,22 @@ function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
   return value
 }
 
+function normalizeCalendarHidePastEvents(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    return DEFAULT_SETTINGS.calendarHidePastEvents
+  }
+
+  return value
+}
+
+function normalizeCalendarShowAllDayEvents(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    return DEFAULT_SETTINGS.calendarShowAllDayEvents
+  }
+
+  return value
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -233,6 +253,12 @@ export function loadSettings(): Settings {
       fontPreset: normalizeFontPreset(rest.fontPreset),
       showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
+      calendarHidePastEvents: normalizeCalendarHidePastEvents(
+        (rest as { calendarHidePastEvents?: unknown }).calendarHidePastEvents,
+      ),
+      calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(
+        (rest as { calendarShowAllDayEvents?: unknown }).calendarShowAllDayEvents,
+      ),
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),

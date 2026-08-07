@@ -30,6 +30,8 @@ describe('settings persistence', () => {
     expect(loaded.pomodoroWorkMinutes).toBe(DEFAULT_SETTINGS.pomodoroWorkMinutes)
     expect(loaded.weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
+    expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
+    expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
   })
 
   it('returns defaults when localStorage contains invalid JSON', () => {
@@ -55,6 +57,8 @@ describe('settings persistence', () => {
         { url: 'https://example.com/cal.ics', color: '#123456' },
         { url: 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics', color: '#654321' },
       ],
+      calendarHidePastEvents: true,
+      calendarShowAllDayEvents: false,
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,
@@ -80,6 +84,8 @@ describe('settings persistence', () => {
     localStorage.setItem(
       'dayboard:settings',
       JSON.stringify({
+        calendarHidePastEvents: 'no',
+        calendarShowAllDayEvents: 'yes',
         weatherUnitSystem: 'kelvin',
         weatherShowExtraDetails: 'nope',
         showBuyMeACoffeeWidget: 'sometimes',
@@ -89,6 +95,8 @@ describe('settings persistence', () => {
     expect(loaded.weatherUnitSystem).toBe(DEFAULT_SETTINGS.weatherUnitSystem)
     expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
+    expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
+    expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
   })
 })
 
