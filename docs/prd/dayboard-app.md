@@ -68,6 +68,7 @@ A modal dialog (triggered by a settings icon in the header).
 - **Calendar URL** — text input for ICS/CSV feed URL with a "Test" button.
 - **Appearance** — light / dark / system toggle (three-way).
 - **Theme picker** — visual swatches for: `default`, `retro`, `futuristic`, `nature`, `ocean`, `sunset`.
+- **Font picker** — selectable font presets including JetBrains Mono, Geist Mono, Pixelify Sans, Orbitron, Doto, Space Grotesk, and Bitcount Single.
 - **Pomodoro intervals** — numeric inputs for work and break durations.
 - All values read/written via the `useSettings` hook.
 

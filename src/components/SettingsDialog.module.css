@@ -128,6 +128,47 @@
   color: var(--color-text);
 }
 
+/* Font swatches */
+.fontGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.fontSwatch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-alt);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  cursor: pointer;
+  text-align: left;
+}
+
+.fontSwatch:hover {
+  border-color: var(--color-accent);
+}
+
+.fontActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+.fontIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+}
+
+.fontLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
 /* Color scheme segmented control */
 .segmented {
   display: flex;

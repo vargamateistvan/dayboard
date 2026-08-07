@@ -2,7 +2,8 @@
    Theme: Nature — earthy / organic
    ============================================================ */
 [data-theme='nature'] {
-  --font-family: 'Georgia', 'Times New Roman', serif;
+  --font-family: 'Doto', 'Georgia', 'Times New Roman', serif;
+  --font-family-mono: 'JetBrains Mono', 'Geist Mono', 'SF Mono', monospace;
   --radius-sm: 6px;
   --radius-md: 14px;
   --radius-lg: 22px;

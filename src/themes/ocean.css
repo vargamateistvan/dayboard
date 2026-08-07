@@ -2,6 +2,8 @@
    Theme: Ocean — cool marine blues
    ============================================================ */
 [data-theme='ocean'] {
+  --font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'Geist Mono', 'JetBrains Mono', 'Bitcount Single', 'SF Mono', monospace;
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 18px;

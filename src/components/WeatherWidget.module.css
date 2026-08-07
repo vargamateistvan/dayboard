@@ -84,3 +84,19 @@
   color: var(--color-text-muted);
   opacity: 0.7;
 }
+
+.todayForecast {
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.85;
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.forecastLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.85;
+}

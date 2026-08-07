@@ -2,8 +2,8 @@
    Theme: Retro — 80s CRT / terminal aesthetic
    ============================================================ */
 [data-theme='retro'] {
-  --font-family: 'Courier New', Courier, monospace;
-  --font-family-mono: 'Courier New', Courier, monospace;
+  --font-family: 'Pixelify Sans', 'Courier New', Courier, monospace;
+  --font-family-mono: 'Bitcount Single', 'JetBrains Mono', 'Courier New', Courier, monospace;
   --radius-sm: 0px;
   --radius-md: 0px;
   --radius-lg: 0px;

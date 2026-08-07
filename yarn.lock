@@ -469,6 +469,41 @@
   resolved "https://registry.yarnpkg.com/@esbuild/win32-x64/-/win32-x64-0.28.1.tgz#10064ee44f4347b90c9a02b446bbf80a91632b12"
   integrity sha512-bm4Mowrv+GXMlpWX++EcXw/iLyd1o3+bJkC2DkWXYVvgZCqD/bSj9ctZeAMC3cIxgjRVR2Dufaiu4YPxr5gW1A==
 
+"@fontsource/bitcount-single@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/bitcount-single/-/bitcount-single-5.3.0.tgz#48dcbe93a740d450f25f4d15a20cd80d5c633459"
+  integrity sha512-o84qxvjUij1Co7gzP7re2inPg7YH79O5SEqX6qByPfjo+9o4uqeC85jjhrU/41OIdUhAnaoJHxkAMP95zLW8hQ==
+
+"@fontsource/doto@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/doto/-/doto-5.3.0.tgz#5f8a7faae222f7d12d95f34a183233bd21b4cdf1"
+  integrity sha512-LTsUEUijHxf/0XmRGF8CiS8GyMuSKQSfX5XzzFYjTzWZSG8yPi0p+OV1D3Z4Ra7AfTYZ+Wzra1waw+j/bJBBCw==
+
+"@fontsource/geist-mono@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/geist-mono/-/geist-mono-5.3.0.tgz#3b1823d8c2d64366575015fd4e7a7f07b05cf926"
+  integrity sha512-UtJ1BBBCVpMYdIcW7nEB45UAoAw5M53ZXs2t0ciPW+IokuAAIc56M8+kW5tXbRJCTpDw4XTtU7proT6NdQAHTg==
+
+"@fontsource/jetbrains-mono@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/jetbrains-mono/-/jetbrains-mono-5.3.0.tgz#87bfd849f24b536ed72e89b56ae0d42223697f74"
+  integrity sha512-fqDfB5I9f1p1TV486aUgB9t8zP84P0O1FtQR5Ol9vjwPy+S+EIGlVYm1cvj2W5shcZMTg2nZFdVMoH5wFu8a1A==
+
+"@fontsource/orbitron@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/orbitron/-/orbitron-5.3.0.tgz#d8f944e889ba4ec24de2e873479cf7c6de1dc5af"
+  integrity sha512-+BhPsbUAo/AF7sRcf+TEexm+EWWkgTiR9Zwb7AhYIPkc5oplfvw0C45Oc2xlKPhwVEmxG8hHuA6/Ansbl+Bc6w==
+
+"@fontsource/pixelify-sans@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/pixelify-sans/-/pixelify-sans-5.3.0.tgz#b64352ebeb46babe06838832fbd18a4b29ed7f8f"
+  integrity sha512-4RCe9nXbi7wUu5+H0FNX1sgPZ2kJ1MmY1uTkEfvQIzzqhoS8zGKJaJfdK8oreE0OU+5gM+NdurFi3H3FJRBvyw==
+
+"@fontsource/space-grotesk@^5.3.0":
+  version "5.3.0"
+  resolved "https://registry.yarnpkg.com/@fontsource/space-grotesk/-/space-grotesk-5.3.0.tgz#248f33358ba78cee84832832f7a79c77a096c7e0"
+  integrity sha512-ksnGizDPXIDuvqcTYTSrmZ+evx9sDlS8rp7+42BQ7wU+spt3twEoXfbJz672C+5CLg6VeUQwRy5RXshWb67LcQ==
+
 "@jridgewell/gen-mapping@^0.3.12", "@jridgewell/gen-mapping@^0.3.5":
   version "0.3.13"
   resolved "https://registry.yarnpkg.com/@jridgewell/gen-mapping/-/gen-mapping-0.3.13.tgz#6342a19f44347518c93e43b1ac69deb3c4656a1f"

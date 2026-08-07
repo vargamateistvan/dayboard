@@ -4,6 +4,8 @@
 /* ── Default theme: ultra-clean, time.is-style ── */
 [data-theme='default'][data-color-scheme='light'],
 [data-theme='default'] {
+  --font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Geist Mono', 'Bitcount Single', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
   --color-bg: #ffffff;
   --color-surface: #ffffff;
   --color-surface-alt: #f7f7f7;

@@ -2,6 +2,8 @@
    Theme: Futuristic — neon / glassmorphism
    ============================================================ */
 [data-theme='futuristic'] {
+  --font-family: 'Orbitron', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'Geist Mono', 'JetBrains Mono', 'Bitcount Single', 'SF Mono', monospace;
   --radius-sm: 4px;
   --radius-md: 12px;
   --radius-lg: 20px;

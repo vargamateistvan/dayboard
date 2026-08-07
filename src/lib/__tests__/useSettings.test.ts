@@ -39,12 +39,18 @@ describe('settings persistence', () => {
     const custom = {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
+      fontPreset: 'orbitron' as const,
       calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
     }
     saveSettings(custom)
     expect(loadSettings()).toEqual(custom)
+  })
+
+  it('falls back to default font preset when saved value is invalid', () => {
+    localStorage.setItem('dayboard:settings', JSON.stringify({ fontPreset: 'not-a-font' }))
+    expect(loadSettings().fontPreset).toBe(DEFAULT_SETTINGS.fontPreset)
   })
 })
 

@@ -2,6 +2,8 @@
    Theme: Sunset — warm dusk gradients
    ============================================================ */
 [data-theme='sunset'] {
+  --font-family: 'Bitcount Single', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Geist Mono', 'SF Mono', monospace;
   --radius-sm: 5px;
   --radius-md: 10px;
   --radius-lg: 16px;

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
-import { type Theme, type ColorScheme } from '../lib/settings'
-import { Globe, Monitor, Zap, Leaf, Waves, Palette, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
+import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme } from '../lib/settings'
+import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -92,6 +92,26 @@ export function SettingsDialog({ onClose }: Props) {
                   aria-pressed={settings.colorScheme === s.id}
                 >
                   {s.icon}{s.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* Fonts */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Fonts</h3>
+            <div className={styles.fontGrid}>
+              {FONT_PRESET_OPTIONS.map((fontOption) => (
+                <button
+                  key={fontOption.id}
+                  className={[styles.fontSwatch, settings.fontPreset === fontOption.id ? styles.fontActive : ''].join(' ')}
+                  onClick={() => updateSettings({ fontPreset: fontOption.id })}
+                  aria-pressed={settings.fontPreset === fontOption.id}
+                >
+                  <span className={styles.fontIcon}>
+                    <Type size={14} />
+                  </span>
+                  <span className={styles.fontLabel} style={{ fontFamily: fontOption.fontFamily }}>{fontOption.label}</span>
                 </button>
               ))}
             </div>

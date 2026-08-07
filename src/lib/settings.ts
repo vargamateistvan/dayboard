@@ -1,17 +1,70 @@
 export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset'
+export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 
 export interface Settings {
   theme: Theme
   colorScheme: ColorScheme
+  fontPreset: FontPreset
   calendarUrls: string[]
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
 }
 
+export const FONT_PRESET_OPTIONS: ReadonlyArray<{
+  id: FontPreset
+  label: string
+  fontFamily: string
+  fontFamilyMono: string
+}> = [
+  {
+    id: 'space-grotesk',
+    label: 'Space Grotesk',
+    fontFamily: "'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'JetBrains Mono', 'Geist Mono', 'Bitcount Single', 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+  },
+  {
+    id: 'jetbrains-mono',
+    label: 'JetBrains Mono',
+    fontFamily: "'JetBrains Mono', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'JetBrains Mono', 'Geist Mono', 'Bitcount Single', 'SF Mono', 'Consolas', monospace",
+  },
+  {
+    id: 'geist-mono',
+    label: 'Geist Mono',
+    fontFamily: "'Geist Mono', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'Geist Mono', 'JetBrains Mono', 'Bitcount Single', 'SF Mono', 'Consolas', monospace",
+  },
+  {
+    id: 'pixelify-sans',
+    label: 'Pixelify Sans',
+    fontFamily: "'Pixelify Sans', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'Bitcount Single', 'JetBrains Mono', 'Geist Mono', 'SF Mono', 'Consolas', monospace",
+  },
+  {
+    id: 'orbitron',
+    label: 'Orbitron',
+    fontFamily: "'Orbitron', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'Geist Mono', 'JetBrains Mono', 'Bitcount Single', 'SF Mono', 'Consolas', monospace",
+  },
+  {
+    id: 'doto',
+    label: 'Doto',
+    fontFamily: "'Doto', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'JetBrains Mono', 'Geist Mono', 'Bitcount Single', 'SF Mono', 'Consolas', monospace",
+  },
+  {
+    id: 'bitcount-single',
+    label: 'Bitcount Single',
+    fontFamily: "'Bitcount Single', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif",
+    fontFamilyMono: "'Bitcount Single', 'JetBrains Mono', 'Geist Mono', 'SF Mono', 'Consolas', monospace",
+  },
+]
+
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'default',
   colorScheme: 'system',
+  fontPreset: 'space-grotesk',
   calendarUrls: [],
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
@@ -39,6 +92,15 @@ function normalizeCalendarUrls(calendarUrls: unknown, legacyCalendarUrl?: unknow
   )]
 }
 
+function normalizeFontPreset(fontPreset: unknown): FontPreset {
+  if (typeof fontPreset !== 'string') {
+    return DEFAULT_SETTINGS.fontPreset
+  }
+
+  const matched = FONT_PRESET_OPTIONS.find((option) => option.id === fontPreset)
+  return matched?.id ?? DEFAULT_SETTINGS.fontPreset
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -47,6 +109,7 @@ export function loadSettings(): Settings {
     return {
       ...DEFAULT_SETTINGS,
       ...parsed,
+      fontPreset: normalizeFontPreset((parsed as { fontPreset?: unknown }).fontPreset),
       calendarUrls: normalizeCalendarUrls(parsed.calendarUrls, parsed.calendarUrl),
     }
   } catch {
@@ -73,6 +136,15 @@ export function resolveColorScheme(scheme: ColorScheme): 'light' | 'dark' {
 
 export function applyTheme(settings: Settings): void {
   const resolved = resolveColorScheme(settings.colorScheme)
+  const selectedFontPreset =
+    FONT_PRESET_OPTIONS.find((option) => option.id === settings.fontPreset)
+    ?? FONT_PRESET_OPTIONS.find((option) => option.id === DEFAULT_SETTINGS.fontPreset)
+
+  if (selectedFontPreset) {
+    document.documentElement.style.setProperty('--font-family', selectedFontPreset.fontFamily)
+    document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono)
+  }
+
   document.documentElement.setAttribute('data-theme', settings.theme)
   document.documentElement.setAttribute('data-color-scheme', resolved)
 }
