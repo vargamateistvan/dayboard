@@ -40,7 +40,7 @@ export function SettingsDialog({ onClose }: Props) {
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
   const [customColors, setCustomColors] = useState<CustomColors>(
-    settings.customColors || { primary: '#4f46e5', primaryHover: '#4338ca', background: '#0f172a', fontColor: '#f5f5f5' }
+    settings.customColors || { primary: '#4f46e5', primaryHover: '#4338ca', background: '#0f172a', fontColor: '#f5f5f5', secondaryFontColor: '#999999' }
   )
 
   const updateCalendarUrl = (index: number, value: string) => {
@@ -193,8 +193,22 @@ export function SettingsDialog({ onClose }: Props) {
                    </div>
                  </label>
                </div>
+               <div className={styles.colorInputGroup}>
+                 <label className={styles.colorLabel}>
+                   Secondary Font Color
+                   <div className={styles.colorInputWrapper}>
+                     <input
+                       type="color"
+                       className={styles.colorInput}
+                       value={customColors.secondaryFontColor}
+                       onChange={(e) => setCustomColors({ ...customColors, secondaryFontColor: e.target.value })}
+                     />
+                     <span className={styles.colorValue}>{customColors.secondaryFontColor}</span>
+                   </div>
+                 </label>
+               </div>
              </div>
-             <p className={styles.hint}>Choose your custom accent colors, background, and font color. They will be applied to buttons, links, interactive elements, and text throughout the app.</p>
+             <p className={styles.hint}>Choose your custom accent colors, background, and font colors. They will be applied to buttons, links, interactive elements, and text throughout the app.</p>
            </section>
           )}
 

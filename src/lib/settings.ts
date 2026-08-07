@@ -7,6 +7,7 @@ export interface CustomColors {
   primaryHover: string
   background: string
   fontColor: string
+  secondaryFontColor: string
   secondary?: string
 }
 
@@ -82,6 +83,7 @@ export const DEFAULT_SETTINGS: Settings = {
     primaryHover: '#4338ca',
     background: '#0f172a',
     fontColor: '#f5f5f5',
+    secondaryFontColor: '#999999',
   },
 }
 
@@ -166,6 +168,7 @@ export function applyTheme(settings: Settings): void {
     document.documentElement.style.setProperty('--color-accent-hover', settings.customColors.primaryHover)
     document.documentElement.style.setProperty('--color-custom-bg', settings.customColors.background)
     document.documentElement.style.setProperty('--color-custom-text', settings.customColors.fontColor)
+    document.documentElement.style.setProperty('--color-custom-text-muted', settings.customColors.secondaryFontColor)
   }
 
   document.documentElement.setAttribute('data-theme', settings.theme)

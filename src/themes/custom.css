@@ -6,8 +6,8 @@
   --color-surface-alt: #e8e8e8;
   --color-border: #d0d0d0;
   --color-text: var(--color-custom-text, #1a1a1a);
-  --color-text-muted: #666666;
-  /* --color-accent, --color-accent-hover, --color-custom-bg, and --color-custom-text are set via JS */
+  --color-text-muted: var(--color-custom-text-muted, #666666);
+  /* --color-accent, --color-accent-hover, --color-custom-bg, --color-custom-text, and --color-custom-text-muted are set via JS */
   --color-accent-text: #ffffff;
   --color-danger: #dc2626;
   --color-success: #16a34a;
@@ -19,8 +19,8 @@
   --color-surface-alt: #2d2d2d;
   --color-border: #404040;
   --color-text: var(--color-custom-text, #f5f5f5);
-  --color-text-muted: #999999;
-  /* --color-accent, --color-accent-hover, --color-custom-bg, and --color-custom-text are set via JS */
+  --color-text-muted: var(--color-custom-text-muted, #999999);
+  /* --color-accent, --color-accent-hover, --color-custom-bg, --color-custom-text, and --color-custom-text-muted are set via JS */
   --color-accent-text: #ffffff;
   --color-danger: #f87171;
   --color-success: #4ade80;
