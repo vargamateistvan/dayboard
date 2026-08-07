@@ -58,6 +58,18 @@ describe('CalendarWidget', () => {
     vi.unstubAllGlobals()
   })
 
+  it('normalizes Google Calendar share links before fetching', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS })
+    vi.stubGlobal('fetch', fetchMock)
+    renderWithSettings('https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ')
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+    )
+    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
   it('shows empty state when feed has no events today', async () => {
     const emptyIcs = `BEGIN:VCALENDAR\nVERSION:2.0\nEND:VCALENDAR`
     vi.stubGlobal(

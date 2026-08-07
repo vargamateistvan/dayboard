@@ -1,8 +1,9 @@
 /* ── Timer Panel: flat, no card ───────────────────────────── */
 .panel {
-  /* bare — no background/border */
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  height: 100%;
 }
 
 /* Hairline tab row */
@@ -10,17 +11,19 @@
   display: flex;
   gap: var(--space-6);
   border-bottom: 1px solid var(--color-border);
-  margin-bottom: clamp(0.75rem, 2vh, 2rem);
+  padding-bottom: 0;
+  margin-bottom: clamp(0.5rem, 1.5vh, 1.25rem);
+  flex-shrink: 0;
 }
 
 .tab {
-  padding-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
   font-size: var(--font-size-sm);
   font-weight: 500;
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   border-bottom: 2px solid transparent;
-  margin-bottom: -1px; /* overlap hairline */
+  margin-bottom: -1px;
   transition: color var(--transition-fast), border-color var(--transition-fast);
   white-space: nowrap;
 }
@@ -37,28 +40,32 @@
 .content {
   display: flex;
   align-items: flex-start;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Timer body: left-aligned like everything else */
+/* Timer body */
 .timerBody {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.5rem, 1.5vh, 1.5rem);
+  gap: clamp(0.4rem, 1vh, 1rem);
 }
 
-/* Same large type as weather degrees */
+/*
+  Display font: must fit inside timer row together with tabs (~56px) and button (~48px).
+  Timer row ≈ 1.5/4.5 × (100dvh - padding - gaps).
+  At 1080px that's ~310px. Reserve 110px for tabs+button → 200px for display.
+  18dvh of 1080 = 194px — safe. Hard cap at 12rem (192px) as a backstop.
+*/
 .display {
-  /*
-    Timer row = 1.5fr ≈ 27% of screen height.
-    14dvh sits comfortably in that row with room for tabs + button.
-  */
-  font-size: clamp(2.5rem, max(10vw, 14dvh), 13rem);
+  font-size: clamp(2rem, 18dvh, 12rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-family-mono);
   color: var(--color-text);
   letter-spacing: -0.04em;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .done {

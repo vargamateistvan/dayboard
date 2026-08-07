@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { normalizeCalendarUrl } from '../lib/calendarUrl'
 import { parseCalendarFeed, type CalendarEvent } from '../lib/parseCalendarFeed'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
@@ -14,7 +15,7 @@ export function CalendarWidget() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const url = settings.calendarUrl.trim()
+    const url = normalizeCalendarUrl(settings.calendarUrl)
     if (!url) {
       setEvents([])
       setError(null)

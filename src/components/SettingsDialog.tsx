@@ -83,7 +83,8 @@ export function SettingsDialog({ onClose }: Props) {
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Calendar Feed</h3>
             <p className={styles.hint}>
-              Paste an ICS or CSV calendar URL. If you see errors, your calendar host may need a CORS-friendly proxy.
+              Paste an ICS or CSV calendar URL. Google Calendar share links are supported too. If you see
+              errors, your calendar host may need a CORS-friendly proxy.
             </p>
             <input
               className={styles.input}
