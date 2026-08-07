@@ -11,14 +11,13 @@
 
 .time {
   /*
-    Clock row = 2fr of ~(100dvh - padding - gaps) ≈ 40% of screen height.
-    30dvh keeps it comfortably inside that row at any screen.
-    vw minimum ensures it's never tiny on wide screens.
+    Keep the clock visually dominant, but compact enough to leave room for
+    the weather/calendar/tasks rows beneath it.
   */
-  font-size: clamp(4rem, max(18vw, 25dvh), 20rem);
+  font-size: clamp(4rem, max(16vw, 23dvh), 18rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 0.88;
+  line-height: 0.8;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -35,11 +34,11 @@
 /* Mobile optimizations */
 @media (max-width: 700px) {
   .time {
-    font-size: clamp(2.5rem, 12vw, 4rem);
+    font-size: clamp(2.25rem, 10vw, 3.5rem);
   }
 
   .date {
-    font-size: clamp(0.85rem, 3vw, 1rem);
-    margin-top: 0.3rem;
+    font-size: clamp(0.75rem, 2.5vw, 0.95rem);
+    margin-top: 0.2rem;
   }
 }
