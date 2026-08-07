@@ -1,7 +1,7 @@
 /* ── Full-screen masonry layout ─────────────────────────────── */
 .app {
   height: 100dvh;
-  overflow: hidden;
+  overflow: auto;
   background: var(--color-bg);
   display: flex;
   flex-direction: column;
@@ -58,19 +58,19 @@
 
 /*
   5-cell grid: 2 columns, 2 rows
-  - Clock: full width top row (2 shares height)
+  - Clock: full width top row (1.5fr height)
   - Weather, Calendar: middle row
-  - Timer, Tasks: bottom row (1.5 shares height)
+  - Timer, Tasks: bottom row (1fr height)
 */
 .main {
   flex: 1;
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 2fr 1.5fr;
-  padding: clamp(1rem, 2.5vh, 2.5rem) clamp(2rem, 5vw, 8rem);
-  column-gap: clamp(2rem, 4vw, 6rem);
-  row-gap: clamp(0.5rem, 1.5vh, 1.5rem);
+  grid-template-rows: 1.5fr 1fr;
+  padding: clamp(0.75rem, 2vh, 1.5rem) clamp(1.5rem, 4vw, 4rem);
+  column-gap: clamp(1rem, 3vw, 3rem);
+  row-gap: clamp(0.75rem, 1.5vh, 1.25rem);
   max-width: 2400px;
   width: 100%;
   margin: 0 auto;
@@ -88,12 +88,13 @@
   row-gap: clamp(2rem, 3vh, 3rem);
 }
 
-/* Clock: full width top row — content sticks to bottom of cell */
+/* Clock: full width top row — content centered in cell */
 .cellClock {
   grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  justify-content: center;
+  align-items: center;
   overflow: hidden;
 }
 
@@ -133,38 +134,45 @@
 @media (max-width: 1200px) {
   .main {
     grid-template-columns: 1fr;
-    grid-template-rows: 2fr 1.2fr 1.2fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    padding: clamp(0.5rem, 1.5vh, 1rem) clamp(1rem, 3vw, 2rem);
   }
 
   .cellClock {
     grid-column: 1 / -1;
+    min-height: 12rem;
   }
 
   .cellTimer,
   .cellTasks {
     grid-column: 1 / -1;
+    min-height: 15rem;
   }
 }
 
 @media (max-width: 700px) {
   .app {
-    height: auto;
+    height: 100dvh;
     overflow: auto;
   }
 
   .main {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    padding: 2rem 1.5rem 3rem;
-    row-gap: 2rem;
+    grid-template-rows: auto auto auto auto auto;
+    padding: 1rem clamp(1rem, 4vw, 1.5rem);
+    row-gap: 1rem;
   }
 
-  .cellClock,
-  .cellTimer,
-  .cellNotes,
+  .cellClock {
+    grid-column: 1 / -1;
+    min-height: 8rem;
+  }
+
   .cellWeather,
   .cellCalendar,
+  .cellTimer,
   .cellTasks {
-    grid-column: 1;
+    grid-column: 1 / -1;
+    min-height: 12rem;
   }
 }
