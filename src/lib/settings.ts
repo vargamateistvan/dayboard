@@ -1,5 +1,5 @@
 export type ColorScheme = 'light' | 'dark' | 'system'
-export type Theme = 'default' | 'retro' | 'futuristic' | 'nature'
+export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset'
 
 export interface Settings {
   theme: Theme

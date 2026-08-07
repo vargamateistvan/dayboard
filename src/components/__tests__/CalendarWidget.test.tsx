@@ -24,6 +24,10 @@ const TODAY = new Date()
 const Y = TODAY.getFullYear()
 const M = String(TODAY.getMonth() + 1).padStart(2, '0')
 const D = String(TODAY.getDate()).padStart(2, '0')
+const TOMORROW = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + 1)
+const TOMORROW_Y = TOMORROW.getFullYear()
+const TOMORROW_M = String(TOMORROW.getMonth() + 1).padStart(2, '0')
+const TOMORROW_D = String(TOMORROW.getDate()).padStart(2, '0')
 
 const TODAY_ICS = `BEGIN:VCALENDAR
 VERSION:2.0
@@ -31,6 +35,15 @@ BEGIN:VEVENT
 SUMMARY:Team Standup
 DTSTART:${Y}${M}${D}T090000Z
 DTEND:${Y}${M}${D}T093000Z
+END:VEVENT
+END:VCALENDAR`
+
+const ALL_DAY_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Focus Day
+DTSTART;VALUE=DATE:${Y}${M}${D}
+DTEND;VALUE=DATE:${TOMORROW_Y}${TOMORROW_M}${TOMORROW_D}
 END:VEVENT
 END:VCALENDAR`
 
@@ -55,6 +68,18 @@ describe('CalendarWidget', () => {
     renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('renders all-day events', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => ALL_DAY_ICS }),
+    )
+    renderWithSettings(['https://example.com/cal.ics'])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText('Focus Day')).toBeInTheDocument()
+    expect(screen.getByText('All day')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 

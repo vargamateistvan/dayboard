@@ -17,6 +17,27 @@ function isToday(start: Date, end: Date): boolean {
   return start <= endOfDay && end >= startOfDay
 }
 
+interface IcsProperty {
+  name: string
+  params: string[]
+  value: string
+}
+
+function parseIcsProperty(line: string): IcsProperty | null {
+  const separatorIndex = line.indexOf(':')
+  if (separatorIndex === -1) return null
+
+  const propertyKey = line.slice(0, separatorIndex)
+  const value = line.slice(separatorIndex + 1)
+  const [name, ...params] = propertyKey.split(';')
+
+  return {
+    name,
+    params,
+    value,
+  }
+}
+
 // Parse ICS datetime string like 20240807T143000Z or 20240807
 function parseIcsDate(raw: string): Date {
   const clean = raw.replace(/^TZID=[^:]+:/, '').trim()
@@ -71,7 +92,11 @@ export function parseIcs(text: string): CalendarEvent[] {
       if (startRaw) {
         try {
           const start = parseIcsDate(startRaw)
-          const end = endRaw ? parseIcsDate(endRaw) : new Date(start.getTime() + 3600_000)
+          const end = endRaw
+            ? parseIcsDate(endRaw)
+            : allDay
+              ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)
+              : new Date(start.getTime() + 3600_000)
           if (isToday(start, end)) {
             events.push({ title, start, end, allDay })
           }
@@ -83,17 +108,16 @@ export function parseIcs(text: string): CalendarEvent[] {
     }
     if (!inEvent) continue
 
-    if (line.startsWith('SUMMARY:') || line.startsWith('SUMMARY;')) {
-      title = line.replace(/^SUMMARY[^:]*:/, '')
-    } else if (line.startsWith('DTSTART;VALUE=DATE:')) {
-      startRaw = line.replace('DTSTART;VALUE=DATE:', '')
-      allDay = true
-    } else if (line.startsWith('DTSTART')) {
-      startRaw = line.replace(/^DTSTART[^:]*:/, '')
-    } else if (line.startsWith('DTEND;VALUE=DATE:')) {
-      endRaw = line.replace('DTEND;VALUE=DATE:', '')
-    } else if (line.startsWith('DTEND')) {
-      endRaw = line.replace(/^DTEND[^:]*:/, '')
+    const property = parseIcsProperty(line)
+    if (!property) continue
+
+    if (property.name === 'SUMMARY') {
+      title = property.value
+    } else if (property.name === 'DTSTART') {
+      startRaw = property.value
+      allDay = property.params.some((param) => param.toUpperCase() === 'VALUE=DATE') || !property.value.includes('T')
+    } else if (property.name === 'DTEND') {
+      endRaw = property.value
     }
   }
 

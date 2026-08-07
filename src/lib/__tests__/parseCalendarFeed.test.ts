@@ -46,6 +46,23 @@ DTEND:20240814T110000Z
 END:VEVENT
 END:VCALENDAR`
 
+const ALL_DAY_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Office Day
+DTSTART;VALUE=DATE:20240807
+DTEND;VALUE=DATE:20240808
+END:VEVENT
+END:VCALENDAR`
+
+const ALL_DAY_WITH_EXTRA_PARAMS_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Bank Holiday
+DTSTART;VALUE=DATE;X-MICROSOFT-CDO-ALLDAYEVENT=TRUE:20240807
+END:VEVENT
+END:VCALENDAR`
+
 const TODAY_CSV = `title,start,end
 Stand-up,2024-08-07T09:00:00,2024-08-07T09:30:00`
 
@@ -70,6 +87,20 @@ describe('parseCalendarFeed — ICS', () => {
     const events = parseIcs(MULTI_EVENT_ICS)
     expect(events).toHaveLength(2)
     expect(events.map((e) => e.title)).toEqual(['Morning sync', 'Lunch'])
+  })
+
+  it('parses all-day events for today', () => {
+    const events = parseIcs(ALL_DAY_ICS)
+    expect(events).toHaveLength(1)
+    expect(events[0].title).toBe('Office Day')
+    expect(events[0].allDay).toBe(true)
+  })
+
+  it('parses all-day events when VALUE=DATE has extra parameters', () => {
+    const events = parseIcs(ALL_DAY_WITH_EXTRA_PARAMS_ICS)
+    expect(events).toHaveLength(1)
+    expect(events[0].title).toBe('Bank Holiday')
+    expect(events[0].allDay).toBe(true)
   })
 
   it('returns events sorted by start time', () => {
