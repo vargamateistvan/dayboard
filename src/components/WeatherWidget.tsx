@@ -22,6 +22,8 @@ interface WeatherData {
   temperature: number;
   apparentTemperature: number | null;
   humidity: number | null;
+  cloudCover: number | null;
+  uvIndex: number | null;
   windSpeed: number | null;
   windDirection: number | null;
   timezone: string | null;
@@ -174,7 +176,7 @@ function formatLastRefresh(lastRefreshedAt: number, now: number): string {
 }
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=celsius&wind_speed_unit=kmh&forecast_days=1`;
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=celsius&wind_speed_unit=kmh&forecast_days=1`;
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
 
   const [weatherRes, geoRes] = await Promise.all([
@@ -200,6 +202,14 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
     humidity:
       typeof weather.current?.relative_humidity_2m === "number"
         ? Math.round(weather.current.relative_humidity_2m)
+        : null,
+    cloudCover:
+      typeof weather.current?.cloud_cover === "number"
+        ? Math.round(weather.current.cloud_cover)
+        : null,
+    uvIndex:
+      typeof weather.current?.uv_index === "number"
+        ? Math.round(weather.current.uv_index)
         : null,
     windSpeed:
       typeof weather.current?.wind_speed_10m === "number"
@@ -371,6 +381,15 @@ export function WeatherWidget() {
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
+                <Cloud size={12} />
+                Clouds
+              </span>
+              <span className={styles.detailValue}>
+                {data.cloudCover ?? "—"}%
+              </span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
                 <Sunrise size={12} />
                 Sunrise
               </span>
@@ -382,6 +401,13 @@ export function WeatherWidget() {
                 Sunset
               </span>
               <span className={styles.detailValue}>{sunset ?? "—"}</span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
+                <Sun size={12} />
+                UV index
+              </span>
+              <span className={styles.detailValue}>{data.uvIndex ?? "—"}</span>
             </div>
           </div>
         </div>

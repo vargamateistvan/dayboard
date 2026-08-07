@@ -52,6 +52,8 @@ describe('WeatherWidget', () => {
               temperature_2m: 22,
               apparent_temperature: 24,
               relative_humidity_2m: 56,
+              cloud_cover: 42,
+              uv_index: 7,
               wind_speed_10m: 18,
               wind_direction_10m: 90,
               weather_code: 1,
@@ -86,6 +88,10 @@ describe('WeatherWidget', () => {
     expect(screen.getByText(/24°C/)).toBeInTheDocument()
     expect(screen.getByText(/Humidity/)).toBeInTheDocument()
     expect(screen.getByText(/56%/)).toBeInTheDocument()
+    expect(screen.getByText(/Clouds/)).toBeInTheDocument()
+    expect(screen.getByText(/42%/)).toBeInTheDocument()
+    expect(screen.getByText(/UV index/)).toBeInTheDocument()
+    expect(screen.getByText(/^7$/)).toBeInTheDocument()
     expect(screen.getByText(/Wind/)).toBeInTheDocument()
     expect(screen.getByText(/18 km\/h · E \(90°\)/)).toBeInTheDocument()
     expect(screen.getByText(/Sunrise/)).toBeInTheDocument()
