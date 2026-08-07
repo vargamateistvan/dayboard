@@ -101,6 +101,104 @@ describe('WeatherWidget', () => {
     expect(screen.getByText(/Updated just now/)).toBeInTheDocument()
   })
 
+  it('uses imperial units when configured', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.5, longitude: 19.0 } } as GeolocationPosition)
+    })
+
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          current: {
+            temperature_2m: 72,
+            apparent_temperature: 75,
+            relative_humidity_2m: 56,
+            cloud_cover: 42,
+            uv_index: 7,
+            wind_speed_10m: 18,
+            wind_direction_10m: 90,
+            weather_code: 1,
+          },
+          timezone: 'Europe/Budapest',
+          utc_offset_seconds: 7200,
+          daily: {
+            temperature_2m_max: [81],
+            temperature_2m_min: [64],
+            precipitation_probability_max: [35],
+            sunrise: ['2026-08-07T05:45'],
+            sunset: ['2026-08-07T20:16'],
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          address: { city: 'Budapest' },
+        }),
+      })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithSettings({ weatherUnitSystem: 'imperial' })
+    await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('temperature_unit=fahrenheit')
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('wind_speed_unit=mph')
+    expect(screen.getByText(/72°F/)).toBeInTheDocument()
+    expect(screen.getByText(/18 mph · E \(90°\)/)).toBeInTheDocument()
+  })
+
+  it('can hide the extra weather details', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.5, longitude: 19.0 } } as GeolocationPosition)
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            current: {
+              temperature_2m: 22,
+              apparent_temperature: 24,
+              relative_humidity_2m: 56,
+              cloud_cover: 42,
+              uv_index: 7,
+              wind_speed_10m: 18,
+              wind_direction_10m: 90,
+              weather_code: 1,
+            },
+            timezone: 'Europe/Budapest',
+            utc_offset_seconds: 7200,
+            daily: {
+              temperature_2m_max: [27],
+              temperature_2m_min: [18],
+              precipitation_probability_max: [35],
+              sunrise: ['2026-08-07T05:45'],
+              sunset: ['2026-08-07T20:16'],
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            address: { city: 'Budapest' },
+          }),
+        }),
+    )
+
+    renderWithSettings({ weatherShowExtraDetails: false })
+    await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
+
+    expect(screen.queryByText(/Feels like/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Humidity/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Clouds/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Sunrise/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/UV index/)).not.toBeInTheDocument()
+  })
+
   it('shows error message when geolocation is denied', async () => {
     mockGeolocation.getCurrentPosition.mockImplementation(
       (_success: unknown, error: PositionErrorCallback) => {

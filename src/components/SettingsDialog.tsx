@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { DEFAULT_CUSTOM_COLORS, FONT_PRESET_OPTIONS, type Theme, type ColorScheme, type CustomColors } from '../lib/settings'
+import {
+  DEFAULT_CUSTOM_COLORS,
+  FONT_PRESET_OPTIONS,
+  type Theme,
+  type ColorScheme,
+  type CustomColors,
+  type WeatherUnitSystem,
+} from '../lib/settings'
 import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
@@ -21,6 +28,11 @@ const COLOR_SCHEMES: { id: ColorScheme; label: string; icon: React.ReactNode }[]
   { id: 'dark',   label: 'Dark',   icon: <Moon size={14} /> },
 ]
 
+const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
+  { id: 'metric', label: 'Metric' },
+  { id: 'imperial', label: 'Imperial' },
+]
+
 const WIDGETS: { id: 'clock' | 'weather' | 'calendar' | 'timer' | 'tasks'; label: string }[] = [
   { id: 'clock', label: 'Clock' },
   { id: 'weather', label: 'Weather' },
@@ -38,6 +50,8 @@ export function SettingsDialog({ onClose }: Props) {
   const { visibility, toggleWidget } = useWidgetVisibility()
   const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(settings.weatherRefreshMinutes)
+  const [weatherUnitSystem, setWeatherUnitSystem] = useState<WeatherUnitSystem>(settings.weatherUnitSystem)
+  const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(settings.weatherShowExtraDetails)
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
   const [customColors, setCustomColors] = useState<CustomColors>(
@@ -63,6 +77,8 @@ export function SettingsDialog({ onClose }: Props) {
     updateSettings({
       calendarUrls,
       weatherRefreshMinutes: weatherRefreshMin,
+      weatherUnitSystem,
+      weatherShowExtraDetails,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
       ...(settings.theme === 'custom' && { customColors }),
@@ -285,6 +301,33 @@ export function SettingsDialog({ onClose }: Props) {
               </label>
             </div>
             <p className={styles.hint}>Weather updates automatically using this interval. You can still refresh it manually anytime.</p>
+          </section>
+
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Weather Display</h3>
+            <div className={styles.segmented}>
+              {WEATHER_UNITS.map((unit) => (
+                <button
+                  key={unit.id}
+                  className={[styles.segment, weatherUnitSystem === unit.id ? styles.segmentActive : ''].join(' ')}
+                  onClick={() => setWeatherUnitSystem(unit.id)}
+                  aria-pressed={weatherUnitSystem === unit.id}
+                  type="button"
+                >
+                  {unit.label}
+                </button>
+              ))}
+            </div>
+            <div className={styles.widgetGrid}>
+              <button
+                className={[styles.widgetToggle, weatherShowExtraDetails ? styles.widgetVisible : ''].join(' ')}
+                onClick={() => setWeatherShowExtraDetails((value) => !value)}
+                type="button"
+              >
+                {weatherShowExtraDetails ? <Eye size={14} /> : <EyeOff size={14} />}
+                <span>Show extra weather details</span>
+              </button>
+            </div>
           </section>
 
           {/* Pomodoro */}

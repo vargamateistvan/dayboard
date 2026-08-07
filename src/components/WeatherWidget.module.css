@@ -68,6 +68,10 @@
   align-items: start;
 }
 
+.contentFull {
+  grid-template-columns: 1fr;
+}
+
 .summary {
   display: flex;
   flex-direction: column;

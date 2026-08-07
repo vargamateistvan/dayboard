@@ -1,6 +1,7 @@
 export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
+export type WeatherUnitSystem = 'metric' | 'imperial'
 
 export interface CustomColors {
   primary: string
@@ -17,6 +18,8 @@ export interface Settings {
   fontPreset: FontPreset
   calendarUrls: string[]
   weatherRefreshMinutes: number
+  weatherUnitSystem: WeatherUnitSystem
+  weatherShowExtraDetails: boolean
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -86,6 +89,8 @@ export const DEFAULT_SETTINGS: Settings = {
   fontPreset: 'space-grotesk',
   calendarUrls: [],
   weatherRefreshMinutes: 10,
+  weatherUnitSystem: 'metric',
+  weatherShowExtraDetails: true,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -137,6 +142,18 @@ function normalizeWeatherRefreshMinutes(value: unknown): number {
   return Math.max(1, Math.round(value))
 }
 
+function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
+  return value === 'imperial' ? 'imperial' : 'metric'
+}
+
+function normalizeWeatherShowExtraDetails(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    return DEFAULT_SETTINGS.weatherShowExtraDetails
+  }
+
+  return value
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -148,6 +165,8 @@ export function loadSettings(): Settings {
       fontPreset: normalizeFontPreset((parsed as { fontPreset?: unknown }).fontPreset),
       calendarUrls: normalizeCalendarUrls(parsed.calendarUrls, parsed.calendarUrl),
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes((parsed as { weatherRefreshMinutes?: unknown }).weatherRefreshMinutes),
+      weatherUnitSystem: normalizeWeatherUnitSystem((parsed as { weatherUnitSystem?: unknown }).weatherUnitSystem),
+      weatherShowExtraDetails: normalizeWeatherShowExtraDetails((parsed as { weatherShowExtraDetails?: unknown }).weatherShowExtraDetails),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

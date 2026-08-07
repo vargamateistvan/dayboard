@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
 import styles from "./WeatherWidget.module.css";
+import type { WeatherUnitSystem } from "../lib/settings";
 
 interface WeatherData {
   temperature: number;
@@ -110,6 +111,14 @@ function formatWindDirection(degrees: number | null) {
   return `${directions[index]} (${Math.round(degrees)}°)`;
 }
 
+function getTemperatureUnit(unitSystem: WeatherUnitSystem) {
+  return unitSystem === "imperial" ? "°F" : "°C";
+}
+
+function getWindUnit(unitSystem: WeatherUnitSystem) {
+  return unitSystem === "imperial" ? "mph" : "km/h";
+}
+
 function parseOpenMeteoTime(value: string, utcOffsetSeconds: number | null) {
   const match = value.match(
     /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/,
@@ -175,8 +184,9 @@ function formatLastRefresh(lastRefreshedAt: number, now: number): string {
   return `Updated ${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 }
 
-async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=celsius&wind_speed_unit=kmh&forecast_days=1`;
+async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSystem): Promise<WeatherData> {
+  const isImperial = unitSystem === "imperial";
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&forecast_days=1`;
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
 
   const [weatherRes, geoRes] = await Promise.all([
@@ -263,7 +273,7 @@ export function WeatherWidget() {
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         try {
-          const result = await fetchWeather(coords.latitude, coords.longitude);
+          const result = await fetchWeather(coords.latitude, coords.longitude, settings.weatherUnitSystem);
           setData(result);
           setLastRefreshedAt(Date.now());
           setNow(Date.now());
@@ -278,7 +288,7 @@ export function WeatherWidget() {
         setLoading(false);
       },
     );
-  }, []);
+  }, [settings.weatherUnitSystem]);
 
   useEffect(() => {
     load();
@@ -298,6 +308,8 @@ export function WeatherWidget() {
     [lastRefreshedAt, now],
   );
   const windDirection = data ? formatWindDirection(data.windDirection) : null;
+  const temperatureUnit = getTemperatureUnit(settings.weatherUnitSystem);
+  const windUnit = getWindUnit(settings.weatherUnitSystem);
   const sunrise = data
     ? formatTime(data.sunrise, data.timezone, data.utcOffsetSeconds)
     : null;
@@ -332,13 +344,17 @@ export function WeatherWidget() {
       )}
       {!loading && error && <div className={styles.error}>{error}</div>}
       {!loading && !error && data && info && (
-        <div className={styles.content}>
+        <div
+          className={`${styles.content} ${
+            settings.weatherShowExtraDetails ? "" : styles.contentFull
+          }`}
+        >
           <div className={styles.summary}>
             <div className={styles.temp}>
               <span className={styles.weatherIcon}>
                 <WeatherIcon name={info.icon} size={40} />
               </span>
-              <span className={styles.degrees}>{data.temperature}°C</span>
+              <span className={styles.degrees}>{data.temperature}{temperatureUnit}</span>
             </div>
             <div className={styles.condition}>{info.label}</div>
             <div className={styles.location}>
@@ -348,16 +364,17 @@ export function WeatherWidget() {
             <div className={styles.todayForecast}>
               <span className={styles.forecastLabel}>Today forecast:</span>
               <span>
-                H {data.todayHigh ?? "—"}°C · L {data.todayLow ?? "—"}°C · Rain{" "}
+              H {data.todayHigh ?? "—"}{temperatureUnit} · L {data.todayLow ?? "—"}{temperatureUnit} · Rain{" "}
                 {data.todayRainChance ?? "—"}%
               </span>
             </div>
           </div>
-          <div className={styles.detailsGrid}>
+          {settings.weatherShowExtraDetails && (
+            <div className={styles.detailsGrid}>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>Feels like</span>
               <span className={styles.detailValue}>
-                {data.apparentTemperature ?? "—"}°C
+              {data.apparentTemperature ?? "—"}{temperatureUnit}
               </span>
             </div>
             <div className={styles.detail}>
@@ -375,7 +392,7 @@ export function WeatherWidget() {
                 Wind
               </span>
               <span className={styles.detailValue}>
-                {data.windSpeed ?? "—"} km/h
+                {data.windSpeed ?? "—"} {windUnit}
                 {windDirection ? ` · ${windDirection}` : ""}
               </span>
             </div>
@@ -409,7 +426,8 @@ export function WeatherWidget() {
               </span>
               <span className={styles.detailValue}>{data.uvIndex ?? "—"}</span>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -43,6 +43,8 @@ describe('settings persistence', () => {
       fontPreset: 'orbitron' as const,
       calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
       weatherRefreshMinutes: 15,
+      weatherUnitSystem: 'imperial' as const,
+      weatherShowExtraDetails: false,
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
       customColors: DEFAULT_SETTINGS.customColors,
@@ -59,6 +61,16 @@ describe('settings persistence', () => {
   it('falls back to default weather refresh minutes when saved value is invalid', () => {
     localStorage.setItem('dayboard:settings', JSON.stringify({ weatherRefreshMinutes: 'fast' }))
     expect(loadSettings().weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
+  })
+
+  it('falls back to default weather preferences when saved values are invalid', () => {
+    localStorage.setItem(
+      'dayboard:settings',
+      JSON.stringify({ weatherUnitSystem: 'kelvin', weatherShowExtraDetails: 'nope' }),
+    )
+    const loaded = loadSettings()
+    expect(loaded.weatherUnitSystem).toBe(DEFAULT_SETTINGS.weatherUnitSystem)
+    expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
   })
 })
 
