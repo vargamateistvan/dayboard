@@ -5,6 +5,7 @@ export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pi
 export interface CustomColors {
   primary: string
   primaryHover: string
+  background: string
   secondary?: string
 }
 
@@ -78,6 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
   customColors: {
     primary: '#4f46e5',
     primaryHover: '#4338ca',
+    background: '#0f172a',
   },
 }
 
@@ -160,6 +162,7 @@ export function applyTheme(settings: Settings): void {
   if (settings.theme === 'custom' && settings.customColors) {
     document.documentElement.style.setProperty('--color-accent', settings.customColors.primary)
     document.documentElement.style.setProperty('--color-accent-hover', settings.customColors.primaryHover)
+    document.documentElement.style.setProperty('--color-custom-bg', settings.customColors.background)
   }
 
   document.documentElement.setAttribute('data-theme', settings.theme)

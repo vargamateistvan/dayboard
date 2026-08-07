@@ -7,20 +7,20 @@
   --color-border: #d0d0d0;
   --color-text: #1a1a1a;
   --color-text-muted: #666666;
-  /* --color-accent and --color-accent-hover are set via JS */
+  /* --color-accent, --color-accent-hover, and --color-custom-bg are set via JS */
   --color-accent-text: #ffffff;
   --color-danger: #dc2626;
   --color-success: #16a34a;
 }
 
 [data-theme='custom'][data-color-scheme='dark'] {
-  --color-bg: #0a0a0a;
+  --color-bg: var(--color-custom-bg, #0a0a0a);
   --color-surface: #1a1a1a;
   --color-surface-alt: #2d2d2d;
   --color-border: #404040;
   --color-text: #f5f5f5;
   --color-text-muted: #999999;
-  /* --color-accent and --color-accent-hover are set via JS */
+  /* --color-accent, --color-accent-hover, and --color-custom-bg are set via JS */
   --color-accent-text: #ffffff;
   --color-danger: #f87171;
   --color-success: #4ade80;
