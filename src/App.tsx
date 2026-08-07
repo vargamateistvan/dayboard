@@ -18,6 +18,7 @@ import './themes/futuristic.css'
 import './themes/nature.css'
 import './themes/ocean.css'
 import './themes/sunset.css'
+import './themes/custom.css'
 import styles from './App.module.css'
 
 function Dashboard() {

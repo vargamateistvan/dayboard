@@ -1,6 +1,12 @@
 export type ColorScheme = 'light' | 'dark' | 'system'
-export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset'
+export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
+
+export interface CustomColors {
+  primary: string
+  primaryHover: string
+  secondary?: string
+}
 
 export interface Settings {
   theme: Theme
@@ -9,6 +15,7 @@ export interface Settings {
   calendarUrls: string[]
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
+  customColors?: CustomColors
 }
 
 export const FONT_PRESET_OPTIONS: ReadonlyArray<{
@@ -68,6 +75,10 @@ export const DEFAULT_SETTINGS: Settings = {
   calendarUrls: [],
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
+  customColors: {
+    primary: '#4f46e5',
+    primaryHover: '#4338ca',
+  },
 }
 
 const STORAGE_KEY = 'dayboard:settings'
@@ -143,6 +154,12 @@ export function applyTheme(settings: Settings): void {
   if (selectedFontPreset) {
     document.documentElement.style.setProperty('--font-family', selectedFontPreset.fontFamily)
     document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono)
+  }
+
+  // Apply custom colors if theme is custom
+  if (settings.theme === 'custom' && settings.customColors) {
+    document.documentElement.style.setProperty('--color-accent', settings.customColors.primary)
+    document.documentElement.style.setProperty('--color-accent-hover', settings.customColors.primaryHover)
   }
 
   document.documentElement.setAttribute('data-theme', settings.theme)

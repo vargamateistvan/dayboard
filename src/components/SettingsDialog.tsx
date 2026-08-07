@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme } from '../lib/settings'
+import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme, type CustomColors } from '../lib/settings'
 import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
@@ -12,6 +12,7 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
   { id: 'nature',     label: 'Nature',     icon: <Leaf size={16} /> },
   { id: 'ocean',      label: 'Ocean',      icon: <Waves size={16} /> },
   { id: 'sunset',     label: 'Sunset',     icon: <Palette size={16} /> },
+  { id: 'custom',     label: 'Custom',     icon: <Palette size={16} /> },
 ]
 
 const COLOR_SCHEMES: { id: ColorScheme; label: string; icon: React.ReactNode }[] = [
@@ -38,6 +39,9 @@ export function SettingsDialog({ onClose }: Props) {
   const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
+  const [customColors, setCustomColors] = useState<CustomColors>(
+    settings.customColors || { primary: '#4f46e5', primaryHover: '#4338ca' }
+  )
 
   const updateCalendarUrl = (index: number, value: string) => {
     setCalendarUrls((prev) => prev.map((calendarUrl, currentIndex) => currentIndex === index ? value : calendarUrl))
@@ -59,6 +63,7 @@ export function SettingsDialog({ onClose }: Props) {
       calendarUrls,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
+      ...(settings.theme === 'custom' && { customColors }),
     })
     onClose()
   }
@@ -126,6 +131,44 @@ export function SettingsDialog({ onClose }: Props) {
               ))}
             </div>
           </section>
+
+          {/* Custom Colors (shown when custom theme is selected) */}
+          {settings.theme === 'custom' && (
+           <section className={styles.section}>
+             <h3 className={styles.sectionTitle}>Custom Colors</h3>
+             <div className={styles.colorPickerGrid}>
+               <div className={styles.colorInputGroup}>
+                 <label className={styles.colorLabel}>
+                   Primary Color
+                   <div className={styles.colorInputWrapper}>
+                     <input
+                       type="color"
+                       className={styles.colorInput}
+                       value={customColors.primary}
+                       onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
+                     />
+                     <span className={styles.colorValue}>{customColors.primary}</span>
+                   </div>
+                 </label>
+               </div>
+               <div className={styles.colorInputGroup}>
+                 <label className={styles.colorLabel}>
+                   Hover Color
+                   <div className={styles.colorInputWrapper}>
+                     <input
+                       type="color"
+                       className={styles.colorInput}
+                       value={customColors.primaryHover}
+                       onChange={(e) => setCustomColors({ ...customColors, primaryHover: e.target.value })}
+                     />
+                     <span className={styles.colorValue}>{customColors.primaryHover}</span>
+                   </div>
+                 </label>
+               </div>
+             </div>
+             <p className={styles.hint}>Choose your custom accent colors. They will be applied to buttons, links, and interactive elements.</p>
+           </section>
+          )}
 
           {/* Widgets */}
           <section className={styles.section}>

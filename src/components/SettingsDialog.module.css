@@ -369,3 +369,59 @@
   color: var(--accent-primary);
   font-weight: 600;
 }
+
+/* Color picker styles */
+.colorPickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.colorInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.colorLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.colorInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--color-surface-alt);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  transition: border-color var(--transition-fast);
+}
+
+.colorInputWrapper:focus-within {
+  border-color: var(--color-accent);
+}
+
+.colorInput {
+  width: 56px;
+  height: 40px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.colorValue {
+  font-size: var(--font-size-sm);
+  font-family: monospace;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  flex: 1;
+}
