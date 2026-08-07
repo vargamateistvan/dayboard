@@ -47,6 +47,17 @@ DTEND;VALUE=DATE:${TOMORROW_Y}${TOMORROW_M}${TOMORROW_D}
 END:VEVENT
 END:VCALENDAR`
 
+const RECURRING_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:recurring-team-sync
+SUMMARY:Recurring Team Sync
+DTSTART:${Y}${M}${D}T090000Z
+DTEND:${Y}${M}${D}T093000Z
+RRULE:FREQ=DAILY
+END:VEVENT
+END:VCALENDAR`
+
 describe('CalendarWidget', () => {
   it('shows "no calendar connected" when no URL is set', () => {
     renderWithSettings([])
@@ -80,6 +91,17 @@ describe('CalendarWidget', () => {
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Focus Day')).toBeInTheDocument()
     expect(screen.getByText('All day')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('renders recurring events for today', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => RECURRING_ICS }),
+    )
+    renderWithSettings(['https://example.com/cal.ics'])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText('Recurring Team Sync')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 

@@ -1,3 +1,5 @@
+import ICAL, { type Event as ICalEvent } from 'ical.js'
+
 export interface CalendarEvent {
   title: string
   start: Date
@@ -17,111 +19,106 @@ function isToday(start: Date, end: Date): boolean {
   return start <= endOfDay && end >= startOfDay
 }
 
-interface IcsProperty {
-  name: string
-  params: string[]
-  value: string
+function toCalendarEvent(title: string, start: Date, end: Date, allDay: boolean): CalendarEvent | null {
+  return isToday(start, end) ? { title, start, end, allDay } : null
 }
 
-function parseIcsProperty(line: string): IcsProperty | null {
-  const separatorIndex = line.indexOf(':')
-  if (separatorIndex === -1) return null
-
-  const propertyKey = line.slice(0, separatorIndex)
-  const value = line.slice(separatorIndex + 1)
-  const [name, ...params] = propertyKey.split(';')
-
-  return {
-    name,
-    params,
-    value,
-  }
+function isCancelledEvent(event: ICalEvent): boolean {
+  return event.component.getFirstPropertyValue('status') === 'CANCELLED'
 }
 
-// Parse ICS datetime string like 20240807T143000Z or 20240807
-function parseIcsDate(raw: string): Date {
-  const clean = raw.replace(/^TZID=[^:]+:/, '').trim()
-  if (clean.includes('T')) {
-    // datetime
-    const [datePart, timePart] = clean.split('T')
-    const isUtc = timePart.endsWith('Z')
-    const tp = timePart.replace('Z', '')
-    const year = parseInt(datePart.slice(0, 4))
-    const month = parseInt(datePart.slice(4, 6)) - 1
-    const day = parseInt(datePart.slice(6, 8))
-    const hour = parseInt(tp.slice(0, 2))
-    const min = parseInt(tp.slice(2, 4))
-    const sec = parseInt(tp.slice(4, 6) || '0')
-    return isUtc
-      ? new Date(Date.UTC(year, month, day, hour, min, sec))
-      : new Date(year, month, day, hour, min, sec)
-  } else {
-    // date-only (all-day)
-    const year = parseInt(clean.slice(0, 4))
-    const month = parseInt(clean.slice(4, 6)) - 1
-    const day = parseInt(clean.slice(6, 8))
-    return new Date(year, month, day)
+function parseRecurringEvent(event: ICalEvent, startOfDay: Date, endOfDay: Date): CalendarEvent[] {
+  const iterator = event.iterator()
+  const events: CalendarEvent[] = []
+
+  for (let iterations = 0; iterations < 5000; iterations += 1) {
+    const occurrenceTime = iterator.next()
+    if (!occurrenceTime) break
+
+    const details = event.getOccurrenceDetails(occurrenceTime)
+    const start = details.startDate.toJSDate()
+    if (start > endOfDay) break
+    if (start < startOfDay) continue
+
+    if (isCancelledEvent(details.item)) {
+      continue
+    }
+
+    const nextEvent = toCalendarEvent(
+      details.item.summary,
+      start,
+      details.endDate.toJSDate(),
+      details.startDate.isDate,
+    )
+
+    if (nextEvent) {
+      events.push(nextEvent)
+    }
   }
+
+  return events
 }
 
 export function parseIcs(text: string): CalendarEvent[] {
   if (!text || !text.includes('BEGIN:VEVENT')) return []
 
-  const events: CalendarEvent[] = []
-  // Unfold lines (RFC 5545 line folding: CRLF + space/tab = continuation)
-  const unfolded = text.replace(/\r?\n[ \t]/g, '')
-  const lines = unfolded.split(/\r?\n/)
+  try {
+    const calendar = new ICAL.Component(ICAL.parse(text))
+    const sourceEvents = calendar.getAllSubcomponents('vevent').map((component) => new ICAL.Event(component))
+    const eventsByUid = new Map<string, ICalEvent>()
+    const deferredExceptions: ICalEvent[] = []
+    const calendarEvents: CalendarEvent[] = []
+    const { startOfDay, endOfDay } = todayRange()
 
-  let inEvent = false
-  let title = ''
-  let startRaw = ''
-  let endRaw = ''
-  let allDay = false
-
-  for (const line of lines) {
-    if (line === 'BEGIN:VEVENT') {
-      inEvent = true
-      title = ''
-      startRaw = ''
-      endRaw = ''
-      allDay = false
-      continue
-    }
-    if (line === 'END:VEVENT') {
-      inEvent = false
-      if (startRaw) {
-        try {
-          const start = parseIcsDate(startRaw)
-          const end = endRaw
-            ? parseIcsDate(endRaw)
-            : allDay
-              ? new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1)
-              : new Date(start.getTime() + 3600_000)
-          if (isToday(start, end)) {
-            events.push({ title, start, end, allDay })
-          }
-        } catch {
-          // skip malformed events
+    for (const [index, event] of sourceEvents.entries()) {
+      if (event.isRecurrenceException()) {
+        const parentEvent = event.uid ? eventsByUid.get(event.uid) : undefined
+        if (parentEvent) {
+          parentEvent.relateException(event)
+        } else {
+          deferredExceptions.push(event)
         }
+        continue
       }
-      continue
-    }
-    if (!inEvent) continue
 
-    const property = parseIcsProperty(line)
-    if (!property) continue
-
-    if (property.name === 'SUMMARY') {
-      title = property.value
-    } else if (property.name === 'DTSTART') {
-      startRaw = property.value
-      allDay = property.params.some((param) => param.toUpperCase() === 'VALUE=DATE') || !property.value.includes('T')
-    } else if (property.name === 'DTEND') {
-      endRaw = property.value
+      eventsByUid.set(event.uid || `event-${index}`, event)
     }
+
+    for (const event of deferredExceptions) {
+      const parentEvent = event.uid ? eventsByUid.get(event.uid) : undefined
+      if (parentEvent) {
+        parentEvent.relateException(event)
+      } else {
+        eventsByUid.set(`${event.uid}:${event.recurrenceId?.toString() ?? 'exception'}`, event)
+      }
+    }
+
+    for (const event of eventsByUid.values()) {
+      if (event.isRecurring()) {
+        calendarEvents.push(...parseRecurringEvent(event, startOfDay, endOfDay))
+        continue
+      }
+
+      if (isCancelledEvent(event)) {
+        continue
+      }
+
+      const nextEvent = toCalendarEvent(
+        event.summary,
+        event.startDate.toJSDate(),
+        event.endDate.toJSDate(),
+        event.startDate.isDate,
+      )
+
+      if (nextEvent) {
+        calendarEvents.push(nextEvent)
+      }
+    }
+
+    return calendarEvents.sort((a, b) => a.start.getTime() - b.start.getTime())
+  } catch {
+    return []
   }
-
-  return events.sort((a, b) => a.start.getTime() - b.start.getTime())
 }
 
 export function parseCsv(text: string): CalendarEvent[] {

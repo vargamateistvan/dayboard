@@ -63,6 +63,48 @@ DTSTART;VALUE=DATE;X-MICROSOFT-CDO-ALLDAYEVENT=TRUE:20240807
 END:VEVENT
 END:VCALENDAR`
 
+const RECURRING_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:weekly-standup
+SUMMARY:Recurring Stand-up
+DTSTART:20240731T090000Z
+DTEND:20240731T093000Z
+RRULE:FREQ=WEEKLY;BYDAY=WE
+END:VEVENT
+END:VCALENDAR`
+
+const RECURRING_WITH_EXDATE_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:daily-sync
+SUMMARY:Daily Sync
+DTSTART:20240801T090000Z
+DTEND:20240801T093000Z
+RRULE:FREQ=DAILY
+EXDATE:20240807T090000Z
+END:VEVENT
+END:VCALENDAR`
+
+const RECURRING_WITH_CANCELLED_EXCEPTION_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:daily-cancelled
+SUMMARY:Cancelled Today
+DTSTART:20240801T090000Z
+DTEND:20240801T093000Z
+RRULE:FREQ=DAILY
+END:VEVENT
+BEGIN:VEVENT
+UID:daily-cancelled
+RECURRENCE-ID:20240807T090000Z
+STATUS:CANCELLED
+DTSTART:20240807T090000Z
+DTEND:20240807T093000Z
+SUMMARY:Cancelled Today
+END:VEVENT
+END:VCALENDAR`
+
 const TODAY_CSV = `title,start,end
 Stand-up,2024-08-07T09:00:00,2024-08-07T09:30:00`
 
@@ -101,6 +143,21 @@ describe('parseCalendarFeed — ICS', () => {
     expect(events).toHaveLength(1)
     expect(events[0].title).toBe('Bank Holiday')
     expect(events[0].allDay).toBe(true)
+  })
+
+  it('expands recurring events for today', () => {
+    const events = parseIcs(RECURRING_ICS)
+    expect(events).toHaveLength(1)
+    expect(events[0].title).toBe('Recurring Stand-up')
+    expect(events[0].allDay).toBe(false)
+  })
+
+  it('omits recurring occurrences excluded by EXDATE', () => {
+    expect(parseIcs(RECURRING_WITH_EXDATE_ICS)).toEqual([])
+  })
+
+  it('omits recurring occurrences cancelled by exception records', () => {
+    expect(parseIcs(RECURRING_WITH_CANCELLED_EXCEPTION_ICS)).toEqual([])
   })
 
   it('returns events sorted by start time', () => {
