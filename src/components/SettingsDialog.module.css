@@ -496,3 +496,92 @@
   outline: none;
   box-shadow: 0 0 0 3px var(--color-accent);
 }
+
+@media (max-width: 700px) {
+  .backdrop {
+    padding: max(0.5rem, env(safe-area-inset-top, 0px))
+      max(0.5rem, env(safe-area-inset-right, 0px))
+      max(0.5rem, env(safe-area-inset-bottom, 0px))
+      max(0.5rem, env(safe-area-inset-left, 0px));
+  }
+
+  .dialog {
+    max-height: calc(100dvh - 1rem);
+    border-radius: var(--radius-lg);
+  }
+
+  .header {
+    padding: var(--space-4);
+  }
+
+  .body {
+    padding: var(--space-4);
+    gap: var(--space-5);
+    overflow-x: hidden;
+  }
+
+  .footer {
+    padding: var(--space-3) var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .btnPrimary,
+  .btnGhost {
+    flex: 1 1 calc(50% - 0.5rem);
+    justify-content: center;
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .themeGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fontGrid,
+  .colorPickerGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .segmented {
+    width: 100%;
+  }
+
+  .segment {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding: var(--space-2) var(--space-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .widgetGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .calendarRow {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .calendarUrlInput {
+    flex-basis: 100%;
+  }
+
+  .calendarColorField {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .intervalRow {
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+
+  .numberInput {
+    width: 100%;
+  }
+
+  .colorSwatchGrid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
