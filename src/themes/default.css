@@ -1,0 +1,38 @@
+/* ============================================================
+   Theme: Default — Clean modern
+   ============================================================ */
+/* ── Default theme: ultra-clean, time.is-style ── */
+[data-theme='default'][data-color-scheme='light'],
+[data-theme='default'] {
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f7f7f7;
+  --color-border: #e8e8e8;
+  --color-text: #111111;
+  --color-text-muted: #999999;
+  --color-accent: #0066ff;
+  --color-accent-hover: #0052cc;
+  --color-accent-text: #ffffff;
+  --color-danger: #e53e3e;
+  --color-success: #38a169;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
+}
+
+[data-theme='default'][data-color-scheme='dark'] {
+  --color-bg: #0d0d0d;
+  --color-surface: #0d0d0d;
+  --color-surface-alt: #1a1a1a;
+  --color-border: #2a2a2a;
+  --color-text: #f0f0f0;
+  --color-text-muted: #666666;
+  --color-accent: #4d8fff;
+  --color-accent-hover: #6aa3ff;
+  --color-accent-text: #0d0d0d;
+  --color-danger: #fc8181;
+  --color-success: #68d391;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+}

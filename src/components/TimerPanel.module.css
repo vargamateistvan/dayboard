@@ -1,0 +1,182 @@
+/* ── Timer Panel: flat, no card ───────────────────────────── */
+.panel {
+  /* bare — no background/border */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Hairline tab row */
+.tabs {
+  display: flex;
+  gap: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: clamp(0.75rem, 2vh, 2rem);
+}
+
+.tab {
+  padding-bottom: var(--space-3);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap hairline */
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tab:hover {
+  color: var(--color-text);
+}
+
+.activeTab {
+  color: var(--color-text);
+  border-bottom-color: var(--color-text);
+}
+
+.content {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* Timer body: left-aligned like everything else */
+.timerBody {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.5vh, 1.5rem);
+}
+
+/* Same large type as weather degrees */
+.display {
+  /*
+    Timer row = 1.5fr ≈ 27% of screen height.
+    14dvh sits comfortably in that row with room for tabs + button.
+  */
+  font-size: clamp(2.5rem, max(10vw, 14dvh), 13rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-family-mono);
+  color: var(--color-text);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.done {
+  color: var(--color-accent);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Minimal inline controls */
+.controls {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.btnPrimary,
+.btnSecondary,
+.btnGhost {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.btnPrimary {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.btnPrimary:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btnSecondary:hover {
+  border-color: var(--color-text-muted);
+}
+
+.btnGhost {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+}
+
+.btnGhost:hover {
+  color: var(--color-text);
+}
+
+/* Countdown input */
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.inputLabel {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.numberInput {
+  width: 72px;
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-text);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.numberInput:focus {
+  outline: none;
+  border-bottom-color: var(--color-text);
+}
+
+/* Pomodoro phase label */
+.phaseBadge {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.phaseBadge[data-phase='work'] {
+  color: var(--color-accent);
+}
+
+.phaseBadge[data-phase='break'] {
+  color: var(--color-success);
+}
+
+.sessions {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}

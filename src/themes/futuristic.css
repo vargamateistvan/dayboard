@@ -1,0 +1,44 @@
+/* ============================================================
+   Theme: Futuristic — neon / glassmorphism
+   ============================================================ */
+[data-theme='futuristic'] {
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+[data-theme='futuristic'][data-color-scheme='light'],
+[data-theme='futuristic'] {
+  --color-bg: #0a0a1a;
+  --color-surface: rgba(255,255,255,0.07);
+  --color-surface-alt: rgba(255,255,255,0.12);
+  --color-border: rgba(100,200,255,0.2);
+  --color-text: #e0f0ff;
+  --color-text-muted: #7ab8d4;
+  --color-accent: #00d4ff;
+  --color-accent-hover: #00f0ff;
+  --color-accent-text: #000000;
+  --color-danger: #ff2d78;
+  --color-success: #00ffaa;
+  --shadow-sm: 0 0 8px rgba(0,212,255,0.2);
+  --shadow-md: 0 0 20px rgba(0,212,255,0.3);
+  --shadow-lg: 0 0 40px rgba(0,212,255,0.4);
+}
+
+[data-theme='futuristic'][data-color-scheme='dark'] {
+  --color-bg: #04040f;
+  --color-surface: rgba(255,255,255,0.05);
+  --color-surface-alt: rgba(255,255,255,0.09);
+  --color-border: rgba(180,100,255,0.25);
+  --color-text: #f0e0ff;
+  --color-text-muted: #9b7ac4;
+  --color-accent: #bf5fff;
+  --color-accent-hover: #d080ff;
+  --color-accent-text: #000000;
+  --color-danger: #ff2d78;
+  --color-success: #00ffaa;
+  --shadow-sm: 0 0 8px rgba(191,95,255,0.2);
+  --shadow-md: 0 0 20px rgba(191,95,255,0.3);
+  --shadow-lg: 0 0 40px rgba(191,95,255,0.4);
+}

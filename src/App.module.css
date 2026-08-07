@@ -1,0 +1,96 @@
+/* ── Full-screen masonry layout ─────────────────────────────── */
+.app {
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Floating settings button — barely visible until hovered */
+.settingsBtn {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.5rem;
+  z-index: 200;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  opacity: 0.3;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: opacity 200ms ease, color 150ms ease;
+  line-height: 1;
+}
+
+.settingsBtn:hover {
+  opacity: 1;
+  color: var(--color-text);
+}
+
+/*
+  3 rows that together fill 100dvh:
+  - Clock row gets 2 shares (dominant)
+  - Weather/Calendar row gets 1 share
+  - Timer row gets 1.5 shares
+*/
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 2fr 1fr 1.5fr;
+  padding: clamp(1.5rem, 3vh, 3.5rem) clamp(2rem, 5vw, 8rem);
+  column-gap: clamp(2rem, 4vw, 6rem);
+  row-gap: clamp(0.75rem, 2vh, 2rem);
+  max-width: 1800px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Clock: full width top row — content sticks to bottom of cell */
+.cellClock {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+/* Weather + Calendar share row 2 */
+.cellWeather,
+.cellCalendar {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+/* Timer: full width bottom row */
+.cellTimer {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+@media (max-width: 700px) {
+  .app {
+    height: auto;
+    overflow: auto;
+  }
+
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    padding: 2rem 1.5rem 3rem;
+    row-gap: 2rem;
+  }
+
+  .cellClock,
+  .cellTimer {
+    grid-column: 1;
+  }
+}

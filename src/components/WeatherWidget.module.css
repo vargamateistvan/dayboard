@@ -1,0 +1,80 @@
+/* ── Weather: flat, no card ───────────────────────────────── */
+.widget {
+  /* bare — no background, no border */
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: clamp(0.5rem, 1vw, 1rem);
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.refresh {
+  font-size: var(--font-size-base);
+  color: var(--color-text-muted);
+  opacity: 0.45;
+  padding: 2px var(--space-1);
+  transition: opacity var(--transition-fast);
+  line-height: 1;
+}
+
+.refresh:hover {
+  opacity: 1;
+}
+
+.loading,
+.error {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.temp {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.emoji {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1;
+}
+
+.degrees {
+  font-size: clamp(2.5rem, 8vw, 10rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.condition {
+  font-size: clamp(0.9rem, 1.6vw, 1.2rem);
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.location {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}

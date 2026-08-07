@@ -1,0 +1,92 @@
+/* ── Calendar: flat, no card ──────────────────────────────── */
+.widget {
+  /* bare */
+}
+
+.header {
+  margin-bottom: clamp(0.5rem, 1vw, 1rem);
+}
+
+.title {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.loading,
+.empty,
+.error {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: var(--font-size-sm);
+}
+
+.hint {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  font-size: var(--font-size-xs);
+  margin-top: var(--space-1);
+}
+
+.list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Separator line only — no card/box */
+.event {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-3);
+  transition: opacity var(--transition-fast);
+}
+
+.event:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.next {
+  /* highlighted with accent color text instead of a border/badge */
+}
+
+.past {
+  opacity: 0.4;
+}
+
+.eventTime {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.eventTitle {
+  font-size: clamp(0.95rem, 1.5vw, 1.15rem);
+  font-weight: 500;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.next .eventTitle {
+  color: var(--color-accent);
+}
+
+.nextBadge {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-accent);
+  opacity: 0.8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}

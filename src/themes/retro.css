@@ -1,0 +1,47 @@
+/* ============================================================
+   Theme: Retro — 80s CRT / terminal aesthetic
+   ============================================================ */
+[data-theme='retro'] {
+  --font-family: 'Courier New', Courier, monospace;
+  --font-family-mono: 'Courier New', Courier, monospace;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-full: 0px;
+}
+
+[data-theme='retro'][data-color-scheme='light'],
+[data-theme='retro'] {
+  --color-bg: #1a1a00;
+  --color-surface: #0d0d00;
+  --color-surface-alt: #2a2a00;
+  --color-border: #4a4a00;
+  --color-text: #ffb300;
+  --color-text-muted: #996800;
+  --color-accent: #ffb300;
+  --color-accent-hover: #ffd700;
+  --color-accent-text: #000000;
+  --color-danger: #ff4444;
+  --color-success: #00ff00;
+  --shadow-sm: 0 0 4px rgba(255,179,0,0.3);
+  --shadow-md: 0 0 12px rgba(255,179,0,0.4);
+  --shadow-lg: 0 0 24px rgba(255,179,0,0.5);
+}
+
+[data-theme='retro'][data-color-scheme='dark'] {
+  --color-bg: #000d00;
+  --color-surface: #001400;
+  --color-surface-alt: #002000;
+  --color-border: #004400;
+  --color-text: #00ff41;
+  --color-text-muted: #008f11;
+  --color-accent: #00ff41;
+  --color-accent-hover: #00ff80;
+  --color-accent-text: #000000;
+  --color-danger: #ff4444;
+  --color-success: #00ff80;
+  --shadow-sm: 0 0 4px rgba(0,255,65,0.3);
+  --shadow-md: 0 0 12px rgba(0,255,65,0.4);
+  --shadow-lg: 0 0 24px rgba(0,255,65,0.5);
+}
