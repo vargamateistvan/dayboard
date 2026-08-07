@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { FONT_PRESET_OPTIONS, type Theme, type ColorScheme, type CustomColors } from '../lib/settings'
+import { getThemePalette } from '../lib/colorPalette'
 import { Globe, Monitor, Zap, Leaf, Waves, Palette, Type, Sun, Moon, SunMoon, X, Plus, Trash2, Eye, EyeOff } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
@@ -42,6 +43,13 @@ export function SettingsDialog({ onClose }: Props) {
   const [customColors, setCustomColors] = useState<CustomColors>(
     settings.customColors || { primary: '#4f46e5', primaryHover: '#4338ca', background: '#0f172a', fontColor: '#f5f5f5', secondaryFontColor: '#999999' }
   )
+  const [themePalette, setThemePalette] = useState<string[]>([])
+
+  // Generate color palette when theme changes
+  useEffect(() => {
+    const palette = getThemePalette()
+    setThemePalette(palette)
+  }, [settings.theme])
 
   const updateCalendarUrl = (index: number, value: string) => {
     setCalendarUrls((prev) => prev.map((calendarUrl, currentIndex) => currentIndex === index ? value : calendarUrl))
@@ -136,79 +144,153 @@ export function SettingsDialog({ onClose }: Props) {
           {settings.theme === 'custom' && (
            <section className={styles.section}>
              <h3 className={styles.sectionTitle}>Custom Colors</h3>
-             <div className={styles.colorPickerGrid}>
-               <div className={styles.colorInputGroup}>
-                 <label className={styles.colorLabel}>
-                   Primary Color
-                   <div className={styles.colorInputWrapper}>
-                     <input
-                       type="color"
-                       className={styles.colorInput}
-                       value={customColors.primary}
-                       onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
+             <p className={styles.hint}>Colors are generated from the current theme. Click a swatch to apply it, or use the color picker for custom colors.</p>
+             <div className={styles.colorPickerSection}>
+               {/* Primary Color */}
+               <div className={styles.colorOptionGroup}>
+                 <label className={styles.colorOptionLabel}>Primary Color</label>
+                 <div className={styles.colorSwatchGrid}>
+                   {themePalette.map((color) => (
+                     <button
+                       key={color}
+                       className={styles.colorSwatch}
+                       style={{
+                         backgroundColor: color,
+                         borderColor: customColors.primary === color ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.1)',
+                         borderWidth: customColors.primary === color ? '3px' : '2px',
+                       }}
+                       onClick={() => setCustomColors({ ...customColors, primary: color })}
+                       title={color}
                      />
-                     <span className={styles.colorValue}>{customColors.primary}</span>
-                   </div>
-                 </label>
+                   ))}
+                 </div>
+                 <div className={styles.colorInputWrapper}>
+                   <input
+                     type="color"
+                     className={styles.colorInput}
+                     value={customColors.primary}
+                     onChange={(e) => setCustomColors({ ...customColors, primary: e.target.value })}
+                   />
+                   <span className={styles.colorValue}>{customColors.primary}</span>
+                 </div>
                </div>
-               <div className={styles.colorInputGroup}>
-                 <label className={styles.colorLabel}>
-                   Hover Color
-                   <div className={styles.colorInputWrapper}>
-                     <input
-                       type="color"
-                       className={styles.colorInput}
-                       value={customColors.primaryHover}
-                       onChange={(e) => setCustomColors({ ...customColors, primaryHover: e.target.value })}
+
+               {/* Hover Color */}
+               <div className={styles.colorOptionGroup}>
+                 <label className={styles.colorOptionLabel}>Hover Color</label>
+                 <div className={styles.colorSwatchGrid}>
+                   {themePalette.map((color) => (
+                     <button
+                       key={color}
+                       className={styles.colorSwatch}
+                       style={{
+                         backgroundColor: color,
+                         borderColor: customColors.primaryHover === color ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.1)',
+                         borderWidth: customColors.primaryHover === color ? '3px' : '2px',
+                       }}
+                       onClick={() => setCustomColors({ ...customColors, primaryHover: color })}
+                       title={color}
                      />
-                     <span className={styles.colorValue}>{customColors.primaryHover}</span>
-                   </div>
-                 </label>
+                   ))}
+                 </div>
+                 <div className={styles.colorInputWrapper}>
+                   <input
+                     type="color"
+                     className={styles.colorInput}
+                     value={customColors.primaryHover}
+                     onChange={(e) => setCustomColors({ ...customColors, primaryHover: e.target.value })}
+                   />
+                   <span className={styles.colorValue}>{customColors.primaryHover}</span>
+                 </div>
                </div>
-               <div className={styles.colorInputGroup}>
-                 <label className={styles.colorLabel}>
-                   Background Color
-                   <div className={styles.colorInputWrapper}>
-                     <input
-                       type="color"
-                       className={styles.colorInput}
-                       value={customColors.background}
-                       onChange={(e) => setCustomColors({ ...customColors, background: e.target.value })}
+
+               {/* Background Color */}
+               <div className={styles.colorOptionGroup}>
+                 <label className={styles.colorOptionLabel}>Background Color</label>
+                 <div className={styles.colorSwatchGrid}>
+                   {themePalette.map((color) => (
+                     <button
+                       key={color}
+                       className={styles.colorSwatch}
+                       style={{
+                         backgroundColor: color,
+                         borderColor: customColors.background === color ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.1)',
+                         borderWidth: customColors.background === color ? '3px' : '2px',
+                       }}
+                       onClick={() => setCustomColors({ ...customColors, background: color })}
+                       title={color}
                      />
-                     <span className={styles.colorValue}>{customColors.background}</span>
-                   </div>
-                 </label>
+                   ))}
+                 </div>
+                 <div className={styles.colorInputWrapper}>
+                   <input
+                     type="color"
+                     className={styles.colorInput}
+                     value={customColors.background}
+                     onChange={(e) => setCustomColors({ ...customColors, background: e.target.value })}
+                   />
+                   <span className={styles.colorValue}>{customColors.background}</span>
+                 </div>
                </div>
-               <div className={styles.colorInputGroup}>
-                 <label className={styles.colorLabel}>
-                   Font Color
-                   <div className={styles.colorInputWrapper}>
-                     <input
-                       type="color"
-                       className={styles.colorInput}
-                       value={customColors.fontColor}
-                       onChange={(e) => setCustomColors({ ...customColors, fontColor: e.target.value })}
+
+               {/* Font Color */}
+               <div className={styles.colorOptionGroup}>
+                 <label className={styles.colorOptionLabel}>Font Color</label>
+                 <div className={styles.colorSwatchGrid}>
+                   {themePalette.map((color) => (
+                     <button
+                       key={color}
+                       className={styles.colorSwatch}
+                       style={{
+                         backgroundColor: color,
+                         borderColor: customColors.fontColor === color ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.1)',
+                         borderWidth: customColors.fontColor === color ? '3px' : '2px',
+                       }}
+                       onClick={() => setCustomColors({ ...customColors, fontColor: color })}
+                       title={color}
                      />
-                     <span className={styles.colorValue}>{customColors.fontColor}</span>
-                   </div>
-                 </label>
+                   ))}
+                 </div>
+                 <div className={styles.colorInputWrapper}>
+                   <input
+                     type="color"
+                     className={styles.colorInput}
+                     value={customColors.fontColor}
+                     onChange={(e) => setCustomColors({ ...customColors, fontColor: e.target.value })}
+                   />
+                   <span className={styles.colorValue}>{customColors.fontColor}</span>
+                 </div>
                </div>
-               <div className={styles.colorInputGroup}>
-                 <label className={styles.colorLabel}>
-                   Secondary Font Color
-                   <div className={styles.colorInputWrapper}>
-                     <input
-                       type="color"
-                       className={styles.colorInput}
-                       value={customColors.secondaryFontColor}
-                       onChange={(e) => setCustomColors({ ...customColors, secondaryFontColor: e.target.value })}
+
+               {/* Secondary Font Color */}
+               <div className={styles.colorOptionGroup}>
+                 <label className={styles.colorOptionLabel}>Secondary Font Color</label>
+                 <div className={styles.colorSwatchGrid}>
+                   {themePalette.map((color) => (
+                     <button
+                       key={color}
+                       className={styles.colorSwatch}
+                       style={{
+                         backgroundColor: color,
+                         borderColor: customColors.secondaryFontColor === color ? 'var(--color-accent)' : 'rgba(255, 255, 255, 0.1)',
+                         borderWidth: customColors.secondaryFontColor === color ? '3px' : '2px',
+                       }}
+                       onClick={() => setCustomColors({ ...customColors, secondaryFontColor: color })}
+                       title={color}
                      />
-                     <span className={styles.colorValue}>{customColors.secondaryFontColor}</span>
-                   </div>
-                 </label>
+                   ))}
+                 </div>
+                 <div className={styles.colorInputWrapper}>
+                   <input
+                     type="color"
+                     className={styles.colorInput}
+                     value={customColors.secondaryFontColor}
+                     onChange={(e) => setCustomColors({ ...customColors, secondaryFontColor: e.target.value })}
+                   />
+                   <span className={styles.colorValue}>{customColors.secondaryFontColor}</span>
+                 </div>
                </div>
              </div>
-             <p className={styles.hint}>Choose your custom accent colors, background, and font colors. They will be applied to buttons, links, interactive elements, and text throughout the app.</p>
            </section>
           )}
 
