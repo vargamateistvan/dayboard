@@ -1,0 +1,44 @@
+/* ============================================================
+   Theme: Sunset — warm dusk gradients
+   ============================================================ */
+[data-theme='sunset'] {
+  --radius-sm: 5px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}
+
+[data-theme='sunset'][data-color-scheme='light'],
+[data-theme='sunset'] {
+  --color-bg: #fff1e8;
+  --color-surface: #fff7f1;
+  --color-surface-alt: #ffe1cc;
+  --color-border: #f2b994;
+  --color-text: #3f1f15;
+  --color-text-muted: #8a5748;
+  --color-accent: #ef6b3b;
+  --color-accent-hover: #d8572c;
+  --color-accent-text: #ffffff;
+  --color-danger: #c93b3b;
+  --color-success: #3d9e5d;
+  --shadow-sm: 0 1px 4px rgba(107, 45, 26, 0.12);
+  --shadow-md: 0 4px 16px rgba(107, 45, 26, 0.16);
+  --shadow-lg: 0 8px 30px rgba(107, 45, 26, 0.22);
+}
+
+[data-theme='sunset'][data-color-scheme='dark'] {
+  --color-bg: #211018;
+  --color-surface: #311823;
+  --color-surface-alt: #4a2231;
+  --color-border: #7e4055;
+  --color-text: #ffe4d4;
+  --color-text-muted: #c79a89;
+  --color-accent: #ff8b52;
+  --color-accent-hover: #ffa874;
+  --color-accent-text: #2a120f;
+  --color-danger: #ff7e7e;
+  --color-success: #63d08a;
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.34);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.52);
+}

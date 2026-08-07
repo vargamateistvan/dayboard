@@ -1,0 +1,44 @@
+/* ============================================================
+   Theme: Ocean — cool marine blues
+   ============================================================ */
+[data-theme='ocean'] {
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 26px;
+}
+
+[data-theme='ocean'][data-color-scheme='light'],
+[data-theme='ocean'] {
+  --color-bg: #eaf7ff;
+  --color-surface: #f5fbff;
+  --color-surface-alt: #d8eefc;
+  --color-border: #9ccce8;
+  --color-text: #0f2c3f;
+  --color-text-muted: #4e7891;
+  --color-accent: #0f8ecf;
+  --color-accent-hover: #0b79b0;
+  --color-accent-text: #ffffff;
+  --color-danger: #d64141;
+  --color-success: #0f9d79;
+  --shadow-sm: 0 1px 4px rgba(11, 72, 106, 0.12);
+  --shadow-md: 0 4px 16px rgba(11, 72, 106, 0.16);
+  --shadow-lg: 0 8px 30px rgba(11, 72, 106, 0.2);
+}
+
+[data-theme='ocean'][data-color-scheme='dark'] {
+  --color-bg: #031722;
+  --color-surface: #082535;
+  --color-surface-alt: #11384d;
+  --color-border: #1e5d7d;
+  --color-text: #d8f1ff;
+  --color-text-muted: #8db6cc;
+  --color-accent: #48c4ff;
+  --color-accent-hover: #70d2ff;
+  --color-accent-text: #031722;
+  --color-danger: #ff7a7a;
+  --color-success: #39d6a7;
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.52);
+}

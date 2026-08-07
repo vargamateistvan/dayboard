@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { type Theme, type ColorScheme } from '../lib/settings'
-import { Globe, Monitor, Zap, Leaf, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
+import { Globe, Monitor, Zap, Leaf, Waves, Palette, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -9,6 +9,8 @@ const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
   { id: 'retro',      label: 'Retro',      icon: <Monitor size={16} /> },
   { id: 'futuristic', label: 'Futuristic', icon: <Zap size={16} /> },
   { id: 'nature',     label: 'Nature',     icon: <Leaf size={16} /> },
+  { id: 'ocean',      label: 'Ocean',      icon: <Waves size={16} /> },
+  { id: 'sunset',     label: 'Sunset',     icon: <Palette size={16} /> },
 ]
 
 const COLOR_SCHEMES: { id: ColorScheme; label: string; icon: React.ReactNode }[] = [

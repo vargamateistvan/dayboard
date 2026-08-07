@@ -67,7 +67,7 @@ Each mode is its own sub-component; shared timer logic (tick, pause, reset) is e
 A modal dialog (triggered by a settings icon in the header).
 - **Calendar URL** — text input for ICS/CSV feed URL with a "Test" button.
 - **Appearance** — light / dark / system toggle (three-way).
-- **Theme picker** — visual swatches for: `default`, `retro`, `futuristic`, `nature` (at least four).
+- **Theme picker** — visual swatches for: `default`, `retro`, `futuristic`, `nature`, `ocean`, `sunset`.
 - **Pomodoro intervals** — numeric inputs for work and break durations.
 - All values read/written via the `useSettings` hook.
 
@@ -78,7 +78,7 @@ Single source of truth for all user preferences.
 - Handles system color-scheme detection via `prefers-color-scheme` media query.
 
 #### 7. Theme System
-- Four themes: `default` (clean modern), `retro` (CRT / terminal aesthetic), `futuristic` (neon / glassmorphism), `nature` (earthy / organic).
+- Six themes: `default` (clean modern), `retro` (CRT / terminal aesthetic), `futuristic` (neon / glassmorphism), `nature` (earthy / organic), `ocean` (cool marine), `sunset` (warm dusk).
 - Each theme is a CSS file that sets a fixed set of CSS custom properties (`--color-bg`, `--color-surface`, `--color-accent`, `--font-family`, etc.).
 - Applied by toggling a `data-theme` attribute on `<html>`.
 - Light/dark variants within each theme via `data-color-scheme`.

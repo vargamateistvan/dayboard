@@ -11,6 +11,8 @@ import './themes/default.css'
 import './themes/retro.css'
 import './themes/futuristic.css'
 import './themes/nature.css'
+import './themes/ocean.css'
+import './themes/sunset.css'
 import styles from './App.module.css'
 
 function Dashboard() {
