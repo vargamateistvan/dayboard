@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Settings, Maximize2 } from 'lucide-react'
 import { SettingsProvider } from './lib/useSettings'
-import { useTheme } from './lib/useTheme'
 import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
 import { useWidgetVisibility } from './lib/useWidgetVisibility'
@@ -23,15 +22,9 @@ import styles from './App.module.css'
 
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const { effectiveTheme } = useTheme()
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode, toggleFocusMode } = useFocusMode()
   const { visibility } = useWidgetVisibility()
-
-  // Apply theme to HTML element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', effectiveTheme)
-  }, [effectiveTheme])
 
   return (
     <div className={`${styles.app} ${focusMode ? styles.focusMode : ''}`}>

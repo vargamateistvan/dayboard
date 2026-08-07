@@ -25,11 +25,10 @@ export function useTheme() {
   // Determine effective theme
   const effectiveTheme = themeMode === 'auto' ? (systemPrefersDark ? 'dark' : 'light') : themeMode
 
-  // Apply theme to document
+  // Save theme mode to localStorage (don't set data-theme; that's handled by settings system)
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, themeMode)
-    document.documentElement.setAttribute('data-theme', effectiveTheme)
-  }, [themeMode, effectiveTheme])
+  }, [themeMode])
 
   // Auto-switch based on time of day
   useEffect(() => {
