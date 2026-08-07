@@ -11,17 +11,28 @@ import {
   MapPin,
   RefreshCw,
   Thermometer,
+  Droplets,
+  Sunrise,
+  Sunset,
 } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
 import styles from "./WeatherWidget.module.css";
 
 interface WeatherData {
   temperature: number;
+  apparentTemperature: number | null;
+  humidity: number | null;
+  windSpeed: number | null;
+  windDirection: number | null;
+  timezone: string | null;
+  utcOffsetSeconds: number | null;
   weatherCode: number;
   location: string;
   todayHigh: number | null;
   todayLow: number | null;
   todayRainChance: number | null;
+  sunrise: string | null;
+  sunset: string | null;
 }
 
 type WeatherIconName =
@@ -68,6 +79,9 @@ const ICON_MAP = {
   CloudLightning,
   Wind,
   Thermometer,
+  Droplets,
+  Sunrise,
+  Sunset,
 };
 
 function WeatherIcon({ name, size }: { name: WeatherIconName; size: number }) {
@@ -82,6 +96,60 @@ function getWeatherInfo(code: number) {
       icon: "Thermometer" as WeatherIconName,
     }
   );
+}
+
+function formatWindDirection(degrees: number | null) {
+  if (degrees === null) {
+    return null;
+  }
+
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const index = Math.round(degrees / 45) % directions.length;
+  return `${directions[index]} (${Math.round(degrees)}°)`;
+}
+
+function parseOpenMeteoTime(value: string, utcOffsetSeconds: number | null) {
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/,
+  );
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute, second = "0"] = match;
+  const offsetMs = (utcOffsetSeconds ?? 0) * 1000;
+  return new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ) - offsetMs,
+  );
+}
+
+function formatTime(
+  value: string | null,
+  timeZone: string | null,
+  utcOffsetSeconds: number | null,
+) {
+  if (!value || !timeZone || utcOffsetSeconds === null) {
+    return null;
+  }
+
+  const instant = parseOpenMeteoTime(value, utcOffsetSeconds);
+  if (!instant) {
+    return null;
+  }
+
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  }).format(instant);
 }
 
 function formatLastRefresh(lastRefreshedAt: number, now: number): string {
@@ -106,7 +174,7 @@ function formatLastRefresh(lastRefreshedAt: number, now: number): string {
 }
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=celsius&forecast_days=1`;
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=celsius&wind_speed_unit=kmh&forecast_days=1`;
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
 
   const [weatherRes, geoRes] = await Promise.all([
@@ -125,6 +193,27 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
 
   return {
     temperature: Math.round(weather.current.temperature_2m),
+    apparentTemperature:
+      typeof weather.current?.apparent_temperature === "number"
+        ? Math.round(weather.current.apparent_temperature)
+        : null,
+    humidity:
+      typeof weather.current?.relative_humidity_2m === "number"
+        ? Math.round(weather.current.relative_humidity_2m)
+        : null,
+    windSpeed:
+      typeof weather.current?.wind_speed_10m === "number"
+        ? Math.round(weather.current.wind_speed_10m)
+        : null,
+    windDirection:
+      typeof weather.current?.wind_direction_10m === "number"
+        ? Math.round(weather.current.wind_direction_10m)
+        : null,
+    timezone: typeof weather.timezone === "string" ? weather.timezone : null,
+    utcOffsetSeconds:
+      typeof weather.utc_offset_seconds === "number"
+        ? weather.utc_offset_seconds
+        : null,
     weatherCode: weather.current.weather_code,
     location: city,
     todayHigh:
@@ -138,6 +227,14 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
     todayRainChance:
       typeof weather.daily?.precipitation_probability_max?.[0] === "number"
         ? Math.round(weather.daily.precipitation_probability_max[0])
+        : null,
+    sunrise:
+      typeof weather.daily?.sunrise?.[0] === "string"
+        ? weather.daily.sunrise[0]
+        : null,
+    sunset:
+      typeof weather.daily?.sunset?.[0] === "string"
+        ? weather.daily.sunset[0]
         : null,
   };
 }
@@ -190,6 +287,13 @@ export function WeatherWidget() {
       lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now),
     [lastRefreshedAt, now],
   );
+  const windDirection = data ? formatWindDirection(data.windDirection) : null;
+  const sunrise = data
+    ? formatTime(data.sunrise, data.timezone, data.utcOffsetSeconds)
+    : null;
+  const sunset = data
+    ? formatTime(data.sunset, data.timezone, data.utcOffsetSeconds)
+    : null;
 
   return (
     <div className={styles.widget}>
@@ -219,23 +323,66 @@ export function WeatherWidget() {
       {!loading && error && <div className={styles.error}>{error}</div>}
       {!loading && !error && data && info && (
         <div className={styles.content}>
-          <div className={styles.temp}>
-            <span className={styles.weatherIcon}>
-              <WeatherIcon name={info.icon} size={48} />
-            </span>
-            <span className={styles.degrees}>{data.temperature}°C</span>
+          <div className={styles.summary}>
+            <div className={styles.temp}>
+              <span className={styles.weatherIcon}>
+                <WeatherIcon name={info.icon} size={48} />
+              </span>
+              <span className={styles.degrees}>{data.temperature}°C</span>
+            </div>
+            <div className={styles.condition}>{info.label}</div>
+            <div className={styles.location}>
+              <MapPin size={12} />
+              {data.location}
+            </div>
+            <div className={styles.todayForecast}>
+              <span className={styles.forecastLabel}>Today forecast:</span>
+              <span>
+                H {data.todayHigh ?? "—"}°C · L {data.todayLow ?? "—"}°C · Rain{" "}
+                {data.todayRainChance ?? "—"}%
+              </span>
+            </div>
           </div>
-          <div className={styles.condition}>{info.label}</div>
-          <div className={styles.location}>
-            <MapPin size={12} />
-            {data.location}
-          </div>
-          <div className={styles.todayForecast}>
-            <span className={styles.forecastLabel}>Today forecast:</span>
-            <span>
-              H {data.todayHigh ?? "—"}°C · L {data.todayLow ?? "—"}°C · Rain{" "}
-              {data.todayRainChance ?? "—"}%
-            </span>
+          <div className={styles.detailsGrid}>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>Feels like</span>
+              <span className={styles.detailValue}>
+                {data.apparentTemperature ?? "—"}°C
+              </span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
+                <Droplets size={12} />
+                Humidity
+              </span>
+              <span className={styles.detailValue}>
+                {data.humidity ?? "—"}%
+              </span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
+                <Wind size={12} />
+                Wind
+              </span>
+              <span className={styles.detailValue}>
+                {data.windSpeed ?? "—"} km/h
+                {windDirection ? ` · ${windDirection}` : ""}
+              </span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
+                <Sunrise size={12} />
+                Sunrise
+              </span>
+              <span className={styles.detailValue}>{sunrise ?? "—"}</span>
+            </div>
+            <div className={styles.detail}>
+              <span className={styles.detailLabel}>
+                <Sunset size={12} />
+                Sunset
+              </span>
+              <span className={styles.detailValue}>{sunset ?? "—"}</span>
+            </div>
           </div>
         </div>
       )}

@@ -48,11 +48,22 @@ describe('WeatherWidget', () => {
         .mockResolvedValueOnce({
           ok: true,
           json: async () => ({
-            current: { temperature_2m: 22, weather_code: 1 },
+            current: {
+              temperature_2m: 22,
+              apparent_temperature: 24,
+              relative_humidity_2m: 56,
+              wind_speed_10m: 18,
+              wind_direction_10m: 90,
+              weather_code: 1,
+            },
+            timezone: 'Europe/Budapest',
+            utc_offset_seconds: 7200,
             daily: {
               temperature_2m_max: [27],
               temperature_2m_min: [18],
               precipitation_probability_max: [35],
+              sunrise: ['2026-08-07T05:45'],
+              sunset: ['2026-08-07T20:16'],
             },
           }),
         })
@@ -71,6 +82,16 @@ describe('WeatherWidget', () => {
     expect(screen.getByText(/Budapest/)).toBeInTheDocument()
     expect(screen.getByText(/Today forecast:/)).toBeInTheDocument()
     expect(screen.getByText(/H 27°C · L 18°C · Rain 35%/)).toBeInTheDocument()
+    expect(screen.getByText(/Feels like/)).toBeInTheDocument()
+    expect(screen.getByText(/24°C/)).toBeInTheDocument()
+    expect(screen.getByText(/Humidity/)).toBeInTheDocument()
+    expect(screen.getByText(/56%/)).toBeInTheDocument()
+    expect(screen.getByText(/Wind/)).toBeInTheDocument()
+    expect(screen.getByText(/18 km\/h · E \(90°\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Sunrise/)).toBeInTheDocument()
+    expect(screen.getByText(/05:45/)).toBeInTheDocument()
+    expect(screen.getByText(/Sunset/)).toBeInTheDocument()
+    expect(screen.getByText(/20:16/)).toBeInTheDocument()
     expect(screen.getByText(/Updated just now/)).toBeInTheDocument()
   })
 
