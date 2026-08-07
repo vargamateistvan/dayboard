@@ -89,6 +89,12 @@
   row-gap: clamp(2rem, 3vh, 3rem);
 }
 
+.app.compactWidgets .main {
+  grid-template-columns: 1fr;
+  grid-template-rows: auto auto auto auto auto;
+  row-gap: clamp(1rem, 2vh, 1.5rem);
+}
+
 /* Clock: full width top row — content centered in cell */
 .cellClock {
   grid-column: 1 / -1;
@@ -130,6 +136,18 @@
 .app.focusMode .cellTasks {
   grid-column: 1 / -1;
   min-height: 20rem;
+}
+
+.app.compactWidgets .cellWeather,
+.app.compactWidgets .cellCalendar,
+.app.compactWidgets .cellTimer,
+.app.compactWidgets .cellTasks {
+  grid-column: 1 / -1;
+  min-height: clamp(14rem, 24vh, 22rem);
+}
+
+.app.compactWidgets .cellClock {
+  min-height: 14rem;
 }
 
 @media (max-width: 1200px) {

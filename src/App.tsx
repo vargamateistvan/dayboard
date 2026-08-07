@@ -26,9 +26,15 @@ function Dashboard() {
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode, toggleFocusMode } = useFocusMode()
   const { visibility } = useWidgetVisibility()
+  const visibleWidgetCount = Object.values(visibility).filter(Boolean).length
+  const compactWidgetLayout = !focusMode && visibleWidgetCount > 0 && visibleWidgetCount <= 2
 
   return (
-    <div className={`${styles.app} ${focusMode ? styles.focusMode : ''}`}>
+    <div
+      className={`${styles.app} ${focusMode ? styles.focusMode : ''} ${
+        compactWidgetLayout ? styles.compactWidgets : ''
+      }`}
+    >
       <button
         className={styles.settingsBtn}
         onClick={() => setSettingsOpen(true)}
