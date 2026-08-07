@@ -1,10 +1,8 @@
 import { normalizeCalendarUrl } from './calendarUrl'
 
 const LOCAL_PROXY_PATH = '/api/calendar'
-const PUBLIC_PROXY_URL_BUILDERS = [
-  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-]
+const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
+const JINA_MIRROR_PREFIX = 'https://r.jina.ai/http://'
 
 function isLocalHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1'
@@ -14,6 +12,18 @@ function buildLocalProxyUrl(calendarUrl: string): string {
   return `${LOCAL_PROXY_PATH}?url=${encodeURIComponent(calendarUrl)}`
 }
 
+function buildJinaMirrorUrl(calendarUrl: string): string {
+  return `${JINA_MIRROR_PREFIX}${calendarUrl.replace(/^https?:\/\//, '')}`
+}
+
+function shouldPreferMirror(calendarUrl: string): boolean {
+  try {
+    return new URL(calendarUrl).hostname === GOOGLE_CALENDAR_HOST
+  } catch {
+    return false
+  }
+}
+
 export function getCalendarFeedRequestUrls(
   rawCalendarUrl: string,
   hostname = typeof window === 'undefined' ? '' : window.location.hostname,
@@ -21,15 +31,33 @@ export function getCalendarFeedRequestUrls(
   const calendarUrl = normalizeCalendarUrl(rawCalendarUrl)
   if (!calendarUrl) return []
 
+  const mirrorUrl = buildJinaMirrorUrl(calendarUrl)
   const requestUrls = isLocalHostname(hostname)
     ? [buildLocalProxyUrl(calendarUrl), calendarUrl]
-    : [calendarUrl, ...PUBLIC_PROXY_URL_BUILDERS.map((buildProxyUrl) => buildProxyUrl(calendarUrl))]
+    : shouldPreferMirror(calendarUrl)
+      ? [mirrorUrl, calendarUrl]
+      : [calendarUrl, mirrorUrl]
 
   return [...new Set(requestUrls)]
 }
 
 function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error('Could not load calendar.')
+}
+
+function normalizeCalendarFeedText(text: string): string {
+  const beginIndex = text.indexOf('BEGIN:VCALENDAR')
+  if (beginIndex === -1) {
+    return text
+  }
+
+  const endMarker = 'END:VCALENDAR'
+  const endIndex = text.lastIndexOf(endMarker)
+  if (endIndex === -1 || endIndex < beginIndex) {
+    return text.slice(beginIndex).trim()
+  }
+
+  return text.slice(beginIndex, endIndex + endMarker.length).trim()
 }
 
 export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string> {
@@ -44,7 +72,13 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
         continue
       }
 
-      return await response.text()
+      const text = normalizeCalendarFeedText(await response.text())
+      if (!text.includes('BEGIN:VCALENDAR')) {
+        lastError = new Error('Unexpected calendar response.')
+        continue
+      }
+
+      return text
     } catch (error: unknown) {
       lastError = toError(error)
     }

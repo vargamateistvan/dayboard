@@ -14,16 +14,27 @@ describe('getCalendarFeedRequestUrls', () => {
     ])
   })
 
-  it('uses public proxy fallbacks away from localhost', () => {
+  it('prefers the mirror for Google Calendar feeds away from localhost', () => {
     expect(
       getCalendarFeedRequestUrls(
         'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
         'dayboard.app',
       ),
     ).toEqual([
-      'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
-      'https://api.allorigins.win/raw?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
-      'https://corsproxy.io/?https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
+    'https://r.jina.ai/http://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+    'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+    ])
+  })
+
+  it('tries the original URL before the mirror for non-Google feeds away from localhost', () => {
+    expect(
+    getCalendarFeedRequestUrls(
+      'https://example.com/calendar.ics',
+      'dayboard.app',
+    ),
+    ).toEqual([
+    'https://example.com/calendar.ics',
+    'https://r.jina.ai/http://example.com/calendar.ics',
     ])
   })
 })
@@ -40,6 +51,20 @@ describe('fetchCalendarFeed', () => {
     )
 
     await expect(fetchCalendarFeed('https://example.com/calendar.ics')).resolves.toBe('BEGIN:VCALENDAR')
+  })
+
+  it('extracts the ICS payload from mirrored responses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () => 'Title: Feed\n\nMarkdown Content:\nBEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n',
+      }),
+    )
+
+    await expect(
+      fetchCalendarFeed('https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics'),
+    ).resolves.toBe('BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR')
   })
 
   it('falls back to the direct URL when the local proxy fails', async () => {
