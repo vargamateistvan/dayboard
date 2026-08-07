@@ -1,6 +1,12 @@
 /* ── Clock: dominant element, takes all available width ──── */
 .widget {
-  /* No card — bare text on canvas */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .time {
