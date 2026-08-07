@@ -29,6 +29,9 @@
   font-weight: 400;
   color: var(--color-text-muted);
   letter-spacing: -0.01em;
+  align-self: flex-end;
+  text-align: right;
+  width: 100%;
 }
 
 /* Mobile optimizations */
