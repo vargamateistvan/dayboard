@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTimer } from '../lib/useTimer'
 import { useSettings } from '../lib/useSettings'
 import {
   Play, Pause, RotateCcw, Timer, AlarmClock, Coffee,
   Target, Hourglass, StopCircle, ChevronRight,
 } from 'lucide-react'
+import { beep } from '../lib/beep'
 import styles from './TimerPanel.module.css'
 
 type Mode = 'stopwatch' | 'countdown' | 'pomodoro'
@@ -57,13 +58,25 @@ function Countdown() {
   const durationMs = inputMin * 60_000
   const { elapsedMs, state, start, pause, resume, reset } = useTimer({
     durationMs,
-    onComplete: () => setDone(true),
+    onComplete: () => { setDone(true); beep('done') },
   })
   const remaining = Math.max(0, durationMs - elapsedMs)
+
+  // Tick beep for last 3 seconds
+  const lastTickRef = useRef(-1)
+  useEffect(() => {
+    if (state !== 'running') return
+    const sec = Math.ceil(remaining / 1000)
+    if (sec <= 3 && sec > 0 && sec !== lastTickRef.current) {
+      lastTickRef.current = sec
+      beep('tick')
+    }
+  }, [remaining, state])
 
   const handleReset = () => {
     reset()
     setDone(false)
+    lastTickRef.current = -1
   }
 
   return (
@@ -117,15 +130,27 @@ function Pomodoro() {
   const breakMs = settings.pomodoroBreakMinutes * 60_000
   const durationMs = phase === 'work' ? workMs : breakMs
 
-  const handleComplete = () => setWaitingNext(true)
+  const handleComplete = () => { setWaitingNext(true); beep('done') }
 
   const { elapsedMs, state, start, pause, resume, reset } = useTimer({ durationMs, onComplete: handleComplete })
   const remaining = Math.max(0, durationMs - elapsedMs)
+
+  // Tick beep for last 3 seconds
+  const lastTickRef = useRef(-1)
+  useEffect(() => {
+    if (state !== 'running') return
+    const sec = Math.ceil(remaining / 1000)
+    if (sec <= 3 && sec > 0 && sec !== lastTickRef.current) {
+      lastTickRef.current = sec
+      beep('tick')
+    }
+  }, [remaining, state])
 
   const startNext = () => {
     if (phase === 'work') setSessions((s) => s + 1)
     setPhase((p) => (p === 'work' ? 'break' : 'work'))
     setWaitingNext(false)
+    lastTickRef.current = -1
     reset()
   }
 
@@ -134,6 +159,7 @@ function Pomodoro() {
     setWaitingNext(false)
     setPhase('work')
     setSessions(0)
+    lastTickRef.current = -1
   }
 
   return (
