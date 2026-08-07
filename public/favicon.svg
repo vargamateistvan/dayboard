@@ -1,60 +1,9 @@
 <svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background -->
-  <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
-    </linearGradient>
-  </defs>
+  <!-- Clean background -->
+  <rect width="256" height="256" fill="#6366f1" rx="56"/>
   
-  <rect width="256" height="256" fill="url(#bgGradient)" rx="32"/>
-  
-  <!-- Board/Grid pattern -->
-  <g fill="rgba(255, 255, 255, 0.15)" stroke="none">
-    <!-- Top left cell -->
-    <rect x="24" y="24" width="50" height="50" rx="4"/>
-    <!-- Top right cell -->
-    <rect x="88" y="24" width="50" height="50" rx="4"/>
-    <!-- Top far right cell -->
-    <rect x="152" y="24" width="50" height="50" rx="4"/>
-    
-    <!-- Middle left cell -->
-    <rect x="24" y="88" width="50" height="50" rx="4"/>
-    <!-- Middle center cell -->
-    <rect x="88" y="88" width="50" height="50" rx="4"/>
-    <!-- Middle right cell -->
-    <rect x="152" y="88" width="50" height="50" rx="4"/>
-    
-    <!-- Bottom left cell -->
-    <rect x="24" y="152" width="50" height="50" rx="4"/>
-    <!-- Bottom center cell -->
-    <rect x="88" y="152" width="50" height="50" rx="4"/>
-    <!-- Bottom right cell -->
-    <rect x="152" y="152" width="50" height="50" rx="4"/>
-  </g>
-  
-  <!-- Clock symbol (representing time tracking) -->
-  <circle cx="49" cy="49" r="16" fill="white" opacity="0.9"/>
-  <circle cx="49" cy="49" r="14" fill="none" stroke="url(#bgGradient)" stroke-width="2"/>
-  <!-- Hour hand -->
-  <line x1="49" y1="49" x2="49" y2="39" stroke="url(#bgGradient)" stroke-width="2" stroke-linecap="round"/>
-  <!-- Minute hand -->
-  <line x1="49" y1="49" x2="57" y2="49" stroke="url(#bgGradient)" stroke-width="2" stroke-linecap="round"/>
-  
-  <!-- Calendar symbol (representing days/planning) -->
-  <rect x="139" y="35" width="28" height="28" rx="2" fill="white" opacity="0.9"/>
-  <line x1="139" y1="47" x2="167" y2="47" stroke="url(#bgGradient)" stroke-width="1.5"/>
-  <circle cx="143" cy="52" r="1.5" fill="url(#bgGradient)"/>
-  <circle cx="151" cy="52" r="1.5" fill="url(#bgGradient)"/>
-  <circle cx="159" cy="52" r="1.5" fill="url(#bgGradient)"/>
-  
-  <!-- Task/Checkmark symbol (representing tasks) -->
-  <circle cx="113" cy="177" r="14" fill="white" opacity="0.9"/>
-  <!-- Checkmark -->
-  <path d="M 107 177 L 111 181 L 120 172" stroke="url(#bgGradient)" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  
-  <!-- Accent elements (dots) -->
-  <circle cx="49" cy="177" r="3" fill="white" opacity="0.7"/>
-  <circle cx="177" cy="113" r="3" fill="white" opacity="0.7"/>
-  <circle cx="113" cy="49" r="3" fill="white" opacity="0.7"/>
+  <!-- Minimalist day indicator - simple horizontal lines -->
+  <line x1="72" y1="96" x2="184" y2="96" stroke="white" stroke-width="12" stroke-linecap="round"/>
+  <line x1="72" y1="144" x2="184" y2="144" stroke="white" stroke-width="12" stroke-linecap="round"/>
+  <line x1="72" y1="160" x2="144" y2="160" stroke="white" stroke-width="12" stroke-linecap="round" opacity="0.6"/>
 </svg>
