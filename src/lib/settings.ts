@@ -21,6 +21,14 @@ export interface Settings {
   customColors?: CustomColors
 }
 
+export const DEFAULT_CUSTOM_COLORS: CustomColors = {
+  primary: '#4f46e5',
+  primaryHover: '#4338ca',
+  background: '#0f172a',
+  fontColor: '#f5f5f5',
+  secondaryFontColor: '#999999',
+}
+
 export const FONT_PRESET_OPTIONS: ReadonlyArray<{
   id: FontPreset
   label: string
@@ -78,16 +86,17 @@ export const DEFAULT_SETTINGS: Settings = {
   calendarUrls: [],
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
-  customColors: {
-    primary: '#4f46e5',
-    primaryHover: '#4338ca',
-    background: '#0f172a',
-    fontColor: '#f5f5f5',
-    secondaryFontColor: '#999999',
-  },
+  customColors: DEFAULT_CUSTOM_COLORS,
 }
 
 const STORAGE_KEY = 'dayboard:settings'
+const CUSTOM_THEME_VARIABLES = [
+  '--color-accent',
+  '--color-accent-hover',
+  '--color-custom-bg',
+  '--color-custom-text',
+  '--color-custom-text-muted',
+] as const
 
 interface StoredSettings extends Partial<Omit<Settings, 'calendarUrls'>> {
   calendarUrl?: unknown
@@ -162,13 +171,18 @@ export function applyTheme(settings: Settings): void {
     document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono)
   }
 
-  // Apply custom colors if theme is custom
-  if (settings.theme === 'custom' && settings.customColors) {
-    document.documentElement.style.setProperty('--color-accent', settings.customColors.primary)
-    document.documentElement.style.setProperty('--color-accent-hover', settings.customColors.primaryHover)
-    document.documentElement.style.setProperty('--color-custom-bg', settings.customColors.background)
-    document.documentElement.style.setProperty('--color-custom-text', settings.customColors.fontColor)
-    document.documentElement.style.setProperty('--color-custom-text-muted', settings.customColors.secondaryFontColor)
+  for (const variableName of CUSTOM_THEME_VARIABLES) {
+    document.documentElement.style.removeProperty(variableName)
+  }
+
+  if (settings.theme === 'custom') {
+    const customColors = settings.customColors ?? DEFAULT_CUSTOM_COLORS
+
+    document.documentElement.style.setProperty('--color-accent', customColors.primary)
+    document.documentElement.style.setProperty('--color-accent-hover', customColors.primaryHover)
+    document.documentElement.style.setProperty('--color-custom-bg', customColors.background)
+    document.documentElement.style.setProperty('--color-custom-text', customColors.fontColor)
+    document.documentElement.style.setProperty('--color-custom-text-muted', customColors.secondaryFontColor)
   }
 
   document.documentElement.setAttribute('data-theme', settings.theme)
