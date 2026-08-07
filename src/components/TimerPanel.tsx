@@ -12,9 +12,20 @@ import { PomodoroStats } from './PomodoroStats'
 import styles from './TimerPanel.module.css'
 
 type Mode = 'stopwatch' | 'countdown' | 'pomodoro'
+const TIMER_TAB_STORAGE_KEY = 'dayboard:timer-tab'
+const TIMER_MODES: ReadonlyArray<Mode> = ['stopwatch', 'countdown', 'pomodoro']
 
 function pad(n: number) {
   return String(n).padStart(2, '0')
+}
+
+function isMode(value: string | null): value is Mode {
+  return value !== null && TIMER_MODES.includes(value as Mode)
+}
+
+function loadStoredMode(): Mode {
+  const savedMode = localStorage.getItem(TIMER_TAB_STORAGE_KEY)
+  return isMode(savedMode) ? savedMode : 'stopwatch'
 }
 
 function formatMs(ms: number, showTenths = false): string {
@@ -255,7 +266,12 @@ const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function TimerPanel() {
-  const [mode, setMode] = useState<Mode>('stopwatch')
+  const [mode, setMode] = useState<Mode>(() => loadStoredMode())
+
+  const handleModeChange = (nextMode: Mode) => {
+    setMode(nextMode)
+    localStorage.setItem(TIMER_TAB_STORAGE_KEY, nextMode)
+  }
 
   return (
     <div className={styles.panel}>
@@ -266,7 +282,7 @@ export function TimerPanel() {
             role="tab"
             aria-selected={mode === t.id}
             className={[styles.tab, mode === t.id ? styles.activeTab : ''].join(' ')}
-            onClick={() => setMode(t.id)}
+            onClick={() => handleModeChange(t.id)}
           >
             {t.icon}{t.label}
           </button>
