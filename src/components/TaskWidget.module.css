@@ -2,11 +2,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   gap: 0.5rem;
-  padding: 1rem;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -20,20 +17,18 @@
 
 .header h2 {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-primary);
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
 }
 
 .counter {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
 }
 
 .inputForm {
@@ -45,11 +40,12 @@
 
 .input {
   flex: 1;
-  padding: 0.625rem 0.75rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
+  padding: 0.5rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-text);
   font-size: 0.875rem;
   font-family: inherit;
   transition: border-color 0.2s;
@@ -57,33 +53,29 @@
 
 .input:focus {
   outline: none;
-  border-color: var(--accent-primary);
+  border-color: var(--color-accent);
 }
 
 .input::placeholder {
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
 }
 
 .addBtn {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem 0.75rem;
-  background: var(--accent-primary);
+  padding: 0.25rem;
+  background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
-  color: var(--accent-text);
+  color: var(--color-text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+  opacity: 0.55;
 }
 
 .addBtn:hover {
-  opacity: 0.9;
-  transform: scale(1.02);
-}
-
-.addBtn:active {
-  transform: scale(0.98);
+  opacity: 1;
+  color: var(--color-text);
 }
 
 .list {
@@ -97,7 +89,7 @@
 }
 
 .empty {
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   font-size: 0.825rem;
   text-align: center;
   padding: 2rem 0;
@@ -108,14 +100,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.625rem 0.75rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  transition: background 0.2s;
-}
-
-.taskItem:hover {
-  background: var(--bg-tertiary);
+  padding: 0.375rem 0;
 }
 
 .checkBtn {
@@ -126,35 +111,37 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: 2px solid var(--border-color);
+  border: 1.5px solid var(--color-text-muted);
   border-radius: 0.25rem;
   color: transparent;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
   padding: 0;
+  opacity: 0.8;
 }
 
 .checkBtn:hover {
-  border-color: var(--accent-primary);
-  background: rgba(var(--accent-primary-rgb), 0.05);
+  border-color: var(--color-accent);
+  opacity: 1;
 }
 
 .checkBtn.checked {
-  background: var(--accent-primary);
-  border-color: var(--accent-primary);
-  color: var(--accent-text);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-accent-text);
 }
 
 .taskText {
   flex: 1;
+  min-width: 0;
   font-size: 0.875rem;
-  color: var(--text-primary);
-  word-break: break-word;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
   transition: all 0.2s;
 }
 
 .taskText.completed {
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   text-decoration: line-through;
   opacity: 0.6;
 }
@@ -168,10 +155,10 @@
   height: 1.75rem;
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--color-text-muted);
   cursor: pointer;
-  border-radius: var(--radius-xs);
-  transition: all 0.2s;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), opacity var(--transition-fast);
   opacity: 0;
 }
 
@@ -180,6 +167,5 @@
 }
 
 .deleteBtn:hover {
-  background: var(--bg-danger);
-  color: var(--danger-text);
+  color: var(--color-danger);
 }
