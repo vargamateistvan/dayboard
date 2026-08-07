@@ -263,3 +263,9 @@
 .toggleLabel:hover {
   color: var(--color-text);
 }
+
+@media (max-width: 700px) {
+  .display {
+    font-size: clamp(1.65rem, 12vw, 3.1rem);
+  }
+}
