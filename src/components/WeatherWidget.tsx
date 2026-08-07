@@ -9,6 +9,9 @@ interface WeatherData {
   temperature: number
   weatherCode: number
   location: string
+  todayHigh: number | null
+  todayLow: number | null
+  todayRainChance: number | null
 }
 
 type WeatherIconName = 'Sun' | 'CloudSun' | 'Cloud' | 'CloudDrizzle' | 'CloudRain' | 'CloudSnow' | 'CloudLightning' | 'Wind' | 'Thermometer'
@@ -48,7 +51,7 @@ function getWeatherInfo(code: number) {
 }
 
 async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=celsius`
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&temperature_unit=celsius&forecast_days=1`
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
 
   const [weatherRes, geoRes] = await Promise.all([fetch(weatherUrl), fetch(geoUrl)])
@@ -62,6 +65,11 @@ async function fetchWeather(lat: number, lon: number): Promise<WeatherData> {
     temperature: Math.round(weather.current.temperature_2m),
     weatherCode: weather.current.weather_code,
     location: city,
+    todayHigh: typeof weather.daily?.temperature_2m_max?.[0] === 'number' ? Math.round(weather.daily.temperature_2m_max[0]) : null,
+    todayLow: typeof weather.daily?.temperature_2m_min?.[0] === 'number' ? Math.round(weather.daily.temperature_2m_min[0]) : null,
+    todayRainChance: typeof weather.daily?.precipitation_probability_max?.[0] === 'number'
+      ? Math.round(weather.daily.precipitation_probability_max[0])
+      : null,
   }
 }
 
@@ -120,6 +128,12 @@ export function WeatherWidget() {
           </div>
           <div className={styles.condition}>{info.label}</div>
           <div className={styles.location}><MapPin size={12} />{data.location}</div>
+          <div className={styles.todayForecast}>
+            <span className={styles.forecastLabel}>Today forecast:</span>
+            <span>
+              H {data.todayHigh ?? '—'}°C · L {data.todayLow ?? '—'}°C · Rain {data.todayRainChance ?? '—'}%
+            </span>
+          </div>
         </div>
       )}
     </div>

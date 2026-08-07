@@ -36,6 +36,11 @@ describe('WeatherWidget', () => {
           ok: true,
           json: async () => ({
             current: { temperature_2m: 22, weather_code: 1 },
+            daily: {
+              temperature_2m_max: [27],
+              temperature_2m_min: [18],
+              precipitation_probability_max: [35],
+            },
           }),
         })
         .mockResolvedValueOnce({
@@ -51,6 +56,8 @@ describe('WeatherWidget', () => {
 
     expect(screen.getByText(/22°C/)).toBeInTheDocument()
     expect(screen.getByText(/Budapest/)).toBeInTheDocument()
+    expect(screen.getByText(/Today forecast:/)).toBeInTheDocument()
+    expect(screen.getByText(/H 27°C · L 18°C · Rain 35%/)).toBeInTheDocument()
   })
 
   it('shows error message when geolocation is denied', async () => {
