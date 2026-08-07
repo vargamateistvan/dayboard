@@ -64,8 +64,22 @@ describe('CalendarWidget', () => {
     renderWithSettings('https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ')
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+      '/api/calendar?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
     )
+    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('falls back after a failed proxy request', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '' })
+      .mockResolvedValueOnce({ ok: true, text: async () => TODAY_ICS })
+    vi.stubGlobal('fetch', fetchMock)
+    renderWithSettings('https://example.com/cal.ics')
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/calendar?url=https%3A%2F%2Fexample.com%2Fcal.ics')
+    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/cal.ics')
     expect(screen.getByText('Team Standup')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { normalizeCalendarUrl } from '../lib/calendarUrl'
+import { fetchCalendarFeed } from '../lib/fetchCalendarFeed'
 import { parseCalendarFeed, type CalendarEvent } from '../lib/parseCalendarFeed'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
@@ -15,8 +15,7 @@ export function CalendarWidget() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const url = normalizeCalendarUrl(settings.calendarUrl)
-    if (!url) {
+    if (!settings.calendarUrl.trim()) {
       setEvents([])
       setError(null)
       return
@@ -26,11 +25,7 @@ export function CalendarWidget() {
     setLoading(true)
     setError(null)
 
-    fetch(url)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.text()
-      })
+    fetchCalendarFeed(settings.calendarUrl)
       .then((text) => {
         if (cancelled) return
         setEvents(parseCalendarFeed(text))
@@ -71,7 +66,7 @@ export function CalendarWidget() {
         <div className={styles.error}>
           <p>Could not load calendar: {error}</p>
           <p className={styles.hint}>
-            Tip: Some calendars block browser requests due to CORS. Try a public proxy URL.
+            Tip: Dayboard retries with a proxy when it can, but some calendar hosts still block browser access.
           </p>
         </div>
       )}

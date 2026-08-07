@@ -85,7 +85,8 @@ export function SettingsDialog({ onClose }: Props) {
             <h3 className={styles.sectionTitle}>Calendar Feed</h3>
             <p className={styles.hint}>
               Paste an ICS or CSV calendar URL. Google Calendar share links are supported too. If you see
-              errors, your calendar host may need a CORS-friendly proxy.
+              errors, Dayboard will try a proxy fallback, but some calendar hosts still require a
+              CORS-friendly feed URL.
             </p>
             <input
               className={styles.input}
