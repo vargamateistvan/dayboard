@@ -216,6 +216,7 @@
   color: var(--text-secondary);
   cursor: pointer;
   user-select: none;
+  white-space: nowrap;
 }
 
 .toggleLabel input[type="checkbox"] {
