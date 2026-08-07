@@ -12,6 +12,12 @@ describe('normalizeCalendarUrl', () => {
     ).toBe('https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics')
   })
 
+  it('converts webcal URLs to https URLs', () => {
+    expect(
+      normalizeCalendarUrl('webcal://outlook.live.com/calendar/abc123/calendar.ics'),
+    ).toBe('https://outlook.live.com/calendar/abc123/calendar.ics')
+  })
+
   it('converts Google Calendar cid links to public ICS feeds', () => {
     expect(
       normalizeCalendarUrl('https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ'),
@@ -30,6 +36,12 @@ describe('normalizeCalendarUrl', () => {
         'https://calendar.google.com/calendar/embed?src=mateistvanvarga%40gmail.com&ctz=Europe%2FBudapest',
       ),
     ).toBe('https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics')
+  })
+
+  it('converts Outlook published calendar html links to ICS feeds', () => {
+    expect(
+      normalizeCalendarUrl('https://outlook.live.com/calendar/0/deeplink/compose/calendar.html'),
+    ).toBe('https://outlook.live.com/calendar/0/deeplink/compose/calendar.ics')
   })
 
   it('leaves non-Google calendar URLs unchanged', () => {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useSettings } from '../lib/useSettings'
 import { type Theme, type ColorScheme } from '../lib/settings'
-import { Globe, Monitor, Zap, Leaf, Sun, Moon, SunMoon, X } from 'lucide-react'
+import { Globe, Monitor, Zap, Leaf, Sun, Moon, SunMoon, X, Plus, Trash2 } from 'lucide-react'
 import styles from './SettingsDialog.module.css'
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -23,13 +23,28 @@ interface Props {
 
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings()
-  const [calendarUrl, setCalendarUrl] = useState(settings.calendarUrl)
+  const [calendarUrls, setCalendarUrls] = useState(settings.calendarUrls.length > 0 ? settings.calendarUrls : [''])
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes)
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes)
 
+  const updateCalendarUrl = (index: number, value: string) => {
+    setCalendarUrls((prev) => prev.map((calendarUrl, currentIndex) => currentIndex === index ? value : calendarUrl))
+  }
+
+  const addCalendarUrl = () => {
+    setCalendarUrls((prev) => [...prev, ''])
+  }
+
+  const removeCalendarUrl = (index: number) => {
+    setCalendarUrls((prev) => {
+      const next = prev.filter((_calendarUrl, currentIndex) => currentIndex !== index)
+      return next.length > 0 ? next : ['']
+    })
+  }
+
   const save = () => {
     updateSettings({
-      calendarUrl,
+      calendarUrls,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
     })
@@ -82,19 +97,38 @@ export function SettingsDialog({ onClose }: Props) {
 
           {/* Calendar */}
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Calendar Feed</h3>
+            <div className={styles.sectionHeader}>
+              <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
+              <button className={styles.addCalendarBtn} onClick={addCalendarUrl} type="button">
+                <Plus size={14} />
+                Add link
+              </button>
+            </div>
             <p className={styles.hint}>
-              Paste an ICS or CSV calendar URL. Google Calendar share links are supported too. If you see
-              errors, Dayboard will try a proxy fallback, but some calendar hosts still require a
-              CORS-friendly feed URL.
+              Paste one or more ICS or CSV calendar URLs. Google share links, Outlook published
+              calendar links, and webcal:// feeds are supported too.
             </p>
-            <input
-              className={styles.input}
-              type="url"
-              placeholder="https://calendar.example.com/feed.ics"
-              value={calendarUrl}
-              onChange={(e) => setCalendarUrl(e.target.value)}
-            />
+            <div className={styles.calendarList}>
+              {calendarUrls.map((calendarUrl, index) => (
+                <div className={styles.calendarRow} key={index}>
+                  <input
+                    className={styles.input}
+                    type="url"
+                    placeholder={index === 0 ? 'https://calendar.example.com/feed.ics' : 'https://outlook.office.com/calendar/.../calendar.ics'}
+                    value={calendarUrl}
+                    onChange={(e) => updateCalendarUrl(index, e.target.value)}
+                  />
+                  <button
+                    aria-label={`Remove calendar link ${index + 1}`}
+                    className={styles.removeCalendarBtn}
+                    onClick={() => removeCalendarUrl(index)}
+                    type="button"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </section>
 
           {/* Pomodoro */}

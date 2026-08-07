@@ -52,3 +52,15 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
 
   throw lastError ?? new Error('Could not load calendar.')
 }
+
+export async function fetchCalendarFeeds(rawCalendarUrls: string[]): Promise<string[]> {
+  const results = await Promise.allSettled(rawCalendarUrls.map((calendarUrl) => fetchCalendarFeed(calendarUrl)))
+  const successfulFeeds = results.flatMap((result) => result.status === 'fulfilled' ? [result.value] : [])
+
+  if (successfulFeeds.length > 0) {
+    return successfulFeeds
+  }
+
+  const failedResults = results.flatMap((result) => result.status === 'rejected' ? [toError(result.reason)] : [])
+  throw failedResults[0] ?? new Error('Could not load calendar.')
+}

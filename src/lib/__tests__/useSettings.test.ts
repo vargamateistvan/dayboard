@@ -30,11 +30,16 @@ describe('settings persistence', () => {
     expect(loaded).toEqual(DEFAULT_SETTINGS)
   })
 
+  it('migrates a legacy single calendarUrl setting into calendarUrls', () => {
+    localStorage.setItem('dayboard:settings', JSON.stringify({ calendarUrl: 'https://example.com/cal.ics' }))
+    expect(loadSettings().calendarUrls).toEqual(['https://example.com/cal.ics'])
+  })
+
   it('round-trips all fields correctly', () => {
     const custom = {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
-      calendarUrl: 'https://example.com/cal.ics',
+      calendarUrls: ['https://example.com/cal.ics', 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics'],
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
     }

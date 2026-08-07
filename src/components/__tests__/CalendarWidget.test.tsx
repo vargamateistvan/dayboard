@@ -4,8 +4,8 @@ import { CalendarWidget } from '../CalendarWidget'
 import { SettingsProvider } from '../../lib/useSettings'
 import { saveSettings, DEFAULT_SETTINGS } from '../../lib/settings'
 
-function renderWithSettings(calendarUrl = '') {
-  saveSettings({ ...DEFAULT_SETTINGS, calendarUrl })
+function renderWithSettings(calendarUrls: string[] = []) {
+  saveSettings({ ...DEFAULT_SETTINGS, calendarUrls })
   return render(
     <SettingsProvider>
       <CalendarWidget />
@@ -36,13 +36,13 @@ END:VCALENDAR`
 
 describe('CalendarWidget', () => {
   it('shows "no calendar connected" when no URL is set', () => {
-    renderWithSettings('')
-    expect(screen.getByText(/No calendar connected/)).toBeInTheDocument()
+    renderWithSettings([])
+    expect(screen.getByText(/No calendars connected/)).toBeInTheDocument()
   })
 
   it('shows loading while fetching', () => {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(() => new Promise(() => {})))
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     expect(screen.getByLabelText('Loading events')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
@@ -52,7 +52,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS }),
     )
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText('Team Standup')).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -61,7 +61,7 @@ describe('CalendarWidget', () => {
   it('normalizes Google Calendar share links before fetching', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS })
     vi.stubGlobal('fetch', fetchMock)
-    renderWithSettings('https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ')
+    renderWithSettings(['https://calendar.google.com/calendar/u/0?cid=bWF0ZWlzdHZhbnZhcmdhQGdtYWlsLmNvbQ'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/calendar?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
@@ -76,7 +76,7 @@ describe('CalendarWidget', () => {
       .mockResolvedValueOnce({ ok: false, status: 404, text: async () => '' })
       .mockResolvedValueOnce({ ok: true, text: async () => TODAY_ICS })
     vi.stubGlobal('fetch', fetchMock)
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/calendar?url=https%3A%2F%2Fexample.com%2Fcal.ics')
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/cal.ics')
@@ -90,7 +90,7 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: true, text: async () => emptyIcs }),
     )
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/No events today/)).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -98,7 +98,7 @@ describe('CalendarWidget', () => {
 
   it('shows error state when fetch fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network error')))
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/Could not load calendar/)).toBeInTheDocument()
     vi.unstubAllGlobals()
@@ -109,9 +109,32 @@ describe('CalendarWidget', () => {
       'fetch',
       vi.fn().mockResolvedValue({ ok: false, status: 403, text: async () => '' }),
     )
-    renderWithSettings('https://example.com/cal.ics')
+    renderWithSettings(['https://example.com/cal.ics'])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/Could not load calendar/)).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('merges events from multiple calendar feeds', async () => {
+    const laterIcs = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Client Call
+DTSTART:${Y}${M}${D}T110000Z
+DTEND:${Y}${M}${D}T113000Z
+END:VEVENT
+END:VCALENDAR`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockResolvedValueOnce({ ok: true, text: async () => TODAY_ICS })
+        .mockResolvedValueOnce({ ok: true, text: async () => laterIcs }),
+    )
+    renderWithSettings(['https://example.com/one.ics', 'https://example.com/two.ics'])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    expect(screen.getByText('Client Call')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 })

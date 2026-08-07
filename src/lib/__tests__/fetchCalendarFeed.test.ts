@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchCalendarFeed, getCalendarFeedRequestUrls } from '../fetchCalendarFeed'
+import { fetchCalendarFeed, fetchCalendarFeeds, getCalendarFeedRequestUrls } from '../fetchCalendarFeed'
 
 describe('getCalendarFeedRequestUrls', () => {
   it('uses the local proxy first on localhost', () => {
@@ -65,5 +65,39 @@ describe('fetchCalendarFeed', () => {
 
     await expect(fetchCalendarFeed('https://example.com/calendar.ics')).rejects.toThrow('proxy unavailable')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('fetchCalendarFeeds', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('returns all successful feed bodies', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockResolvedValueOnce({ ok: true, text: async () => 'BEGIN:VCALENDAR\nSUMMARY:A' })
+        .mockResolvedValueOnce({ ok: true, text: async () => 'BEGIN:VCALENDAR\nSUMMARY:B' }),
+    )
+
+    await expect(fetchCalendarFeeds(['https://example.com/one.ics', 'https://example.com/two.ics'])).resolves.toEqual([
+      'BEGIN:VCALENDAR\nSUMMARY:A',
+      'BEGIN:VCALENDAR\nSUMMARY:B',
+    ])
+  })
+
+  it('returns successful feeds when one feed fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockRejectedValueOnce(new Error('first failed'))
+        .mockRejectedValueOnce(new Error('second fallback failed'))
+        .mockResolvedValueOnce({ ok: true, text: async () => 'BEGIN:VCALENDAR\nSUMMARY:B' }),
+    )
+
+    await expect(fetchCalendarFeeds(['https://example.com/one.ics', 'https://example.com/two.ics'])).resolves.toEqual([
+      'BEGIN:VCALENDAR\nSUMMARY:B',
+    ])
   })
 })

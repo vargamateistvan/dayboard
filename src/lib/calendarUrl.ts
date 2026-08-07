@@ -1,4 +1,10 @@
 const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
+const OUTLOOK_CALENDAR_HOSTS = new Set([
+  'outlook.live.com',
+  'outlook.office.com',
+  'outlook.office365.com',
+  'outlook.office365.us',
+])
 
 function decodeGoogleCalendarId(value: string): string | null {
   const decodedValue = decodeURIComponent(value.trim())
@@ -29,15 +35,21 @@ export function normalizeCalendarUrl(rawUrl: string): string {
 
   let url: URL
   try {
-    url = new URL(trimmedUrl)
+    url = new URL(trimmedUrl.replace(/^webcal:/i, 'https:'))
   } catch {
     return trimmedUrl
   }
 
-  if (url.hostname !== GOOGLE_CALENDAR_HOST) return trimmedUrl
+  if (url.hostname === GOOGLE_CALENDAR_HOST) {
+    const calendarId = decodeGoogleCalendarId(url.searchParams.get('cid') ?? url.searchParams.get('src') ?? '')
+    if (!calendarId) return url.toString()
 
-  const calendarId = decodeGoogleCalendarId(url.searchParams.get('cid') ?? url.searchParams.get('src') ?? '')
-  if (!calendarId) return trimmedUrl
+    return buildGoogleCalendarIcsUrl(calendarId)
+  }
 
-  return buildGoogleCalendarIcsUrl(calendarId)
+  if (OUTLOOK_CALENDAR_HOSTS.has(url.hostname) && url.pathname.endsWith('/calendar.html')) {
+    url.pathname = `${url.pathname.slice(0, -'.html'.length)}.ics`
+  }
+
+  return url.toString()
 }

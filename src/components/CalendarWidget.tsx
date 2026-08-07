@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchCalendarFeed } from '../lib/fetchCalendarFeed'
+import { fetchCalendarFeeds } from '../lib/fetchCalendarFeed'
 import { parseCalendarFeed, type CalendarEvent } from '../lib/parseCalendarFeed'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
@@ -13,9 +13,10 @@ export function CalendarWidget() {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasCalendarUrls = settings.calendarUrls.length > 0
 
   useEffect(() => {
-    if (!settings.calendarUrl.trim()) {
+    if (settings.calendarUrls.length === 0) {
       setEvents([])
       setError(null)
       return
@@ -25,10 +26,13 @@ export function CalendarWidget() {
     setLoading(true)
     setError(null)
 
-    fetchCalendarFeed(settings.calendarUrl)
-      .then((text) => {
+    fetchCalendarFeeds(settings.calendarUrls)
+      .then((texts) => {
         if (cancelled) return
-        setEvents(parseCalendarFeed(text))
+        const nextEvents = texts
+          .flatMap((text) => parseCalendarFeed(text))
+          .sort((a, b) => a.start.getTime() - b.start.getTime())
+        setEvents(nextEvents)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -40,7 +44,7 @@ export function CalendarWidget() {
     return () => {
       cancelled = true
     }
-  }, [settings.calendarUrl])
+  }, [settings.calendarUrls])
 
   const now = new Date()
   const nextEvent = events.find((e) => e.end > now)
@@ -51,18 +55,18 @@ export function CalendarWidget() {
         <span className={styles.title}>Today's Events</span>
       </div>
 
-      {!settings.calendarUrl && (
+      {!hasCalendarUrls && (
         <div className={styles.empty}>
-          No calendar connected.{' '}
-          <span className={styles.hint}>Add a calendar URL in settings.</span>
+          No calendars connected.{' '}
+          <span className={styles.hint}>Add one or more calendar links in settings.</span>
         </div>
       )}
 
-      {settings.calendarUrl && loading && (
+      {hasCalendarUrls && loading && (
         <div className={styles.loading} aria-label="Loading events">Loading…</div>
       )}
 
-      {settings.calendarUrl && !loading && error && (
+      {hasCalendarUrls && !loading && error && (
         <div className={styles.error}>
           <p>Could not load calendar: {error}</p>
           <p className={styles.hint}>
@@ -71,11 +75,11 @@ export function CalendarWidget() {
         </div>
       )}
 
-      {settings.calendarUrl && !loading && !error && events.length === 0 && (
+      {hasCalendarUrls && !loading && !error && events.length === 0 && (
         <div className={styles.empty}>No events today ✓</div>
       )}
 
-      {settings.calendarUrl && !loading && !error && events.length > 0 && (
+      {hasCalendarUrls && !loading && !error && events.length > 0 && (
         <ul className={styles.list}>
           {events.map((event, i) => {
             const isNext = event === nextEvent
