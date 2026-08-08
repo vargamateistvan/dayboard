@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSettings } from "../lib/useSettings";
-import { useWidgetVisibility } from "../lib/useWidgetVisibility";
+import {
+  WIDGET_GRID_COLUMNS,
+  WIDGET_GRID_ROWS,
+  canPlaceWidget,
+  type WidgetColumnSpan,
+  type WidgetGridColumn,
+  type WidgetGridRow,
+  type WidgetPlacement,
+  type WidgetRowSpan,
+  type Widget,
+  useWidgetVisibility,
+} from "../lib/useWidgetVisibility";
 import {
   DEFAULT_CALENDAR_COLORS,
   DEFAULT_CUSTOM_COLORS,
@@ -27,6 +38,7 @@ import {
   Trash2,
   Eye,
   EyeOff,
+  GripVertical,
 } from "lucide-react";
 import styles from "./SettingsDialog.module.css";
 
@@ -67,12 +79,305 @@ const WIDGETS: {
 ];
 
 interface Props {
-  onClose: () => void;
+  readonly onClose: () => void;
 }
+
+function getWidgetLabel(widget: Widget): string {
+  return WIDGETS.find((entry) => entry.id === widget)?.label ?? widget;
+}
+
+interface WidgetLayoutEditorProps {
+  readonly order: Widget[];
+  readonly visibility: Record<Widget, boolean>;
+  readonly placements: Record<Widget, WidgetPlacement>;
+  readonly onSetWidgetPlacement: (
+    widget: Widget,
+    placement: WidgetPlacement,
+  ) => void;
+  readonly onToggleWidget: (widget: Widget, visible?: boolean) => void;
+}
+
+function WidgetLayoutEditor({
+  order,
+  visibility,
+  placements,
+  onSetWidgetPlacement,
+  onToggleWidget,
+}: WidgetLayoutEditorProps) {
+  const [paletteDragWidget, setPaletteDragWidget] = useState<Widget | null>(null);
+  const [gridDragWidget, setGridDragWidget] = useState<Widget | null>(null);
+  const [dropTargetCell, setDropTargetCell] = useState<{ column: WidgetGridColumn; row: WidgetGridRow } | null>(null);
+  const [resizingWidget, setResizingWidget] = useState<Widget | null>(null);
+  const resizeStartRef = useRef<{
+    startX: number;
+    startY: number;
+    startColumnSpan: WidgetColumnSpan;
+    startRowSpan: WidgetRowSpan;
+    cellWidth: number;
+    cellHeight: number;
+  } | null>(null);
+  const gridRef = useRef<HTMLDivElement | null>(null);
+
+  const visibleWidgets = order.filter((w) => visibility[w]);
+  const hiddenWidgets = order.filter((w) => !visibility[w]);
+  const allWidgets = [...visibleWidgets, ...hiddenWidgets];
+  const dragWidget = paletteDragWidget ?? gridDragWidget;
+
+  const canUsePlacement = (widget: Widget, patch: Partial<WidgetPlacement>) =>
+    canPlaceWidget(placements, visibility, widget, {
+      ...placements[widget],
+      ...patch,
+    });
+
+  const getCellFromPoint = (clientX: number, clientY: number): { column: WidgetGridColumn; row: WidgetGridRow } | null => {
+    if (!gridRef.current) return null;
+    const rect = gridRef.current.getBoundingClientRect();
+    const relX = Math.min(Math.max(clientX - rect.left, 0), rect.width - 1);
+    const relY = Math.min(Math.max(clientY - rect.top, 0), rect.height - 1);
+    const column = Math.min(
+      WIDGET_GRID_COLUMNS,
+      Math.floor((relX / rect.width) * WIDGET_GRID_COLUMNS) + 1,
+    ) as WidgetGridColumn;
+    const row = Math.min(
+      WIDGET_GRID_ROWS,
+      Math.floor((relY / rect.height) * WIDGET_GRID_ROWS) + 1,
+    ) as WidgetGridRow;
+    return { column, row };
+  };
+
+  const handlePaletteDragStart = (widget: Widget) => (e: React.DragEvent) => {
+    setPaletteDragWidget(widget);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", widget);
+  };
+
+  const handlePaletteDragEnd = () => {
+    setPaletteDragWidget(null);
+    setDropTargetCell(null);
+  };
+
+  const handleGridDragStart = (widget: Widget) => (e: React.DragEvent) => {
+    setGridDragWidget(widget);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", widget);
+  };
+
+  const handleGridDragEnd = () => {
+    setGridDragWidget(null);
+    setDropTargetCell(null);
+  };
+
+  const handleGridDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!dragWidget) return;
+    e.preventDefault();
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    setDropTargetCell(cell);
+  };
+
+  const handleGridDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const widgetId = (e.dataTransfer.getData("text/plain") || dragWidget) as Widget | "";
+    const widget = order.find((w) => w === widgetId);
+    if (!widget) {
+      setPaletteDragWidget(null);
+      setGridDragWidget(null);
+      setDropTargetCell(null);
+      return;
+    }
+    const cell = getCellFromPoint(e.clientX, e.clientY);
+    if (cell && canUsePlacement(widget, { column: cell.column, row: cell.row })) {
+      onSetWidgetPlacement(widget, { ...placements[widget], column: cell.column, row: cell.row });
+      if (!visibility[widget]) {
+        onToggleWidget(widget, true);
+      }
+    }
+    setPaletteDragWidget(null);
+    setGridDragWidget(null);
+    setDropTargetCell(null);
+  };
+
+  const handleGridDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!gridRef.current?.contains(e.relatedTarget as Node)) {
+      setDropTargetCell(null);
+    }
+  };
+
+  const handleResizeMouseDown = (widget: Widget) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!gridRef.current) return;
+    const rect = gridRef.current.getBoundingClientRect();
+    const cellWidth = rect.width / WIDGET_GRID_COLUMNS;
+    const cellHeight = rect.height / WIDGET_GRID_ROWS;
+    setResizingWidget(widget);
+    resizeStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startColumnSpan: placements[widget].columnSpan,
+      startRowSpan: placements[widget].rowSpan,
+      cellWidth,
+      cellHeight,
+    };
+
+    const onMouseMove = (mv: MouseEvent) => {
+      if (!resizeStartRef.current) return;
+      const { startX, startY, startColumnSpan, startRowSpan, cellWidth, cellHeight } = resizeStartRef.current;
+      const placement = placements[widget];
+      const dx = mv.clientX - startX;
+      const dy = mv.clientY - startY;
+      const newColumnSpan = Math.min(
+        WIDGET_GRID_COLUMNS - placement.column + 1,
+        Math.max(1, startColumnSpan + Math.round(dx / cellWidth)),
+      ) as WidgetColumnSpan;
+      const newRowSpan = Math.min(
+        WIDGET_GRID_ROWS - placement.row + 1,
+        Math.max(1, startRowSpan + Math.round(dy / cellHeight)),
+      ) as WidgetRowSpan;
+      if (
+        (newColumnSpan !== placement.columnSpan || newRowSpan !== placement.rowSpan) &&
+        canUsePlacement(widget, { columnSpan: newColumnSpan, rowSpan: newRowSpan })
+      ) {
+        onSetWidgetPlacement(widget, { ...placement, columnSpan: newColumnSpan, rowSpan: newRowSpan });
+      }
+    };
+
+    const onMouseUp = () => {
+      setResizingWidget(null);
+      resizeStartRef.current = null;
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const handleRemoveWidget = (widget: Widget) => {
+    onToggleWidget(widget, false);
+  };
+
+  return (
+    <div className={styles.layoutEditor}>
+      {/* Widget palette */}
+      <div className={styles.widgetPalette}>
+        <span className={styles.widgetPaletteLabel}>
+          {visibleWidgets.length}/{allWidgets.length} widgets on dashboard
+        </span>
+        <div className={styles.widgetPaletteChips}>
+          {allWidgets.map((widget) => {
+            const isVisible = visibility[widget];
+            return (
+              <div
+                key={widget}
+                className={[
+                  styles.widgetChip,
+                  isVisible ? styles.widgetChipVisible : styles.widgetChipHidden,
+                ].join(" ")}
+                draggable={!isVisible}
+                onDragStart={!isVisible ? handlePaletteDragStart(widget) : undefined}
+                onDragEnd={!isVisible ? handlePaletteDragEnd : undefined}
+                aria-label={isVisible ? `${getWidgetLabel(widget)} is on the dashboard` : `Drag ${getWidgetLabel(widget)} onto the grid`}
+                title={isVisible ? `${getWidgetLabel(widget)} (on grid)` : `Drag to add ${getWidgetLabel(widget)}`}
+              >
+                {!isVisible && <GripVertical size={12} />}
+                <span>{getWidgetLabel(widget)}</span>
+              </div>
+            );
+          })}
+        </div>
+        <span className={styles.widgetPaletteHint}>Drag a hidden widget onto the grid to show it</span>
+      </div>
+
+      {/* 3x2 grid */}
+      <div
+        ref={gridRef}
+        className={[
+          styles.layoutGrid,
+          resizingWidget ? styles.layoutGridResizing : "",
+        ].join(" ")}
+        onDragOver={handleGridDragOver}
+        onDrop={handleGridDrop}
+        onDragLeave={handleGridDragLeave}
+      >
+        {/* Background cells */}
+        {Array.from({ length: WIDGET_GRID_ROWS * WIDGET_GRID_COLUMNS }, (_, i) => {
+          const col = ((i % WIDGET_GRID_COLUMNS) + 1) as WidgetGridColumn;
+          const row = (Math.floor(i / WIDGET_GRID_COLUMNS) + 1) as WidgetGridRow;
+          const isDropTarget = dropTargetCell?.column === col && dropTargetCell?.row === row;
+          const canDrop = dragWidget ? canUsePlacement(dragWidget, { column: col, row: row }) : false;
+          return (
+            <div
+              key={`${row}-${col}`}
+              className={[
+                styles.layoutCell,
+                dragWidget ? (canDrop ? styles.layoutCellAvailable : styles.layoutCellBlocked) : "",
+                isDropTarget && canDrop ? styles.layoutCellDropTarget : "",
+              ].join(" ")}
+              style={{ gridColumn: col, gridRow: row }}
+            />
+          );
+        })}
+
+        {/* Placed widgets */}
+        {visibleWidgets.map((widget) => {
+          const p = placements[widget];
+          const isResizing = resizingWidget === widget;
+          return (
+            <div
+              key={widget}
+              data-testid={`layout-widget-${widget}`}
+              className={[
+                styles.layoutWidget,
+                isResizing ? styles.layoutWidgetResizing : "",
+              ].join(" ")}
+              style={{
+                gridColumn: `${p.column} / span ${p.columnSpan}`,
+                gridRow: `${p.row} / span ${p.rowSpan}`,
+              }}
+              draggable
+              onDragStart={handleGridDragStart(widget)}
+              onDragEnd={handleGridDragEnd}
+            >
+              <div className={styles.layoutWidgetInner}>
+                <GripVertical size={14} className={styles.layoutWidgetGrip} />
+                <span className={styles.layoutWidgetLabel}>{getWidgetLabel(widget)}</span>
+                <span className={styles.layoutWidgetSize}>{p.columnSpan}&times;{p.rowSpan}</span>
+                <button
+                  className={styles.layoutWidgetRemove}
+                  onClick={() => handleRemoveWidget(widget)}
+                  aria-label={`Remove ${getWidgetLabel(widget)} from dashboard`}
+                  type="button"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+              <div
+                className={styles.layoutWidgetResizeHandle}
+                onMouseDown={handleResizeMouseDown(widget)}
+                title="Drag to resize"
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      <p className={styles.layoutEditorHint}>
+        Drag widgets onto the grid &bull; drag the corner handle to resize &bull; &times; to remove
+      </p>
+    </div>
+  );
+}
+
 
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings();
-  const { visibility, toggleWidget } = useWidgetVisibility();
+  const {
+    visibility,
+    order,
+    placements,
+    toggleWidget,
+    setWidgetPlacement,
+  } = useWidgetVisibility();
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>(
     settings.calendarFeeds.length > 0
       ? settings.calendarFeeds
@@ -149,15 +454,11 @@ export function SettingsDialog({ onClose }: Props) {
   };
 
   return (
-    <div
-      className={styles.backdrop}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div
+    <div className={styles.backdrop}>
+      <dialog
         className={styles.dialog}
-        role="dialog"
-        aria-modal="true"
         aria-label="Settings"
+        open
       >
         <div className={styles.header}>
           <h2 className={styles.title}>Settings</h2>
@@ -165,6 +466,7 @@ export function SettingsDialog({ onClose }: Props) {
             className={styles.close}
             onClick={onClose}
             aria-label="Close settings"
+            type="button"
           >
             <X size={16} />
           </button>
@@ -184,6 +486,7 @@ export function SettingsDialog({ onClose }: Props) {
                   ].join(" ")}
                   onClick={() => updateSettings({ theme: t.id })}
                   aria-pressed={settings.theme === t.id}
+                  type="button"
                 >
                   <span className={styles.themeEmoji}>{t.icon}</span>
                   <span className={styles.themeLabel}>{t.label}</span>
@@ -205,6 +508,7 @@ export function SettingsDialog({ onClose }: Props) {
                   ].join(" ")}
                   onClick={() => updateSettings({ colorScheme: s.id })}
                   aria-pressed={settings.colorScheme === s.id}
+                  type="button"
                 >
                   {s.icon}
                   {s.label}
@@ -228,6 +532,7 @@ export function SettingsDialog({ onClose }: Props) {
                   ].join(" ")}
                   onClick={() => updateSettings({ fontPreset: fontOption.id })}
                   aria-pressed={settings.fontPreset === fontOption.id}
+                  type="button"
                 >
                   <span className={styles.fontIcon}>
                     <Type size={14} />
@@ -364,27 +669,17 @@ export function SettingsDialog({ onClose }: Props) {
 
           {/* Widgets */}
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Widgets</h3>
-            <div className={styles.widgetGrid}>
-              {WIDGETS.map((widget) => (
-                <button
-                  key={widget.id}
-                  className={[
-                    styles.widgetToggle,
-                    visibility[widget.id] ? styles.widgetVisible : "",
-                  ].join(" ")}
-                  onClick={() => toggleWidget(widget.id)}
-                  title={`Toggle ${widget.label} widget`}
-                >
-                  {visibility[widget.id] ? (
-                    <Eye size={14} />
-                  ) : (
-                    <EyeOff size={14} />
-                  )}
-                  <span>{widget.label}</span>
-                </button>
-              ))}
-            </div>
+            <h3 className={styles.sectionTitle}>Widget Layout</h3>
+            <WidgetLayoutEditor
+              order={order}
+              visibility={visibility}
+              placements={placements}
+              onSetWidgetPlacement={setWidgetPlacement}
+              onToggleWidget={toggleWidget}
+            />
+            <p className={styles.hint}>
+              Drag widgets from the palette onto the 3×2 grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
+            </p>
           </section>
 
           <section className={styles.section}>
@@ -433,7 +728,10 @@ export function SettingsDialog({ onClose }: Props) {
             </p>
             <div className={styles.calendarList}>
               {calendarFeeds.map((calendarFeed, index) => (
-                <div className={styles.calendarRow} key={index}>
+                <div
+                  className={styles.calendarRow}
+                  key={`${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
+                >
                   <input
                     className={[styles.input, styles.calendarUrlInput].join(
                       " ",
@@ -515,7 +813,7 @@ export function SettingsDialog({ onClose }: Props) {
             <h3 className={styles.sectionTitle}>Weather Refresh</h3>
             <div className={styles.intervalRow}>
               <label className={styles.intervalLabel}>
-                Refresh every (min)
+                <span>Refresh every (min)</span>
                 <input
                   className={styles.numberInput}
                   type="number"
@@ -524,7 +822,7 @@ export function SettingsDialog({ onClose }: Props) {
                   value={weatherRefreshMin}
                   onChange={(e) =>
                     setWeatherRefreshMin(
-                      Math.max(1, parseInt(e.target.value) || 1),
+                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
                     )
                   }
                 />
@@ -578,7 +876,7 @@ export function SettingsDialog({ onClose }: Props) {
             <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
             <div className={styles.intervalRow}>
               <label className={styles.intervalLabel}>
-                Work (min)
+                <span>Work (min)</span>
                 <input
                   className={styles.numberInput}
                   type="number"
@@ -586,12 +884,14 @@ export function SettingsDialog({ onClose }: Props) {
                   max={120}
                   value={workMin}
                   onChange={(e) =>
-                    setWorkMin(Math.max(1, parseInt(e.target.value) || 1))
+                    setWorkMin(
+                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                    )
                   }
                 />
               </label>
               <label className={styles.intervalLabel}>
-                Break (min)
+                <span>Break (min)</span>
                 <input
                   className={styles.numberInput}
                   type="number"
@@ -599,7 +899,9 @@ export function SettingsDialog({ onClose }: Props) {
                   max={60}
                   value={breakMin}
                   onChange={(e) =>
-                    setBreakMin(Math.max(1, parseInt(e.target.value) || 1))
+                    setBreakMin(
+                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                    )
                   }
                 />
               </label>
@@ -608,14 +910,14 @@ export function SettingsDialog({ onClose }: Props) {
         </div>
 
         <div className={styles.footer}>
-          <button className={styles.btnGhost} onClick={onClose}>
+          <button className={styles.btnGhost} onClick={onClose} type="button">
             Cancel
           </button>
-          <button className={styles.btnPrimary} onClick={save}>
+          <button className={styles.btnPrimary} onClick={save} type="button">
             Save
           </button>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }

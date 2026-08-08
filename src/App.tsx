@@ -3,7 +3,7 @@ import { Settings, Maximize2 } from 'lucide-react'
 import { SettingsProvider } from './lib/useSettings'
 import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
-import { useWidgetVisibility } from './lib/useWidgetVisibility'
+import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
 import { ClockWidget } from './components/ClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
 import { CalendarWidget } from './components/CalendarWidget'
@@ -22,25 +22,50 @@ import './themes/sunset.css'
 import './themes/custom.css'
 import styles from './App.module.css'
 
+function renderWidget(widget: Widget) {
+  switch (widget) {
+    case 'clock':
+      return <ClockWidget />
+    case 'weather':
+      return <WeatherWidget />
+    case 'calendar':
+      return <CalendarWidget />
+    case 'timer':
+      return <TimerPanel />
+    case 'tasks':
+      return <TaskWidget />
+  }
+}
+
+function getWidgetTypeClass(widget: Widget) {
+  return widget === 'clock' ? styles.widgetClock : ''
+}
+
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode, toggleFocusMode } = useFocusMode()
-  const { visibility } = useWidgetVisibility()
-  const visibleWidgetCount = Object.values(visibility).filter(Boolean).length
-  const compactWidgetLayout = !focusMode && visibleWidgetCount > 0 && visibleWidgetCount <= 2
+  const { visibility, order, placements } = useWidgetVisibility()
+  const orderedVisibleWidgets = order.filter((widget) => {
+    if (!visibility[widget]) {
+      return false
+    }
+
+    if (focusMode && (widget === 'weather' || widget === 'calendar')) {
+      return false
+    }
+
+    return true
+  })
 
   return (
-    <div
-      className={`${styles.app} ${focusMode ? styles.focusMode : ''} ${
-        compactWidgetLayout ? styles.compactWidgets : ''
-      }`}
-    >
+    <div className={`${styles.app} ${focusMode ? styles.focusMode : ''}`}>
       <button
         className={styles.settingsBtn}
         onClick={() => setSettingsOpen(true)}
         aria-label="Open settings"
         title="Settings"
+        type="button"
       >
         <Settings size={18} />
       </button>
@@ -50,36 +75,31 @@ function Dashboard() {
         onClick={() => toggleFocusMode()}
         aria-label={`${focusMode ? 'Exit' : 'Enter'} focus mode`}
         title="Focus Mode (Cmd+K)"
+        type="button"
       >
         <Maximize2 size={18} />
       </button>
 
       <main className={styles.main}>
-        {visibility.clock && (
-          <div className={styles.cellClock}>
-            <ClockWidget />
+        {orderedVisibleWidgets.map((widget) => (
+          <div
+            key={widget}
+            className={[
+              styles.widgetCell,
+              getWidgetTypeClass(widget),
+            ].join(' ')}
+            style={
+              focusMode
+                ? undefined
+                : {
+                    gridColumn: `${placements[widget].column} / span ${placements[widget].columnSpan}`,
+                    gridRow: `${placements[widget].row} / span ${placements[widget].rowSpan}`,
+                  }
+            }
+          >
+            {renderWidget(widget)}
           </div>
-        )}
-        {visibility.weather && !focusMode && (
-          <div className={styles.cellWeather}>
-            <WeatherWidget />
-          </div>
-        )}
-        {visibility.calendar && !focusMode && (
-          <div className={styles.cellCalendar}>
-            <CalendarWidget />
-          </div>
-        )}
-        {visibility.timer && (
-          <div className={styles.cellTimer}>
-            <TimerPanel />
-          </div>
-        )}
-        {visibility.tasks && (
-          <div className={styles.cellTasks}>
-            <TaskWidget />
-          </div>
-        )}
+        ))}
       </main>
 
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />

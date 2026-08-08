@@ -56,18 +56,12 @@
   background: rgba(var(--accent-primary-rgb), 0.1);
 }
 
-/*
-  5-cell grid: 2 columns, 2 rows
-  - Clock: full width top row (1.5fr height)
-  - Weather, Calendar: middle row
-  - Timer, Tasks: bottom row (1fr height)
-*/
 .main {
   flex: 1 1 0;
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
   padding: clamp(0.75rem, 2vh, 1.5rem) clamp(1.5rem, 4vw, 4rem);
   column-gap: clamp(1rem, 3vw, 3rem);
   row-gap: clamp(0.75rem, 1.5vh, 1.25rem);
@@ -89,30 +83,8 @@
   row-gap: clamp(2rem, 3vh, 3rem);
 }
 
-.app.compactWidgets .main {
-  grid-template-columns: 1fr;
-  grid-template-rows: auto auto auto auto auto;
-  row-gap: clamp(1rem, 2vh, 1.5rem);
-}
-
-/* Clock: full width top row — content centered in cell */
-.cellClock {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-}
-
-.app.focusMode .cellClock {
-  justify-content: center;
-  min-height: 15rem;
-}
-
-/* Weather and Calendar share middle row */
-.cellWeather,
-.cellCalendar {
+/* Widget slots */
+.widgetCell {
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -120,56 +92,37 @@
   justify-content: flex-start;
 }
 
-/* Timer and Tasks share bottom row */
-.cellTimer,
-.cellTasks {
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+.widgetClock {
+  justify-content: center;
+  align-items: center;
 }
 
-.app.focusMode .cellTimer {
+.app.focusMode .widgetClock {
+  justify-content: center;
+  min-height: 15rem;
+}
+
+.app.focusMode .widgetCell {
   grid-column: 1 / -1;
   min-height: 18rem;
-}
-
-.app.focusMode .cellTasks {
-  grid-column: 1 / -1;
-  min-height: 20rem;
-}
-
-.app.compactWidgets .cellWeather,
-.app.compactWidgets .cellCalendar,
-.app.compactWidgets .cellTimer,
-.app.compactWidgets .cellTasks {
-  grid-column: 1 / -1;
-  min-height: clamp(14rem, 24vh, 22rem);
-}
-
-.app.compactWidgets .cellClock {
-  min-height: 14rem;
 }
 
 @media (max-width: 1200px) {
   .main {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(5, minmax(0, 1fr));
+    grid-template-rows: auto;
     padding: clamp(0.5rem, 1.5vh, 1rem) clamp(1rem, 3vw, 2rem);
   }
 
-  .cellClock {
-    grid-column: 1 / -1;
-    min-height: 12rem;
-  }
-
-  .cellWeather,
-  .cellCalendar,
-  .cellTimer,
-  .cellTasks {
+  .widgetCell {
     grid-column: 1 / -1;
     min-height: 15rem;
   }
+
+  .widgetClock {
+    min-height: 12rem;
+  }
+
 }
 
 @media (max-width: 700px) {
@@ -189,15 +142,12 @@
     gap: 0.6rem;
   }
 
-  .cellClock {
+  .widgetClock {
     min-height: clamp(5.5rem, 16vh, 7rem);
     overflow: visible;
   }
 
-  .cellWeather,
-  .cellCalendar,
-  .cellTimer,
-  .cellTasks {
+  .widgetCell {
     min-height: 10.5rem;
     overflow: visible;
   }

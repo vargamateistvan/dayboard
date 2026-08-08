@@ -8,6 +8,7 @@
   z-index: 1000;
   padding: var(--space-4);
   backdrop-filter: blur(4px);
+  overflow-y: auto;
 }
 
 .dialog {
@@ -15,12 +16,15 @@
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   box-shadow: var(--shadow-lg);
+  padding: 0;
+  margin: 0;
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  margin: auto;
 }
 
 .header {
@@ -371,32 +375,221 @@
   gap: 0.5rem;
 }
 
-.widgetToggle {
+.layoutEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.layoutEditorHint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Widget palette ────────────────────────────────── */
+
+.widgetPalette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.widgetPaletteLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.widgetPaletteHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.widgetPaletteChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.widgetChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  user-select: none;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.widgetChipVisible {
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: var(--color-accent);
+  cursor: default;
+}
+
+.widgetChipHidden {
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  cursor: grab;
+}
+
+.widgetChipHidden:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+/* ── 3x2 Layout grid ──────────────────────────────── */
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, minmax(4.5rem, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  position: relative;
+}
+
+.layoutGridResizing {
+  cursor: nwse-resize;
+}
+
+.layoutCell {
+  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  pointer-events: none;
+}
+
+.layoutCellAvailable {
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 4%, var(--color-surface-alt));
+}
+
+.layoutCellBlocked {
+  opacity: 0.4;
+}
+
+.layoutCellDropTarget {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  border-style: solid;
+}
+
+/* Placed widget card */
+.layoutWidget {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+  z-index: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+  min-width: 0;
+}
+
+.layoutWidget:hover {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
+}
+
+.layoutWidgetResizing {
+  cursor: nwse-resize;
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.layoutWidgetInner {
   display: flex;
   align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.layoutWidgetGrip {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.layoutWidgetLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layoutWidgetSize {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.layoutWidgetRemove {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  width: 1.4rem;
+  height: 1.4rem;
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 0.825rem;
-  transition: all 0.2s;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
-.widgetToggle:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+.layoutWidgetRemove:hover {
+  color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent);
 }
 
-.widgetToggle.widgetVisible {
-  background: rgba(var(--accent-primary-rgb, 59 130 246), 0.1);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-  font-weight: 600;
+/* Resize handle – bottom-right corner */
+.layoutWidgetResizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 40%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 55%,
+    transparent 55%,
+    transparent 65%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 65%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 80%,
+    transparent 80%
+  );
+  border-radius: 0 0 var(--radius-md) 0;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
 }
+
+.layoutWidgetResizeHandle:hover {
+  opacity: 1;
+}
+
 
 /* Color picker styles */
 .colorPickerGrid {
@@ -557,6 +750,9 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .layoutGrid {
+    grid-template-rows: repeat(3, minmax(4rem, 1fr));
+  }
   .calendarRow {
     flex-wrap: wrap;
     align-items: center;
