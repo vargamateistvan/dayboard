@@ -34,6 +34,15 @@ export function SpotifyWidget() {
 
   return (
     <div className={styles.widget}>
+      <MusicEmbedWidget
+        title="Spotify Player"
+        provider="spotify"
+        shareUrl={settings.spotifyEmbedUrl}
+        showHeader={false}
+        showStatus={false}
+        showActions={false}
+      />
+
       <form className={styles.form} onSubmit={handleSave}>
         <input
           className={styles.input}
@@ -46,15 +55,6 @@ export function SpotifyWidget() {
       </form>
 
       {error && <div className={styles.error}>{error}</div>}
-
-      <MusicEmbedWidget
-        title="Spotify Player"
-        provider="spotify"
-        shareUrl={settings.spotifyEmbedUrl}
-        showHeader={false}
-        showStatus={false}
-        showActions={false}
-      />
     </div>
   )
 }

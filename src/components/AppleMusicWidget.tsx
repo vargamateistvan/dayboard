@@ -34,6 +34,15 @@ export function AppleMusicWidget() {
 
   return (
     <div className={styles.widget}>
+      <MusicEmbedWidget
+        title="Apple Music Player"
+        provider="apple-music"
+        shareUrl={settings.appleMusicEmbedUrl}
+        showHeader={false}
+        showStatus={false}
+        showActions={false}
+      />
+
       <form className={styles.form} onSubmit={handleSave}>
         <input
           className={styles.input}
@@ -46,15 +55,6 @@ export function AppleMusicWidget() {
       </form>
 
       {error && <div className={styles.error}>{error}</div>}
-
-      <MusicEmbedWidget
-        title="Apple Music Player"
-        provider="apple-music"
-        shareUrl={settings.appleMusicEmbedUrl}
-        showHeader={false}
-        showStatus={false}
-        showActions={false}
-      />
     </div>
   )
 }
