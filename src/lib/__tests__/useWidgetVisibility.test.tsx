@@ -35,6 +35,14 @@ function Probe({ label }: { label: string }) {
           placements.clock.rowSpan,
         ].join(',')}
       </span>
+      <span data-testid={`apple-placement-${label}`}>
+        {[
+          placements.appleMusic.column,
+          placements.appleMusic.row,
+          placements.appleMusic.columnSpan,
+          placements.appleMusic.rowSpan,
+        ].join(',')}
+      </span>
 
       {/* toggle buttons */}
       <button onClick={() => toggleWidget('weather')}  aria-label={`toggle-${label}`}>toggle</button>
@@ -66,6 +74,11 @@ function Probe({ label }: { label: string }) {
         onClick={() => setWidgetPlacement('clock', { ...placements.clock, columnSpan: 2, rowSpan: 2 })}
         aria-label={`grow-clock-twobytwo-${label}`}
       >grow clock 2x2</button>
+
+      <button
+        onClick={() => setWidgetPlacement('appleMusic', { ...placements.appleMusic, columnSpan: 1, rowSpan: 1 })}
+        aria-label={`shrink-apple-${label}`}
+      >shrink apple</button>
     </div>
   )
 }
@@ -94,7 +107,7 @@ describe('useWidgetVisibility', () => {
 
     // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer(1,3); tasks hidden but placement ties at (1,3)
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,calendar,timer,tasks,notes,spotify,appleMusic',
+      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify',
     )
   })
 
@@ -169,5 +182,19 @@ describe('useWidgetVisibility', () => {
     expect(
       JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}').placements.clock,
     ).toEqual({ column: 1, row: 1, columnSpan: 2, rowSpan: 2 })
+  })
+
+  it('keeps apple music at minimum 1x2', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        placements: {
+          appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
+        },
+      }),
+    )
+    render(<Probe label="apple-min" />)
+
+    expect(screen.getByTestId('apple-placement-apple-min').textContent).toBe('1,2,1,2')
   })
 })

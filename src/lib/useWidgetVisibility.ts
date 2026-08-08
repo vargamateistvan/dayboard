@@ -63,7 +63,21 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   tasks:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
   notes:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
   spotify:  { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-  appleMusic: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
+};
+
+const MIN_WIDGET_SIZE: Record<
+  Widget,
+  Pick<WidgetPlacement, "columnSpan" | "rowSpan">
+> = {
+  clock: { columnSpan: 1, rowSpan: 1 },
+  weather: { columnSpan: 1, rowSpan: 1 },
+  calendar: { columnSpan: 1, rowSpan: 1 },
+  timer: { columnSpan: 1, rowSpan: 1 },
+  tasks: { columnSpan: 1, rowSpan: 1 },
+  notes: { columnSpan: 1, rowSpan: 1 },
+  spotify: { columnSpan: 1, rowSpan: 1 },
+  appleMusic: { columnSpan: 1, rowSpan: 2 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {
@@ -159,6 +173,27 @@ function normalizePlacement(
   return { column, row, columnSpan, rowSpan };
 }
 
+function normalizePlacementForWidget(
+  widget: Widget,
+  placement: unknown,
+  fallback: WidgetPlacement,
+  rowCount: number,
+): WidgetPlacement {
+  const normalized = normalizePlacement(placement, fallback, rowCount);
+  const minimum = MIN_WIDGET_SIZE[widget];
+  const columnSpan = Math.max(
+    normalized.columnSpan,
+    minimum.columnSpan,
+  ) as WidgetColumnSpan;
+  const rowSpan = Math.max(normalized.rowSpan, minimum.rowSpan);
+  const maxColumn = Math.max(1, WIDGET_GRID_COLUMNS - columnSpan + 1);
+  const maxRow = Math.max(1, rowCount - rowSpan + 1);
+  const column = Math.min(normalized.column, maxColumn) as WidgetGridColumn;
+  const row = Math.min(normalized.row, maxRow);
+
+  return { column, row, columnSpan, rowSpan };
+}
+
 function normalizePlacements(value: unknown, rowCount: number): WidgetPlacements {
   const candidate =
     value && typeof value === "object"
@@ -166,7 +201,8 @@ function normalizePlacements(value: unknown, rowCount: number): WidgetPlacements
       : {};
 
   return WIDGET_IDS.reduce<WidgetPlacements>((placements, widget) => {
-    placements[widget] = normalizePlacement(
+    placements[widget] = normalizePlacementForWidget(
+      widget,
       candidate[widget],
       DEFAULT_PLACEMENTS[widget],
       rowCount,
@@ -317,7 +353,8 @@ function migrateLegacyLayout(value: {
           column <= WIDGET_GRID_COLUMNS && !placed;
           column += 1
         ) {
-          const placement = normalizePlacement(
+          const placement = normalizePlacementForWidget(
+            widget,
             { column, row, ...size },
             DEFAULT_PLACEMENTS[widget],
             rowCount,
@@ -503,7 +540,8 @@ export function useWidgetVisibility() {
         nextRow += 1;
       }
 
-      const nextPlacement = normalizePlacement(
+      const nextPlacement = normalizePlacementForWidget(
+        widget,
         {
           ...currentPlacement,
           column: nextColumn,
@@ -539,7 +577,8 @@ export function useWidgetVisibility() {
   const setWidgetPlacement = useCallback(
     (widget: Widget, nextPlacement: WidgetPlacement) => {
       const currentLayout = readLayout();
-      const normalizedPlacement = normalizePlacement(
+      const normalizedPlacement = normalizePlacementForWidget(
+        widget,
         nextPlacement,
         currentLayout.placements[widget],
         currentLayout.rowCount,
