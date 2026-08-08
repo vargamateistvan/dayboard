@@ -452,13 +452,59 @@
 .layoutGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: repeat(3, minmax(4.5rem, 1fr));
   gap: 0.5rem;
   padding: 0.5rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
   position: relative;
+}
+
+.layoutGridWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.layoutRowControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.layoutRowLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.layoutRowBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.layoutRowBtn:hover:not(:disabled) {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.layoutRowBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
 .layoutGridResizing {
@@ -751,7 +797,8 @@
   }
 
   .layoutGrid {
-    grid-template-rows: repeat(3, minmax(4rem, 1fr));
+    /* row height shrinks on mobile; inline style controls count */
+    min-height: 0;
   }
   .calendarRow {
     flex-wrap: wrap;

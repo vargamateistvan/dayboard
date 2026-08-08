@@ -8,14 +8,16 @@ export const WIDGET_IDS = [
   "tasks",
 ] as const;
 export const WIDGET_GRID_COLUMNS = 2;
-export const WIDGET_GRID_ROWS = 3;
+export const MIN_GRID_ROWS = 2;
+export const MAX_GRID_ROWS = 6;
+export const DEFAULT_GRID_ROWS = 3;
 
 export type Widget = (typeof WIDGET_IDS)[number];
 export type WidgetMoveDirection = "up" | "down" | "left" | "right";
 export type WidgetGridColumn = 1 | 2;
-export type WidgetGridRow = 1 | 2 | 3;
+export type WidgetGridRow = number;
 export type WidgetColumnSpan = 1 | 2;
-export type WidgetRowSpan = 1 | 2 | 3;
+export type WidgetRowSpan = number;
 
 type WidgetVisibility = Record<Widget, boolean>;
 
@@ -29,6 +31,7 @@ export interface WidgetPlacement {
 type WidgetPlacements = Record<Widget, WidgetPlacement>;
 
 interface WidgetLayoutState {
+  rowCount: number;
   visibility: WidgetVisibility;
   placements: WidgetPlacements;
 }
@@ -36,7 +39,7 @@ interface WidgetLayoutState {
 const STORAGE_KEY = "dayboard_widget_layout";
 const LEGACY_VISIBILITY_KEY = "dayboard_widget_visibility";
 const CHANGE_EVENT = "dayboard:widget-layout-change";
-const GRID_VERSION = `${WIDGET_GRID_COLUMNS}x${WIDGET_GRID_ROWS}`;
+const GRID_VERSION = `${WIDGET_GRID_COLUMNS}x${DEFAULT_GRID_ROWS}`;
 
 const DEFAULT_VISIBILITY: WidgetVisibility = {
   clock: true,
@@ -55,6 +58,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {
+  rowCount: DEFAULT_GRID_ROWS,
   visibility: DEFAULT_VISIBILITY,
   placements: DEFAULT_PLACEMENTS,
 };
@@ -64,6 +68,7 @@ let cachedLayout: WidgetLayoutState = DEFAULT_LAYOUT;
 
 function cloneDefaultLayout(): WidgetLayoutState {
   return {
+    rowCount: DEFAULT_GRID_ROWS,
     visibility: { ...DEFAULT_VISIBILITY },
     placements: structuredClone(DEFAULT_PLACEMENTS),
   };
@@ -81,19 +86,23 @@ function clampColumn(value: unknown): WidgetGridColumn {
   return value === 2 ? 2 : 1;
 }
 
-function clampRow(value: unknown): WidgetGridRow {
-  if (value === 2 || value === 3) return value;
-  return 1;
+function clampRow(value: unknown, rowCount: number): WidgetGridRow {
+  const n = typeof value === "number" ? value : 1;
+  return Math.min(Math.max(Math.round(n), 1), rowCount);
 }
 
 function clampColumnSpan(value: unknown): WidgetColumnSpan {
   return value === 2 ? 2 : 1;
 }
 
-function clampRowSpan(value: unknown): WidgetRowSpan {
-  if (value === 3) return 3;
-  if (value === 2) return 2;
-  return 1;
+function clampRowSpan(value: unknown, rowCount: number): WidgetRowSpan {
+  const n = typeof value === "number" ? value : 1;
+  return Math.min(Math.max(Math.round(n), 1), rowCount);
+}
+
+function clampRowCount(value: unknown): number {
+  const n = typeof value === "number" ? value : DEFAULT_GRID_ROWS;
+  return Math.min(Math.max(Math.round(n), MIN_GRID_ROWS), MAX_GRID_ROWS);
 }
 
 function normalizeVisibility(value: unknown): WidgetVisibility {
@@ -118,6 +127,7 @@ function normalizeVisibility(value: unknown): WidgetVisibility {
 function normalizePlacement(
   placement: unknown,
   fallback: WidgetPlacement,
+  rowCount: number,
 ): WidgetPlacement {
   if (!placement || typeof placement !== "object") {
     return { ...fallback };
@@ -127,25 +137,20 @@ function normalizePlacement(
     Record<keyof WidgetPlacement, unknown>
   >;
   const columnSpan = clampColumnSpan(candidate.columnSpan);
-  const rowSpan = clampRowSpan(candidate.rowSpan);
+  const rowSpan = clampRowSpan(candidate.rowSpan, rowCount);
   const maxColumn = WIDGET_GRID_COLUMNS - columnSpan + 1;
-  const maxRow = WIDGET_GRID_ROWS - rowSpan + 1;
+  const maxRow = rowCount - rowSpan + 1;
 
   const column = Math.min(
     clampColumn(candidate.column),
     maxColumn,
   ) as WidgetGridColumn;
-  const row = Math.min(clampRow(candidate.row), maxRow) as WidgetGridRow;
+  const row = Math.min(clampRow(candidate.row, rowCount), maxRow);
 
-  return {
-    column,
-    row,
-    columnSpan,
-    rowSpan,
-  };
+  return { column, row, columnSpan, rowSpan };
 }
 
-function normalizePlacements(value: unknown): WidgetPlacements {
+function normalizePlacements(value: unknown, rowCount: number): WidgetPlacements {
   const candidate =
     value && typeof value === "object"
       ? (value as Partial<Record<Widget, unknown>>)
@@ -155,6 +160,7 @@ function normalizePlacements(value: unknown): WidgetPlacements {
     placements[widget] = normalizePlacement(
       candidate[widget],
       DEFAULT_PLACEMENTS[widget],
+      rowCount,
     );
     return placements;
   }, clonePlacements(DEFAULT_PLACEMENTS));
@@ -178,12 +184,12 @@ function getOccupiedCells(placement: WidgetPlacement): string[] {
   return cells;
 }
 
-function fitsGrid(placement: WidgetPlacement): boolean {
+function fitsGrid(placement: WidgetPlacement, rowCount: number): boolean {
   return (
     placement.column >= 1 &&
     placement.row >= 1 &&
     placement.column + placement.columnSpan - 1 <= WIDGET_GRID_COLUMNS &&
-    placement.row + placement.rowSpan - 1 <= WIDGET_GRID_ROWS
+    placement.row + placement.rowSpan - 1 <= rowCount
   );
 }
 
@@ -192,8 +198,9 @@ export function canPlaceWidget(
   visibility: WidgetVisibility,
   widget: Widget,
   nextPlacement: WidgetPlacement,
+  rowCount: number,
 ): boolean {
-  if (!fitsGrid(nextPlacement)) {
+  if (!fitsGrid(nextPlacement, rowCount)) {
     return false;
   }
 
@@ -237,15 +244,19 @@ function normalizeLayout(value: unknown): WidgetLayoutState {
   }
 
   const candidate = value as {
+    rowCount?: unknown;
     visibility?: unknown;
     placements?: unknown;
   };
 
+  const rowCount = clampRowCount(candidate.rowCount);
+
   return {
+    rowCount,
     visibility: normalizeVisibility(
       "visibility" in candidate ? candidate.visibility : candidate,
     ),
-    placements: normalizePlacements(candidate.placements),
+    placements: normalizePlacements(candidate.placements, rowCount),
   };
 }
 
@@ -254,6 +265,7 @@ function migrateLegacyLayout(value: {
   order?: unknown;
   columnSpans?: unknown;
 }): WidgetLayoutState {
+  const rowCount = DEFAULT_GRID_ROWS;
   const visibility = value.visibility;
   const order = Array.isArray(value.order)
     ? value.order.filter(isWidget)
@@ -290,7 +302,7 @@ function migrateLegacyLayout(value: {
     for (const size of candidates) {
       let placed = false;
 
-      for (let row = 1; row <= WIDGET_GRID_ROWS && !placed; row += 1) {
+      for (let row = 1; row <= rowCount && !placed; row += 1) {
         for (
           let column = 1;
           column <= WIDGET_GRID_COLUMNS && !placed;
@@ -299,6 +311,7 @@ function migrateLegacyLayout(value: {
           const placement = normalizePlacement(
             { column, row, ...size },
             DEFAULT_PLACEMENTS[widget],
+            rowCount,
           );
 
           const cells = getOccupiedCells(placement);
@@ -317,6 +330,7 @@ function migrateLegacyLayout(value: {
   });
 
   return {
+    rowCount,
     visibility,
     placements: nextPlacements,
   };
@@ -352,6 +366,7 @@ function parseStoredLayout(raw: string | null): WidgetLayoutState {
   try {
     const parsed = JSON.parse(serialized) as {
       gridVersion?: unknown;
+      rowCount?: unknown;
       visibility?: unknown;
       placements?: unknown;
       order?: unknown;
@@ -360,14 +375,16 @@ function parseStoredLayout(raw: string | null): WidgetLayoutState {
 
     if (prefix === "legacy") {
       return {
+        rowCount: DEFAULT_GRID_ROWS,
         visibility: normalizeVisibility(parsed),
         placements: clonePlacements(DEFAULT_PLACEMENTS),
       };
     }
 
-    // Reset placements to defaults when the grid dimensions changed (modern format only)
+    // Reset placements to defaults when the column count changed (modern format only)
     if ("placements" in parsed && parsed.gridVersion !== GRID_VERSION) {
       return {
+        rowCount: DEFAULT_GRID_ROWS,
         visibility: normalizeVisibility(parsed.visibility ?? parsed),
         placements: clonePlacements(DEFAULT_PLACEMENTS),
       };
@@ -445,6 +462,7 @@ export function useWidgetVisibility() {
     cloneDefaultLayout,
   );
   const order = sortWidgetsByPlacement(layout.placements);
+  const rowCount = layout.rowCount;
 
   const toggleWidget = useCallback((widget: Widget, visible?: boolean) => {
     const currentLayout = readLayout();
@@ -483,6 +501,7 @@ export function useWidgetVisibility() {
           row: nextRow,
         },
         currentPlacement,
+        currentLayout.rowCount,
       );
 
       if (
@@ -491,6 +510,7 @@ export function useWidgetVisibility() {
           currentLayout.visibility,
           widget,
           nextPlacement,
+          currentLayout.rowCount,
         )
       ) {
         return;
@@ -513,6 +533,7 @@ export function useWidgetVisibility() {
       const normalizedPlacement = normalizePlacement(
         nextPlacement,
         currentLayout.placements[widget],
+        currentLayout.rowCount,
       );
 
       if (
@@ -521,6 +542,7 @@ export function useWidgetVisibility() {
           currentLayout.visibility,
           widget,
           normalizedPlacement,
+          currentLayout.rowCount,
         )
       ) {
         return;
@@ -537,12 +559,43 @@ export function useWidgetVisibility() {
     [],
   );
 
+  const addRow = useCallback(() => {
+    const currentLayout = readLayout();
+    if (currentLayout.rowCount >= MAX_GRID_ROWS) return;
+    writeLayout({ ...currentLayout, rowCount: currentLayout.rowCount + 1 });
+  }, []);
+
+  const removeRow = useCallback(() => {
+    const currentLayout = readLayout();
+    if (currentLayout.rowCount <= MIN_GRID_ROWS) return;
+    const newRowCount = currentLayout.rowCount - 1;
+    // Push any widgets that now exceed the grid back to the last valid row
+    const nextPlacements = { ...currentLayout.placements };
+    for (const widget of WIDGET_IDS) {
+      if (!currentLayout.visibility[widget]) continue;
+      const p = nextPlacements[widget];
+      const maxRow = newRowCount - p.rowSpan + 1;
+      if (p.row > maxRow) {
+        nextPlacements[widget] = { ...p, row: Math.max(1, maxRow) };
+      }
+      // Clamp rowSpan so the widget fits within the new row count
+      const maxSpan = newRowCount - nextPlacements[widget].row + 1;
+      if (nextPlacements[widget].rowSpan > maxSpan) {
+        nextPlacements[widget] = { ...nextPlacements[widget], rowSpan: Math.max(1, maxSpan) };
+      }
+    }
+    writeLayout({ ...currentLayout, rowCount: newRowCount, placements: nextPlacements });
+  }, []);
+
   return {
     visibility: layout.visibility,
     placements: layout.placements,
+    rowCount,
     order,
     toggleWidget,
     moveWidget,
     setWidgetPlacement,
+    addRow,
+    removeRow,
   };
 }

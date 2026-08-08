@@ -45,7 +45,7 @@ function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode, toggleFocusMode } = useFocusMode()
-  const { visibility, order, placements } = useWidgetVisibility()
+  const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
       return false
@@ -80,7 +80,7 @@ function Dashboard() {
         <Maximize2 size={18} />
       </button>
 
-      <main className={styles.main}>
+      <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
         {orderedVisibleWidgets.map((widget) => (
           <div
             key={widget}

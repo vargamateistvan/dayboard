@@ -2,7 +2,8 @@ import { useRef, useState } from "react";
 import { useSettings } from "../lib/useSettings";
 import {
   WIDGET_GRID_COLUMNS,
-  WIDGET_GRID_ROWS,
+  MIN_GRID_ROWS,
+  MAX_GRID_ROWS,
   canPlaceWidget,
   type WidgetColumnSpan,
   type WidgetGridColumn,
@@ -90,19 +91,25 @@ interface WidgetLayoutEditorProps {
   readonly order: Widget[];
   readonly visibility: Record<Widget, boolean>;
   readonly placements: Record<Widget, WidgetPlacement>;
+  readonly rowCount: number;
   readonly onSetWidgetPlacement: (
     widget: Widget,
     placement: WidgetPlacement,
   ) => void;
   readonly onToggleWidget: (widget: Widget, visible?: boolean) => void;
+  readonly onAddRow: () => void;
+  readonly onRemoveRow: () => void;
 }
 
 function WidgetLayoutEditor({
   order,
   visibility,
   placements,
+  rowCount,
   onSetWidgetPlacement,
   onToggleWidget,
+  onAddRow,
+  onRemoveRow,
 }: WidgetLayoutEditorProps) {
   const [paletteDragWidget, setPaletteDragWidget] = useState<Widget | null>(null);
   const [gridDragWidget, setGridDragWidget] = useState<Widget | null>(null);
@@ -127,7 +134,7 @@ function WidgetLayoutEditor({
     canPlaceWidget(placements, visibility, widget, {
       ...placements[widget],
       ...patch,
-    });
+    }, rowCount);
 
   const getCellFromPoint = (clientX: number, clientY: number): { column: WidgetGridColumn; row: WidgetGridRow } | null => {
     if (!gridRef.current) return null;
@@ -139,9 +146,9 @@ function WidgetLayoutEditor({
       Math.floor((relX / rect.width) * WIDGET_GRID_COLUMNS) + 1,
     ) as WidgetGridColumn;
     const row = Math.min(
-      WIDGET_GRID_ROWS,
-      Math.floor((relY / rect.height) * WIDGET_GRID_ROWS) + 1,
-    ) as WidgetGridRow;
+      rowCount,
+      Math.floor((relY / rect.height) * rowCount) + 1,
+    );
     return { column, row };
   };
 
@@ -208,7 +215,7 @@ function WidgetLayoutEditor({
     if (!gridRef.current) return;
     const rect = gridRef.current.getBoundingClientRect();
     const cellWidth = rect.width / WIDGET_GRID_COLUMNS;
-    const cellHeight = rect.height / WIDGET_GRID_ROWS;
+    const cellHeight = rect.height / rowCount;
     setResizingWidget(widget);
     resizeStartRef.current = {
       startX: e.clientX,
@@ -230,7 +237,7 @@ function WidgetLayoutEditor({
         Math.max(1, startColumnSpan + Math.round(dx / cellWidth)),
       ) as WidgetColumnSpan;
       const newRowSpan = Math.min(
-        WIDGET_GRID_ROWS - placement.row + 1,
+        rowCount - placement.row + 1,
         Math.max(1, startRowSpan + Math.round(dy / cellHeight)),
       ) as WidgetRowSpan;
       if (
@@ -288,21 +295,23 @@ function WidgetLayoutEditor({
         <span className={styles.widgetPaletteHint}>Drag a hidden widget onto the grid to show it</span>
       </div>
 
-      {/* 3x2 grid */}
-      <div
-        ref={gridRef}
-        className={[
-          styles.layoutGrid,
-          resizingWidget ? styles.layoutGridResizing : "",
-        ].join(" ")}
-        onDragOver={handleGridDragOver}
-        onDrop={handleGridDrop}
-        onDragLeave={handleGridDragLeave}
-      >
+      {/* Grid with row controls */}
+      <div className={styles.layoutGridWrapper}>
+        <div
+          ref={gridRef}
+          className={[
+            styles.layoutGrid,
+            resizingWidget ? styles.layoutGridResizing : "",
+          ].join(" ")}
+          style={{ gridTemplateRows: `repeat(${rowCount}, minmax(4.5rem, 1fr))` }}
+          onDragOver={handleGridDragOver}
+          onDrop={handleGridDrop}
+          onDragLeave={handleGridDragLeave}
+        >
         {/* Background cells */}
-        {Array.from({ length: WIDGET_GRID_ROWS * WIDGET_GRID_COLUMNS }, (_, i) => {
+        {Array.from({ length: rowCount * WIDGET_GRID_COLUMNS }, (_, i) => {
           const col = ((i % WIDGET_GRID_COLUMNS) + 1) as WidgetGridColumn;
-          const row = (Math.floor(i / WIDGET_GRID_COLUMNS) + 1) as WidgetGridRow;
+          const row = Math.floor(i / WIDGET_GRID_COLUMNS) + 1;
           const isDropTarget = dropTargetCell?.column === col && dropTargetCell?.row === row;
           const canDrop = dragWidget ? canUsePlacement(dragWidget, { column: col, row: row }) : false;
           return (
@@ -359,6 +368,32 @@ function WidgetLayoutEditor({
             </div>
           );
         })}
+        </div>
+
+        {/* Row controls */}
+        <div className={styles.layoutRowControls}>
+          <button
+            className={styles.layoutRowBtn}
+            onClick={onRemoveRow}
+            disabled={rowCount <= MIN_GRID_ROWS}
+            aria-label="Remove row"
+            title="Remove a row"
+            type="button"
+          >
+            −
+          </button>
+          <span className={styles.layoutRowLabel}>{rowCount} rows</span>
+          <button
+            className={styles.layoutRowBtn}
+            onClick={onAddRow}
+            disabled={rowCount >= MAX_GRID_ROWS}
+            aria-label="Add row"
+            title="Add a row"
+            type="button"
+          >
+            +
+          </button>
+        </div>
       </div>
 
       <p className={styles.layoutEditorHint}>
@@ -375,8 +410,11 @@ export function SettingsDialog({ onClose }: Props) {
     visibility,
     order,
     placements,
+    rowCount,
     toggleWidget,
     setWidgetPlacement,
+    addRow,
+    removeRow,
   } = useWidgetVisibility();
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>(
     settings.calendarFeeds.length > 0
@@ -480,11 +518,14 @@ export function SettingsDialog({ onClose }: Props) {
               order={order}
               visibility={visibility}
               placements={placements}
+              rowCount={rowCount}
               onSetWidgetPlacement={setWidgetPlacement}
               onToggleWidget={toggleWidget}
+              onAddRow={addRow}
+              onRemoveRow={removeRow}
             />
             <p className={styles.hint}>
-              Drag widgets from the palette onto the 3×2 grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
+              Drag widgets from the palette onto the grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
             </p>
           </section>
 
