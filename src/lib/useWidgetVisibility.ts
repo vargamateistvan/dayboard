@@ -6,6 +6,9 @@ export const WIDGET_IDS = [
   "calendar",
   "timer",
   "tasks",
+  "notes",
+  "spotify",
+  "appleMusic",
 ] as const;
 export const WIDGET_GRID_COLUMNS = 2;
 export const MIN_GRID_ROWS = 2;
@@ -47,6 +50,9 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
   calendar: true,
   timer: true,
   tasks: false,
+  notes: false,
+  spotify: false,
+  appleMusic: false,
 };
 
 const DEFAULT_PLACEMENTS: WidgetPlacements = {
@@ -55,6 +61,9 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
   timer:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
   tasks:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  notes:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  spotify:  { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  appleMusic: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {

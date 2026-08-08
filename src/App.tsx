@@ -9,6 +9,9 @@ import { WeatherWidget } from './components/WeatherWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
 import { TaskWidget } from './components/TaskWidget'
+import { NotesWidget } from './components/NotesWidget'
+import { SpotifyWidget } from './components/SpotifyWidget'
+import { AppleMusicWidget } from './components/AppleMusicWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
@@ -34,6 +37,12 @@ function renderWidget(widget: Widget) {
       return <TimerPanel />
     case 'tasks':
       return <TaskWidget />
+    case 'notes':
+      return <NotesWidget />
+    case 'spotify':
+      return <SpotifyWidget />
+    case 'appleMusic':
+      return <AppleMusicWidget />
   }
 }
 

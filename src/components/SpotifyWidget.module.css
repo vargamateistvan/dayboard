@@ -1,0 +1,40 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.button {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent-primary) 12%, var(--bg-surface));
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+
+.error {
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: 0.78rem;
+  padding: 0.45rem 0.6rem;
+}

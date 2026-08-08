@@ -73,6 +73,12 @@ function calendarProxyPlugin() {
 export default defineConfig({
   plugins: [react(), calendarProxyPlugin()],
   base: '/dayboard/',
+  server: {
+    https: process.env.DAYBOARD_HTTPS === 'true',
+  },
+  preview: {
+    https: process.env.DAYBOARD_HTTPS === 'true',
+  },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -94,7 +94,7 @@ describe('useWidgetVisibility', () => {
 
     // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer(1,3); tasks hidden but placement ties at (1,3)
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,calendar,timer,tasks',
+      'clock,weather,calendar,timer,tasks,notes,spotify,appleMusic',
     )
   })
 
@@ -115,7 +115,7 @@ describe('useWidgetVisibility', () => {
       LAYOUT_STORAGE_KEY,
       JSON.stringify({
         visibility: { clock: true, weather: true, calendar: true, timer: true, tasks: true },
-        order: ['weather', 'clock', 'calendar', 'timer', 'tasks'],
+        order: ['weather', 'clock', 'calendar', 'timer', 'tasks', 'notes', 'spotify', 'appleMusic'],
         columnSpans: { weather: 2, clock: 1 },
       }),
     )

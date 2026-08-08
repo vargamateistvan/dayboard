@@ -28,6 +28,8 @@ export interface Settings {
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
+  spotifyEmbedUrl: string
+  appleMusicEmbedUrl: string
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -113,6 +115,8 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
+  spotifyEmbedUrl: '',
+  appleMusicEmbedUrl: '',
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -212,6 +216,10 @@ function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   return value
 }
 
+function normalizeEmbedUrl(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
 function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
   if (typeof value !== 'boolean') {
     return DEFAULT_SETTINGS.showBuyMeACoffeeWidget
@@ -262,6 +270,8 @@ export function loadSettings(): Settings {
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
+      spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
+      appleMusicEmbedUrl: normalizeEmbedUrl((rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

@@ -69,7 +69,7 @@ const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
 ];
 
 const WIDGETS: {
-  id: "clock" | "weather" | "calendar" | "timer" | "tasks";
+  id: Widget;
   label: string;
 }[] = [
   { id: "clock", label: "Clock" },
@@ -77,6 +77,9 @@ const WIDGETS: {
   { id: "calendar", label: "Calendar" },
   { id: "timer", label: "Timer" },
   { id: "tasks", label: "Tasks" },
+  { id: "notes", label: "Sticky Notes" },
+  { id: "spotify", label: "Spotify Player" },
+  { id: "appleMusic", label: "Apple Music Player" },
 ];
 
 interface Props {
@@ -430,6 +433,8 @@ export function SettingsDialog({ onClose }: Props) {
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
   );
+  const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState(settings.spotifyEmbedUrl);
+  const [appleMusicEmbedUrl, setAppleMusicEmbedUrl] = useState(settings.appleMusicEmbedUrl);
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(
     settings.showBuyMeACoffeeWidget,
   );
@@ -481,6 +486,8 @@ export function SettingsDialog({ onClose }: Props) {
       weatherRefreshMinutes: weatherRefreshMin,
       weatherUnitSystem,
       weatherShowExtraDetails,
+      spotifyEmbedUrl,
+      appleMusicEmbedUrl,
       showBuyMeACoffeeWidget,
       calendarHidePastEvents,
       calendarShowAllDayEvents,
@@ -884,6 +891,33 @@ export function SettingsDialog({ onClose }: Props) {
             <p className={styles.hint}>
               Weather updates automatically using this interval. You can still
               refresh it manually anytime.
+            </p>
+          </section>
+
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Music Embeds</h3>
+            <label className={styles.intervalLabel}>
+              <span>Spotify share URL</span>
+              <input
+                className={styles.input}
+                type="url"
+                placeholder="https://open.spotify.com/track/..."
+                value={spotifyEmbedUrl}
+                onChange={(e) => setSpotifyEmbedUrl(e.target.value)}
+              />
+            </label>
+            <label className={styles.intervalLabel}>
+              <span>Apple Music share URL</span>
+              <input
+                className={styles.input}
+                type="url"
+                placeholder="https://music.apple.com/..."
+                value={appleMusicEmbedUrl}
+                onChange={(e) => setAppleMusicEmbedUrl(e.target.value)}
+              />
+            </label>
+            <p className={styles.hint}>
+              Paste a public share link. Dayboard converts it to an embeddable player automatically.
             </p>
           </section>
 

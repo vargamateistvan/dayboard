@@ -62,6 +62,8 @@ describe('settings persistence', () => {
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,
+      spotifyEmbedUrl: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+      appleMusicEmbedUrl: 'https://music.apple.com/us/album/1989/1440935467?i=1440935475',
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
       customColors: DEFAULT_SETTINGS.customColors,
