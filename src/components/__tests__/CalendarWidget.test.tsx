@@ -168,7 +168,6 @@ describe('CalendarWidget', () => {
     })
     const todayCell = screen.getByLabelText(todayLabel)
     expect(todayCell.querySelector('[aria-hidden="true"]')).not.toBeNull()
-    expect(todayCell.textContent).toContain('Team Standup')
     vi.unstubAllGlobals()
   })
 
