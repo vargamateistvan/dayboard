@@ -57,6 +57,7 @@ import {
   EyeOff,
   GripVertical,
 } from "lucide-react";
+import { MediaBrandIcon } from "./MediaBrandIcon";
 import styles from "./SettingsDialog.module.css";
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -129,6 +130,7 @@ interface WidgetLayoutEditorProps {
 
 interface MediaLinkEditorProps {
   readonly title: string;
+  readonly brand: "spotify" | "apple-music" | "apple-podcasts";
   readonly activeUrl: string;
   readonly savedLinks: SavedMediaLink[];
   readonly addUrl: string;
@@ -142,6 +144,7 @@ interface MediaLinkEditorProps {
 
 function MediaLinkEditor({
   title,
+  brand,
   activeUrl,
   savedLinks,
   addUrl,
@@ -155,7 +158,10 @@ function MediaLinkEditor({
   return (
     <div className={styles.mediaLinkEditor}>
       <label className={styles.intervalLabel}>
-        <span>{title} saved links</span>
+        <span className={styles.mediaLinkLabel}>
+          <MediaBrandIcon brand={brand} size={20} className={styles.mediaLinkLogo} />
+          <span>{title} saved links</span>
+        </span>
         <div className={styles.mediaLinkSelectRow}>
           <select
             className={styles.input}
@@ -187,7 +193,10 @@ function MediaLinkEditor({
       </label>
 
       <label className={styles.intervalLabel}>
-        <span>Add link</span>
+        <span className={styles.mediaLinkLabel}>
+          <MediaBrandIcon brand={brand} size={20} className={styles.mediaLinkLogo} />
+          <span>Add link</span>
+        </span>
         <div className={styles.mediaLinkRow}>
           <input
             className={[styles.input, styles.mediaLinkInput].join(" ")}
@@ -1149,6 +1158,7 @@ export function SettingsDialog({ onClose }: Props) {
             <h3 className={styles.sectionTitle}>Music Embeds</h3>
             <MediaLinkEditor
               title="Spotify"
+              brand="spotify"
               activeUrl={spotifyEmbedUrl}
               savedLinks={spotifyEmbedLinks}
               addUrl={spotifyAddUrl}
@@ -1182,6 +1192,7 @@ export function SettingsDialog({ onClose }: Props) {
             />
             <MediaLinkEditor
               title="Apple Music"
+              brand="apple-music"
               activeUrl={appleMusicEmbedUrl}
               savedLinks={appleMusicEmbedLinks}
               addUrl={appleMusicAddUrl}
@@ -1215,6 +1226,7 @@ export function SettingsDialog({ onClose }: Props) {
             />
             <MediaLinkEditor
               title="Spotify Podcast"
+              brand="spotify"
               activeUrl={spotifyPodcastEmbedUrl}
               savedLinks={spotifyPodcastEmbedLinks}
               addUrl={spotifyPodcastAddUrl}
@@ -1248,6 +1260,7 @@ export function SettingsDialog({ onClose }: Props) {
             />
             <MediaLinkEditor
               title="Apple Podcast"
+              brand="apple-podcasts"
               activeUrl={applePodcastEmbedUrl}
               savedLinks={applePodcastEmbedLinks}
               addUrl={applePodcastAddUrl}

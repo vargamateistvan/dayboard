@@ -34,6 +34,17 @@
   color: var(--text-secondary);
 }
 
+.labelRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.labelLogo {
+  flex: 0 0 auto;
+  display: block;
+}
+
 .selectRow {
   display: flex;
   align-items: center;

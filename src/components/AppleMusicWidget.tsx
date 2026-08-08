@@ -12,6 +12,7 @@ import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { MusicEmbedWidget } from './MusicEmbedWidget'
+import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './AppleMusicWidget.module.css'
 
 export function AppleMusicWidget() {
@@ -89,7 +90,10 @@ export function AppleMusicWidget() {
       </div>
 
       <label className={styles.selectorRow}>
-        <span>Saved links</span>
+        <span className={styles.labelRow}>
+          <MediaBrandIcon brand="apple-music" size={18} className={styles.labelLogo} />
+          <span>Saved links</span>
+        </span>
         <div className={styles.selectRow}>
           <select
             className={styles.select}
@@ -121,7 +125,10 @@ export function AppleMusicWidget() {
       </label>
 
       <label className={styles.selectorRow}>
-        <span>Add link</span>
+        <span className={styles.labelRow}>
+          <MediaBrandIcon brand="apple-music" size={18} className={styles.labelLogo} />
+          <span>Add link</span>
+        </span>
         <div className={styles.formRow}>
           <input
             className={styles.input}

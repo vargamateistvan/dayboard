@@ -384,6 +384,17 @@
   color: var(--color-text-muted);
 }
 
+.mediaLinkLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mediaLinkLogo {
+  flex: 0 0 auto;
+  display: block;
+}
+
 .numberInput {
   width: 80px;
   padding: var(--space-2) var(--space-3);

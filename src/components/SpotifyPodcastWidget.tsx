@@ -12,6 +12,7 @@ import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { PodcastEmbedWidget } from './PodcastEmbedWidget'
+import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './SpotifyWidget.module.css'
 
 export function SpotifyPodcastWidget() {
@@ -92,7 +93,10 @@ export function SpotifyPodcastWidget() {
       </div>
 
       <label className={styles.selectorRow}>
-        <span>Saved links</span>
+        <span className={styles.labelRow}>
+          <MediaBrandIcon brand="spotify" size={18} className={styles.labelLogo} />
+          <span>Saved links</span>
+        </span>
         <div className={styles.selectRow}>
           <select
             className={styles.select}
@@ -124,7 +128,10 @@ export function SpotifyPodcastWidget() {
       </label>
 
       <label className={styles.selectorRow}>
-        <span>Add link</span>
+        <span className={styles.labelRow}>
+          <MediaBrandIcon brand="spotify" size={18} className={styles.labelLogo} />
+          <span>Add link</span>
+        </span>
         <div className={styles.formRow}>
           <input
             className={styles.input}
