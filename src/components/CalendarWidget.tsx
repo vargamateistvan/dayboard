@@ -311,12 +311,12 @@ export function CalendarWidget() {
   const listRef = useRef<HTMLUListElement | null>(null)
   const hasCalendarFeeds = settings.calendarFeeds.length > 0
   const now = new Date()
+  const nowYear = now.getFullYear()
+  const nowMonth = now.getMonth()
+  const nowDate = now.getDate()
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
-  const monthGridRange = useMemo(
-    () => getMonthGridRange(now, settings.calendarWeekStartsOn),
-    [now.getFullYear(), now.getMonth(), settings.calendarWeekStartsOn],
-  )
-  const todayRange = useMemo(() => getTodayRange(now), [now.getFullYear(), now.getMonth(), now.getDate()])
+  const monthGridRange = useMemo(() => getMonthGridRange(now, settings.calendarWeekStartsOn), [nowYear, nowMonth, settings.calendarWeekStartsOn])
+  const todayRange = useMemo(() => getTodayRange(now), [nowYear, nowMonth, nowDate])
 
   useEffect(() => {
     if (!activeTooltip) {
