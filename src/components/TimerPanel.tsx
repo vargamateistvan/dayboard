@@ -371,7 +371,7 @@ function Pomodoro() {
         )}
 
         {/* Auto-cycle toggle inline */}
-        <label className={styles.inlineToggleLabel}>
+        <label className={styles.inlineToggleLabel} title="Auto-cycle to next phase">
           <input
             type="checkbox"
             checked={autoCycle}
@@ -384,6 +384,7 @@ function Pomodoro() {
           >
             {autoCycle && <Check size={12} />}
           </span>
+          <span>Auto-cycle</span>
         </label>
       </div>
 
