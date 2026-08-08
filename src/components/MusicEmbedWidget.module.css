@@ -51,6 +51,10 @@
   overflow: hidden;
 }
 
+.playerFrameLarge {
+  min-height: 22rem;
+}
+
 .player {
   display: block;
   flex: 1 1 auto;

@@ -8,6 +8,8 @@ interface MusicEmbedWidgetProps {
   readonly showHeader?: boolean
   readonly showStatus?: boolean
   readonly showActions?: boolean
+  readonly embedSize?: 'normal' | 'large'
+  readonly colorScheme?: 'light' | 'dark'
 }
 
 const DEFAULT_SHARE_URLS: Record<MusicEmbedWidgetProps['provider'], string> = {
@@ -23,6 +25,22 @@ function getEmbedUrl(provider: MusicEmbedWidgetProps['provider'], shareUrl: stri
   return normalizeAppleMusicEmbedUrl(shareUrl)
 }
 
+function withProviderTheme(
+  provider: MusicEmbedWidgetProps['provider'],
+  embedUrl: string,
+  colorScheme: 'light' | 'dark',
+): string {
+  const url = new URL(embedUrl)
+
+  if (provider === 'spotify') {
+    url.searchParams.set('theme', colorScheme === 'dark' ? '0' : '1')
+    return url.toString()
+  }
+
+  url.searchParams.set('theme', colorScheme)
+  return url.toString()
+}
+
 export function MusicEmbedWidget({
   title,
   provider,
@@ -30,11 +48,16 @@ export function MusicEmbedWidget({
   showHeader = true,
   showStatus = true,
   showActions = true,
+  embedSize = 'normal',
+  colorScheme = 'dark',
 }: MusicEmbedWidgetProps) {
   const trimmedUrl = shareUrl.trim()
   const hasCustomUrl = trimmedUrl.length > 0
   const resolvedShareUrl = hasCustomUrl ? trimmedUrl : DEFAULT_SHARE_URLS[provider]
   const embedUrl = getEmbedUrl(provider, resolvedShareUrl)
+  const themedEmbedUrl = embedUrl
+    ? withProviderTheme(provider, embedUrl, colorScheme)
+    : null
   const signInUrl =
     provider === 'spotify'
       ? 'https://accounts.spotify.com/login'
@@ -63,11 +86,16 @@ export function MusicEmbedWidget({
         </div>
       )}
 
-      {embedUrl && (
-        <div className={styles.playerFrame}>
+      {themedEmbedUrl && (
+        <div
+          className={[
+            styles.playerFrame,
+            embedSize === 'large' ? styles.playerFrameLarge : '',
+          ].join(' ')}
+        >
           <iframe
             className={styles.player}
-            src={embedUrl}
+            src={themedEmbedUrl}
             title={`${title} player`}
             loading="lazy"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"

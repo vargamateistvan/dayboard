@@ -1,13 +1,18 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { normalizeSpotifyEmbedUrl } from '../lib/musicEmbeds'
+import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
+import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { MusicEmbedWidget } from './MusicEmbedWidget'
 import styles from './SpotifyWidget.module.css'
 
 export function SpotifyWidget() {
   const { settings, updateSettings } = useSettings()
+  const { placements } = useWidgetVisibility()
   const [shareUrl, setShareUrl] = useState(settings.spotifyEmbedUrl)
   const [error, setError] = useState<string | null>(null)
+  const isLargeEmbed = placements.spotify.rowSpan >= 2
+  const resolvedColorScheme = resolveColorScheme(settings.colorScheme)
 
   useEffect(() => {
     setShareUrl(settings.spotifyEmbedUrl)
@@ -34,14 +39,23 @@ export function SpotifyWidget() {
 
   return (
     <div className={styles.widget}>
-      <MusicEmbedWidget
-        title="Spotify Player"
-        provider="spotify"
-        shareUrl={settings.spotifyEmbedUrl}
-        showHeader={false}
-        showStatus={false}
-        showActions={false}
-      />
+      <div
+        className={[
+          styles.embedArea,
+          isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
+        ].join(' ')}
+      >
+        <MusicEmbedWidget
+          title="Spotify Player"
+          provider="spotify"
+          shareUrl={settings.spotifyEmbedUrl}
+          showHeader={false}
+          showStatus={false}
+          showActions={false}
+          embedSize={isLargeEmbed ? 'large' : 'normal'}
+          colorScheme={resolvedColorScheme}
+        />
+      </div>
 
       <form className={styles.form} onSubmit={handleSave}>
         <input
