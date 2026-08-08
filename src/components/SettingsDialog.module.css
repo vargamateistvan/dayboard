@@ -860,29 +860,76 @@
 
 @media (max-width: 700px) {
   .backdrop {
-    padding: max(0.5rem, env(safe-area-inset-top, 0px))
-      max(0.5rem, env(safe-area-inset-right, 0px))
-      max(0.5rem, env(safe-area-inset-bottom, 0px))
-      max(0.5rem, env(safe-area-inset-left, 0px));
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
   }
 
   .dialog {
-    max-height: calc(100dvh - 1rem);
-    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: none;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
   }
 
   .header {
-    padding: var(--space-4);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--color-surface);
+    padding:
+      calc(var(--space-4) + env(safe-area-inset-top, 0px))
+      calc(var(--space-4) + env(safe-area-inset-right, 0px))
+      var(--space-4)
+      calc(var(--space-4) + env(safe-area-inset-left, 0px));
+  }
+
+  .title {
+    font-size: 1.125rem;
   }
 
   .body {
-    padding: var(--space-4);
+    padding:
+      var(--space-4)
+      calc(var(--space-4) + env(safe-area-inset-right, 0px))
+      var(--space-4)
+      calc(var(--space-4) + env(safe-area-inset-left, 0px));
     gap: var(--space-5);
     overflow-x: hidden;
   }
 
+  .sectionTitle,
+  .fontLabel,
+  .intervalLabel,
+  .colorLabel,
+  .colorOptionLabel,
+  .layoutWidgetLabel {
+    font-size: var(--font-size-base);
+  }
+
+  .hint,
+  .layoutEditorHint,
+  .widgetPaletteHint,
+  .mediaLinkError,
+  .calendarColorLabel {
+    font-size: var(--font-size-sm);
+    line-height: 1.55;
+  }
+
   .footer {
-    padding: var(--space-3) var(--space-4);
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    background: var(--color-surface);
+    padding:
+      var(--space-3)
+      calc(var(--space-4) + env(safe-area-inset-right, 0px))
+      calc(var(--space-3) + env(safe-area-inset-bottom, 0px))
+      calc(var(--space-4) + env(safe-area-inset-left, 0px));
     flex-wrap: wrap;
   }
 
@@ -895,6 +942,16 @@
 
   .themeGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .themeSwatch,
+  .fontSwatch,
+  .widgetToggle {
+    min-height: 3rem;
+  }
+
+  .themeLabel {
+    font-size: var(--font-size-sm);
   }
 
   .fontGrid,
@@ -910,8 +967,8 @@
     flex: 1 1 0;
     justify-content: center;
     min-width: 0;
-    padding: var(--space-2) var(--space-2);
-    font-size: var(--font-size-xs);
+    padding: 0.75rem 0.5rem;
+    font-size: var(--font-size-sm);
   }
 
   .widgetGrid {
@@ -937,9 +994,24 @@
     gap: var(--space-2);
   }
 
+  .mediaLinkSelectRow,
+  .mediaLinkRow,
   .intervalRow {
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: var(--space-3);
+  }
+
+  .mediaLinkButton,
+  .mediaLinkRemoveButton,
+  .addCalendarBtn,
+  .removeCalendarBtn {
+    width: 100%;
+    min-height: 2.75rem;
+    justify-content: center;
+  }
+
+  .mediaLinkRemoveButton {
+    width: 100%;
   }
 
   .numberInput {
