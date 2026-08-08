@@ -1,5 +1,13 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { normalizeSpotifyPodcastEmbedUrl } from '../lib/musicEmbeds'
+import {
+  createSavedMediaLink,
+  formatSavedLinkLabel,
+  normalizeSavedMediaLinks,
+  removeSavedMediaLink,
+  resolveMediaLinkTitle,
+} from '../lib/mediaLinks'
+import { Trash2 } from 'lucide-react'
 import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
@@ -9,21 +17,36 @@ import styles from './SpotifyWidget.module.css'
 export function SpotifyPodcastWidget() {
   const { settings, updateSettings } = useSettings()
   const { placements } = useWidgetVisibility()
-  const [shareUrl, setShareUrl] = useState(settings.spotifyPodcastEmbedUrl)
+  const savedLinks = normalizeSavedMediaLinks(
+    settings.spotifyPodcastEmbedLinks,
+    settings.spotifyPodcastEmbedUrl,
+  )
+  const activeUrl = settings.spotifyPodcastEmbedUrl || savedLinks[0]?.url || ''
+  const [addUrl, setAddUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
   const isLargeEmbed = placements.spotifyPodcast?.rowSpan >= 2
   const resolvedColorScheme = resolveColorScheme(settings.colorScheme)
 
-  useEffect(() => {
-    setShareUrl(settings.spotifyPodcastEmbedUrl)
-  }, [settings.spotifyPodcastEmbedUrl])
+  const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextUrl = event.target.value
+    updateSettings({ spotifyPodcastEmbedUrl: nextUrl })
+    setError(null)
+  }
 
-  const handleSave = (event: FormEvent) => {
-    event.preventDefault()
-    const trimmed = shareUrl.trim()
+  const handleRemoveSelected = () => {
+    if (!activeUrl) return
+    const nextLinks = removeSavedMediaLink(savedLinks, activeUrl)
+    updateSettings({
+      spotifyPodcastEmbedUrl: nextLinks[0]?.url ?? '',
+      spotifyPodcastEmbedLinks: nextLinks,
+    })
+    setError(null)
+  }
 
+  const handleAddLink = () => {
+    const trimmed = addUrl.trim()
     if (trimmed.length === 0) {
-      updateSettings({ spotifyPodcastEmbedUrl: '' })
       setError(null)
       return
     }
@@ -33,8 +56,19 @@ export function SpotifyPodcastWidget() {
       return
     }
 
-    updateSettings({ spotifyPodcastEmbedUrl: trimmed })
+    setIsAdding(true)
+    const title = resolveMediaLinkTitle(trimmed)
+    const nextLinks = normalizeSavedMediaLinks([
+      createSavedMediaLink(trimmed, title),
+      ...savedLinks,
+    ])
+    updateSettings({
+      spotifyPodcastEmbedUrl: trimmed,
+      spotifyPodcastEmbedLinks: nextLinks,
+    })
+    setAddUrl('')
     setError(null)
+    setIsAdding(false)
   }
 
   return (
@@ -48,7 +82,7 @@ export function SpotifyPodcastWidget() {
         <PodcastEmbedWidget
           title="Spotify Podcast"
           provider="spotify"
-          shareUrl={settings.spotifyPodcastEmbedUrl}
+          shareUrl={activeUrl}
           showHeader={false}
           showStatus={false}
           showActions={false}
@@ -57,16 +91,53 @@ export function SpotifyPodcastWidget() {
         />
       </div>
 
-      <form className={styles.form} onSubmit={handleSave}>
-        <input
-          className={styles.input}
-          type="url"
-          placeholder="Paste Spotify podcast show or episode link"
-          value={shareUrl}
-          onChange={(event) => setShareUrl(event.target.value)}
-        />
-        <button className={styles.button} type="submit">Load</button>
-      </form>
+      <label className={styles.selectorRow}>
+        <span>Saved links</span>
+        <div className={styles.selectRow}>
+          <select
+            className={styles.select}
+            value={activeUrl}
+            onChange={handleSelectChange}
+            disabled={savedLinks.length === 0}
+          >
+            {savedLinks.length === 0 ? (
+              <option value="">No saved links yet</option>
+            ) : (
+              savedLinks.map((entry) => (
+                <option key={entry.url} value={entry.url}>
+                  {formatSavedLinkLabel(entry)}
+                </option>
+              ))
+            )}
+          </select>
+          <button
+            className={styles.removeButton}
+            type="button"
+            onClick={handleRemoveSelected}
+            disabled={!activeUrl}
+            aria-label="Remove selected saved link"
+            title="Remove selected saved link"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </label>
+
+      <label className={styles.selectorRow}>
+        <span>Add link</span>
+        <div className={styles.formRow}>
+          <input
+            className={styles.input}
+            type="url"
+            placeholder="Paste another Spotify podcast show or episode link"
+            value={addUrl}
+            onChange={(event) => setAddUrl(event.target.value)}
+          />
+          <button className={styles.button} type="button" onClick={handleAddLink} disabled={isAdding}>
+            {isAdding ? 'Adding…' : 'Add'}
+          </button>
+        </div>
+      </label>
 
       {error && <div className={styles.error}>{error}</div>}
     </div>

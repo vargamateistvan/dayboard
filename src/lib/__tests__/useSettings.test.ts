@@ -49,6 +49,29 @@ describe('settings persistence', () => {
     ])
   })
 
+  it('migrates legacy single media links into saved link lists', () => {
+    localStorage.setItem(
+      'dayboard:settings',
+      JSON.stringify({
+        spotifyEmbedUrl: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+        appleMusicEmbedUrl: 'https://music.apple.com/us/album/1989/1440935467?i=1440935475',
+      }),
+    )
+    const loaded = loadSettings()
+    expect(loaded.spotifyEmbedLinks).toEqual([
+      {
+        url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+        title: 'Spotify Track',
+      },
+    ])
+    expect(loaded.appleMusicEmbedLinks).toEqual([
+      {
+        url: 'https://music.apple.com/us/album/1989/1440935467?i=1440935475',
+        title: 'Apple Music 1989',
+      },
+    ])
+  })
+
   it('round-trips all fields correctly', () => {
     const custom = {
       theme: 'futuristic' as const,
@@ -67,9 +90,37 @@ describe('settings persistence', () => {
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,
       spotifyEmbedUrl: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+      spotifyEmbedLinks: [
+        {
+          url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
+          title: 'Never Gonna Give You Up',
+        },
+        {
+          url: 'https://open.spotify.com/album/1ATL5GLyefJaxhQzSPVrLX',
+          title: 'Evermore',
+        },
+      ],
       appleMusicEmbedUrl: 'https://music.apple.com/us/album/1989/1440935467?i=1440935475',
-      spotifyPodcastEmbedUrl: '',
-      applePodcastEmbedUrl: '',
+      appleMusicEmbedLinks: [
+        {
+          url: 'https://music.apple.com/us/album/1989/1440935467?i=1440935475',
+          title: '1989',
+        },
+      ],
+      spotifyPodcastEmbedUrl: 'https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk',
+      spotifyPodcastEmbedLinks: [
+        {
+          url: 'https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk',
+          title: 'The Joe Rogan Experience',
+        },
+      ],
+      applePodcastEmbedUrl: 'https://podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272',
+      applePodcastEmbedLinks: [
+        {
+          url: 'https://podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272',
+          title: 'The Joe Rogan Experience',
+        },
+      ],
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
       customColors: DEFAULT_SETTINGS.customColors,

@@ -1,24 +1,52 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import { normalizeApplePodcastEmbedUrl } from '../lib/musicEmbeds'
+import {
+  createSavedMediaLink,
+  formatSavedLinkLabel,
+  normalizeSavedMediaLinks,
+  removeSavedMediaLink,
+  resolveMediaLinkTitle,
+} from '../lib/mediaLinks'
+import { Trash2 } from 'lucide-react'
+import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
+import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { PodcastEmbedWidget } from './PodcastEmbedWidget'
 import styles from './SpotifyWidget.module.css'
 
 export function ApplePodcastWidget() {
   const { settings, updateSettings } = useSettings()
-  const [shareUrl, setShareUrl] = useState(settings.applePodcastEmbedUrl)
+  const { placements } = useWidgetVisibility()
+  const savedLinks = normalizeSavedMediaLinks(
+    settings.applePodcastEmbedLinks,
+    settings.applePodcastEmbedUrl,
+  )
+  const activeUrl = settings.applePodcastEmbedUrl || savedLinks[0]?.url || ''
+  const [addUrl, setAddUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [isAdding, setIsAdding] = useState(false)
+  const isLargeEmbed = placements.applePodcast?.rowSpan >= 2
+  const resolvedColorScheme = resolveColorScheme(settings.colorScheme)
 
-  useEffect(() => {
-    setShareUrl(settings.applePodcastEmbedUrl)
-  }, [settings.applePodcastEmbedUrl])
+  const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextUrl = event.target.value
+    updateSettings({ applePodcastEmbedUrl: nextUrl })
+    setError(null)
+  }
 
-  const handleSave = (event: FormEvent) => {
-    event.preventDefault()
-    const trimmed = shareUrl.trim()
+  const handleRemoveSelected = () => {
+    if (!activeUrl) return
+    const nextLinks = removeSavedMediaLink(savedLinks, activeUrl)
+    updateSettings({
+      applePodcastEmbedUrl: nextLinks[0]?.url ?? '',
+      applePodcastEmbedLinks: nextLinks,
+    })
+    setError(null)
+  }
 
+  const handleAddLink = () => {
+    const trimmed = addUrl.trim()
     if (trimmed.length === 0) {
-      updateSettings({ applePodcastEmbedUrl: '' })
       setError(null)
       return
     }
@@ -28,31 +56,88 @@ export function ApplePodcastWidget() {
       return
     }
 
-    updateSettings({ applePodcastEmbedUrl: trimmed })
+    setIsAdding(true)
+    const title = resolveMediaLinkTitle(trimmed)
+    const nextLinks = normalizeSavedMediaLinks([
+      createSavedMediaLink(trimmed, title),
+      ...savedLinks,
+    ])
+    updateSettings({
+      applePodcastEmbedUrl: trimmed,
+      applePodcastEmbedLinks: nextLinks,
+    })
+    setAddUrl('')
     setError(null)
+    setIsAdding(false)
   }
 
   return (
     <div className={styles.widget}>
-      <PodcastEmbedWidget
-        title="Apple Podcast"
-        provider="apple-podcast"
-        shareUrl={settings.applePodcastEmbedUrl}
-        showHeader={false}
-        showStatus={false}
-        showActions={false}
-      />
-
-      <form className={styles.form} onSubmit={handleSave}>
-        <input
-          className={styles.input}
-          type="url"
-          placeholder="Paste Apple Podcast show or episode link"
-          value={shareUrl}
-          onChange={(event) => setShareUrl(event.target.value)}
+      <div
+        className={[
+          styles.embedArea,
+          isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
+        ].join(' ')}
+      >
+        <PodcastEmbedWidget
+          title="Apple Podcast"
+          provider="apple-podcast"
+          shareUrl={activeUrl}
+          showHeader={false}
+          showStatus={false}
+          showActions={false}
+          embedSize={isLargeEmbed ? 'large' : 'normal'}
+          colorScheme={resolvedColorScheme}
         />
-        <button className={styles.button} type="submit">Load</button>
-      </form>
+      </div>
+
+      <label className={styles.selectorRow}>
+        <span>Saved links</span>
+        <div className={styles.selectRow}>
+          <select
+            className={styles.select}
+            value={activeUrl}
+            onChange={handleSelectChange}
+            disabled={savedLinks.length === 0}
+          >
+            {savedLinks.length === 0 ? (
+              <option value="">No saved links yet</option>
+            ) : (
+              savedLinks.map((entry) => (
+                <option key={entry.url} value={entry.url}>
+                  {formatSavedLinkLabel(entry)}
+                </option>
+              ))
+            )}
+          </select>
+          <button
+            className={styles.removeButton}
+            type="button"
+            onClick={handleRemoveSelected}
+            disabled={!activeUrl}
+            aria-label="Remove selected saved link"
+            title="Remove selected saved link"
+          >
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </label>
+
+      <label className={styles.selectorRow}>
+        <span>Add link</span>
+        <div className={styles.formRow}>
+          <input
+            className={styles.input}
+            type="url"
+            placeholder="Paste another Apple Podcast show or episode link"
+            value={addUrl}
+            onChange={(event) => setAddUrl(event.target.value)}
+          />
+          <button className={styles.button} type="button" onClick={handleAddLink} disabled={isAdding}>
+            {isAdding ? 'Adding…' : 'Add'}
+          </button>
+        </div>
+      </label>
 
       {error && <div className={styles.error}>{error}</div>}
     </div>
