@@ -142,7 +142,7 @@ function Countdown() {
           />
         </div>
       )}
-      <div className={[styles.display, done ? styles.done : ""].join(" ")}>
+      <div className={[styles.display, styles.displaySmall, done ? styles.done : ""].join(" ")}>
         {done ? "Done!" : formatMs(remaining)}
       </div>
       <div className={styles.controls}>
