@@ -416,28 +416,18 @@
 }
 
 .monthTooltip {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 0.35rem);
   width: 12rem;
   padding: 0.45rem 0.5rem;
   border-radius: 0.65rem;
   background: color-mix(in srgb, var(--color-bg) 86%, #000 14%);
   border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
   box-shadow: var(--shadow-lg);
-  opacity: 0;
-  transform: translateY(0.2rem);
   pointer-events: none;
-  transition:
-    opacity var(--transition-fast),
-    transform var(--transition-fast);
-  z-index: 200;
+  z-index: 1200;
 }
 
-.monthCell:hover .monthTooltip,
-.monthCell:focus-visible .monthTooltip {
-  opacity: 1;
-  transform: translateY(0);
+.monthTooltipFloating {
+  position: fixed;
 }
 
 .monthTooltipHeader {

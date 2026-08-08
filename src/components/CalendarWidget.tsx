@@ -25,6 +25,13 @@ interface MonthPreviewEvent {
   color: string
 }
 
+interface ActiveMonthTooltip {
+  dayLabel: string
+  previewEvents: MonthPreviewEvent[]
+  extraCount: number
+  anchorElement: HTMLDivElement
+}
+
 function formatTime(d: Date): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
@@ -258,6 +265,34 @@ function EventDetailsTooltipContent({ event }: Readonly<{ event: CalendarEvent }
   )
 }
 
+function MonthTooltipContent({
+  dayLabel,
+  previewEvents,
+  extraCount,
+}: Readonly<Pick<ActiveMonthTooltip, 'dayLabel' | 'previewEvents' | 'extraCount'>>) {
+  return (
+    <>
+      <div className={styles.monthTooltipHeader}>{dayLabel}</div>
+      <ul className={styles.monthTooltipList}>
+        {previewEvents.slice(0, MAX_TOOLTIP_EVENTS).map((previewEvent) => (
+          <li key={previewEvent.key} className={styles.monthTooltipItem}>
+            <span
+              className={styles.monthTooltipDot}
+              aria-hidden="true"
+              style={{ backgroundColor: previewEvent.color }}
+            />
+            <div className={styles.monthTooltipContent}>
+              <span className={styles.monthTooltipTime}>{previewEvent.timeLabel}</span>
+              <span className={styles.monthTooltipTitle}>{previewEvent.title}</span>
+            </div>
+          </li>
+        ))}
+        {extraCount > 0 && <li className={styles.monthTooltipMore}>+{extraCount} more</li>}
+      </ul>
+    </>
+  )
+}
+
 export function CalendarWidget() {
   const { settings } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
@@ -268,8 +303,11 @@ export function CalendarWidget() {
     anchorElement: HTMLLIElement
   } | null>(null)
   const [tooltipStyle, setTooltipStyle] = useState<CSSProperties>()
+  const [activeMonthTooltip, setActiveMonthTooltip] = useState<ActiveMonthTooltip | null>(null)
+  const [monthTooltipStyle, setMonthTooltipStyle] = useState<CSSProperties>()
   const widgetRef = useRef<HTMLDivElement | null>(null)
   const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const monthTooltipRef = useRef<HTMLDivElement | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
   const hasCalendarFeeds = settings.calendarFeeds.length > 0
   const now = new Date()
@@ -340,11 +378,60 @@ export function CalendarWidget() {
   }, [activeTooltip])
 
   useEffect(() => {
+    if (!activeMonthTooltip) {
+      setMonthTooltipStyle(undefined)
+      return
+    }
+
+    const updateMonthTooltipPosition = () => {
+      const anchorRect = activeMonthTooltip.anchorElement.getBoundingClientRect()
+      const tooltipRect = monthTooltipRef.current?.getBoundingClientRect()
+      const gap = 10
+      const viewportPadding = 12
+      const tooltipWidth = tooltipRect?.width ?? 192
+      const tooltipHeight = tooltipRect?.height ?? 180
+
+      let left = anchorRect.left - tooltipWidth - gap
+      if (left < viewportPadding) {
+        left = anchorRect.right + gap
+      }
+      if (left + tooltipWidth > window.innerWidth - viewportPadding) {
+        left = Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding)
+      }
+
+      let top = anchorRect.top + anchorRect.height / 2 - tooltipHeight / 2
+      if (top < viewportPadding) {
+        top = viewportPadding
+      }
+      if (top + tooltipHeight > window.innerHeight - viewportPadding) {
+        top = window.innerHeight - tooltipHeight - viewportPadding
+      }
+
+      setMonthTooltipStyle({ top, left })
+    }
+
+    updateMonthTooltipPosition()
+
+    const handleViewportChange = () => {
+      updateMonthTooltipPosition()
+    }
+
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener('scroll', handleViewportChange, true)
+    }
+  }, [activeMonthTooltip])
+
+  useEffect(() => {
     if (settings.calendarFeeds.length === 0) {
       setEvents([])
       setError(null)
       setLoading(false)
       setActiveTooltip(null)
+      setActiveMonthTooltip(null)
       return
     }
 
@@ -558,6 +645,56 @@ export function CalendarWidget() {
                     day: 'numeric',
                   })}
                   tabIndex={cell.previewEvents.length > 0 ? 0 : undefined}
+                  onMouseEnter={(currentEvent) => {
+                    if (cell.previewEvents.length === 0) {
+                      return
+                    }
+
+                    setActiveMonthTooltip({
+                      dayLabel: cell.date.toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      }),
+                      previewEvents: cell.previewEvents,
+                      extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
+                      anchorElement: currentEvent.currentTarget,
+                    })
+                  }}
+                  onMouseLeave={(currentEvent) => {
+                    setActiveMonthTooltip((currentTooltip) =>
+                      currentTooltip?.anchorElement === currentEvent.currentTarget &&
+                        document.activeElement === currentEvent.currentTarget
+                        ? currentTooltip
+                        : null,
+                    )
+                  }}
+                  onFocusCapture={(currentEvent) => {
+                    if (cell.previewEvents.length === 0) {
+                      return
+                    }
+
+                    setActiveMonthTooltip({
+                      dayLabel: cell.date.toLocaleDateString(undefined, {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      }),
+                      previewEvents: cell.previewEvents,
+                      extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
+                      anchorElement: currentEvent.currentTarget,
+                    })
+                  }}
+                  onBlurCapture={(currentEvent) => {
+                    const nextFocusedElement = currentEvent.relatedTarget
+                    if (nextFocusedElement instanceof Node && currentEvent.currentTarget.contains(nextFocusedElement)) {
+                      return
+                    }
+
+                    setActiveMonthTooltip((currentTooltip) =>
+                      currentTooltip?.anchorElement === currentEvent.currentTarget ? null : currentTooltip,
+                    )
+                  }}
                 >
                   <span className={styles.monthCellNumber}>{cell.date.getDate()}</span>
                   {cell.eventCount > 0 && (
@@ -570,41 +707,6 @@ export function CalendarWidget() {
                       {cell.eventCount > 1 && (
                         <span className={styles.monthEventCount}>+{cell.eventCount - 1}</span>
                       )}
-                      <div className={styles.monthTooltip} role="tooltip">
-                        <div className={styles.monthTooltipHeader}>
-                          {cell.date.toLocaleDateString(undefined, {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                          })}
-                        </div>
-                        <ul className={styles.monthTooltipList}>
-                          {cell.previewEvents
-                            .slice(0, MAX_TOOLTIP_EVENTS)
-                            .map((previewEvent) => (
-                              <li key={previewEvent.key} className={styles.monthTooltipItem}>
-                                <span
-                                  className={styles.monthTooltipDot}
-                                  aria-hidden="true"
-                                  style={{ backgroundColor: previewEvent.color }}
-                                />
-                                <div className={styles.monthTooltipContent}>
-                                  <span className={styles.monthTooltipTime}>
-                                    {previewEvent.timeLabel}
-                                  </span>
-                                  <span className={styles.monthTooltipTitle}>
-                                    {previewEvent.title}
-                                  </span>
-                                </div>
-                              </li>
-                            ))}
-                          {cell.eventCount > MAX_TOOLTIP_EVENTS && (
-                            <li className={styles.monthTooltipMore}>
-                              +{cell.eventCount - MAX_TOOLTIP_EVENTS} more
-                            </li>
-                          )}
-                        </ul>
-                      </div>
                     </>
                   )}
                 </div>
@@ -621,6 +723,21 @@ export function CalendarWidget() {
           role="tooltip"
         >
           <EventDetailsTooltipContent event={activeTooltip.event} />
+        </div>,
+        document.body,
+      )}
+      {activeMonthTooltip && monthTooltipStyle && createPortal(
+        <div
+          ref={monthTooltipRef}
+          className={[styles.monthTooltip, styles.monthTooltipFloating].join(' ')}
+          style={monthTooltipStyle}
+          role="tooltip"
+        >
+          <MonthTooltipContent
+            dayLabel={activeMonthTooltip.dayLabel}
+            previewEvents={activeMonthTooltip.previewEvents}
+            extraCount={activeMonthTooltip.extraCount}
+          />
         </div>,
         document.body,
       )}
