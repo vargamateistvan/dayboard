@@ -184,8 +184,16 @@
 }
 
 @media (max-width: 700px) {
+  .widget {
+    height: auto;
+    overflow: visible;
+  }
+
   .content {
+    flex: none;
     grid-template-columns: 1fr;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .detailsGrid {

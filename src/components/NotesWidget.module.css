@@ -232,3 +232,19 @@
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
 }
+
+@media (max-width: 700px) {
+  .widget {
+    height: auto;
+    overflow: visible;
+  }
+
+  .notesGrid {
+    flex: none;
+    overflow: visible;
+  }
+
+  .deleteBtn {
+    opacity: 1;
+  }
+}

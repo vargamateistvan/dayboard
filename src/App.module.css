@@ -97,7 +97,7 @@
 }
 
 .widgetCalendar {
-  overflow: visible;
+  overflow: hidden;
   position: relative;
   z-index: 20;
 }
@@ -154,7 +154,9 @@
   }
 
   .widgetCell {
-    min-height: 10.5rem;
+    height: auto;
+    min-height: 0;
+    flex: 0 0 auto;
     overflow: visible;
   }
 

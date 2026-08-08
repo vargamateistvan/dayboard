@@ -202,3 +202,21 @@
 .deleteBtn:hover {
   color: var(--color-danger);
 }
+
+@media (max-width: 700px) {
+  .widget {
+    height: auto;
+    overflow: visible;
+  }
+
+  .list {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+  }
+
+  .deleteBtn {
+    opacity: 1;
+  }
+}
