@@ -80,6 +80,8 @@ const WIDGETS: {
   { id: "notes", label: "Sticky Notes" },
   { id: "spotify", label: "Spotify Player" },
   { id: "appleMusic", label: "Apple Music Player" },
+  { id: "spotifyPodcast", label: "Spotify Podcast" },
+  { id: "applePodcast", label: "Apple Podcast" },
 ];
 
 interface Props {
@@ -435,6 +437,8 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState(settings.spotifyEmbedUrl);
   const [appleMusicEmbedUrl, setAppleMusicEmbedUrl] = useState(settings.appleMusicEmbedUrl);
+  const [spotifyPodcastEmbedUrl, setSpotifyPodcastEmbedUrl] = useState(settings.spotifyPodcastEmbedUrl);
+  const [applePodcastEmbedUrl, setApplePodcastEmbedUrl] = useState(settings.applePodcastEmbedUrl);
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(
     settings.showBuyMeACoffeeWidget,
   );
@@ -488,6 +492,8 @@ export function SettingsDialog({ onClose }: Props) {
       weatherShowExtraDetails,
       spotifyEmbedUrl,
       appleMusicEmbedUrl,
+      spotifyPodcastEmbedUrl,
+      applePodcastEmbedUrl,
       showBuyMeACoffeeWidget,
       calendarHidePastEvents,
       calendarShowAllDayEvents,
@@ -914,6 +920,26 @@ export function SettingsDialog({ onClose }: Props) {
                 placeholder="https://music.apple.com/..."
                 value={appleMusicEmbedUrl}
                 onChange={(e) => setAppleMusicEmbedUrl(e.target.value)}
+              />
+            </label>
+            <label className={styles.intervalLabel}>
+              <span>Spotify Podcast share URL</span>
+              <input
+                className={styles.input}
+                type="url"
+                placeholder="https://open.spotify.com/show/..."
+                value={spotifyPodcastEmbedUrl}
+                onChange={(e) => setSpotifyPodcastEmbedUrl(e.target.value)}
+              />
+            </label>
+            <label className={styles.intervalLabel}>
+              <span>Apple Podcast share URL</span>
+              <input
+                className={styles.input}
+                type="url"
+                placeholder="https://podcasts.apple.com/..."
+                value={applePodcastEmbedUrl}
+                onChange={(e) => setApplePodcastEmbedUrl(e.target.value)}
               />
             </label>
             <p className={styles.hint}>

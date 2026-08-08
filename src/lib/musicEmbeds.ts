@@ -53,3 +53,38 @@ export function normalizeAppleMusicEmbedUrl(value: string): string | null {
 
   return `https://embed.music.apple.com${url.pathname}${url.search}`
 }
+
+export function normalizeSpotifyPodcastEmbedUrl(value: string): string | null {
+  const url = parseHttpUrl(value)
+  if (!url || url.hostname !== 'open.spotify.com') {
+    return null
+  }
+
+  const segments = url.pathname.split('/').filter(Boolean)
+  if (segments.length < 2) {
+    return null
+  }
+
+  const [firstSegment, secondSegment, thirdSegment] = segments
+  const type = firstSegment === 'embed' ? secondSegment : firstSegment
+  const id = firstSegment === 'embed' ? thirdSegment : secondSegment
+
+  if (!type || !id || !['show', 'episode'].includes(type)) {
+    return null
+  }
+
+  return `https://open.spotify.com/embed/${type}/${id}`
+}
+
+export function normalizeApplePodcastEmbedUrl(value: string): string | null {
+  const url = parseHttpUrl(value)
+  if (!url || !['podcasts.apple.com', 'embed.podcasts.apple.com'].includes(url.hostname)) {
+    return null
+  }
+
+  if (url.pathname === '/' || url.pathname.trim() === '') {
+    return null
+  }
+
+  return `https://embed.podcasts.apple.com${url.pathname}${url.search}`
+}

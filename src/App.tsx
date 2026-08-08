@@ -12,6 +12,8 @@ import { TaskWidget } from './components/TaskWidget'
 import { NotesWidget } from './components/NotesWidget'
 import { SpotifyWidget } from './components/SpotifyWidget'
 import { AppleMusicWidget } from './components/AppleMusicWidget'
+import { SpotifyPodcastWidget } from './components/SpotifyPodcastWidget'
+import { ApplePodcastWidget } from './components/ApplePodcastWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
@@ -43,6 +45,10 @@ function renderWidget(widget: Widget) {
       return <SpotifyWidget />
     case 'appleMusic':
       return <AppleMusicWidget />
+    case 'spotifyPodcast':
+      return <SpotifyPodcastWidget />
+    case 'applePodcast':
+      return <ApplePodcastWidget />
   }
 }
 

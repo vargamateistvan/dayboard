@@ -30,6 +30,8 @@ export interface Settings {
   weatherShowExtraDetails: boolean
   spotifyEmbedUrl: string
   appleMusicEmbedUrl: string
+  spotifyPodcastEmbedUrl: string
+  applePodcastEmbedUrl: string
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -117,6 +119,8 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherShowExtraDetails: true,
   spotifyEmbedUrl: '',
   appleMusicEmbedUrl: '',
+  spotifyPodcastEmbedUrl: '',
+  applePodcastEmbedUrl: '',
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -272,6 +276,8 @@ export function loadSettings(): Settings {
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
       spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
       appleMusicEmbedUrl: normalizeEmbedUrl((rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl),
+      spotifyPodcastEmbedUrl: normalizeEmbedUrl((rest as { spotifyPodcastEmbedUrl?: unknown }).spotifyPodcastEmbedUrl),
+      applePodcastEmbedUrl: normalizeEmbedUrl((rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }

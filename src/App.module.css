@@ -109,12 +109,13 @@
 @media (max-width: 1200px) {
   .main {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
+    grid-template-rows: auto !important; /* override inline rowCount style */
     padding: clamp(0.5rem, 1.5vh, 1rem) clamp(1rem, 3vw, 2rem);
   }
 
   .widgetCell {
-    grid-column: 1 / -1;
+    grid-column: 1 / -1 !important; /* override inline placement */
+    grid-row: auto !important;
     min-height: 15rem;
   }
 
