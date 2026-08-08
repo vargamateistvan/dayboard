@@ -52,6 +52,15 @@
   display: flex;
   flex-direction: column;
   gap: clamp(0.3rem, 0.8vh, 0.75rem);
+  flex: 1;
+  min-height: 0;
+}
+
+.pomodoroHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 /*
@@ -68,6 +77,10 @@
   letter-spacing: -0.04em;
   line-height: 1;
   white-space: nowrap;
+}
+
+.displaySmall {
+  font-size: clamp(1.5rem, 8dvh, 5rem);
 }
 
 .done {
@@ -199,26 +212,19 @@
   color: var(--color-text-muted);
 }
 
-/* Auto-cycle toggle */
-.autoCycleToggle {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--border-color);
-  margin-top: auto;
-}
-
-.toggleLabel {
+/* Auto-cycle toggle - now inline */
+.inlineToggleLabel {
   display: flex;
   align-items: center;
   width: fit-content;
   gap: 0.5rem;
-  font-size: 0.825rem;
-  color: var(--text-secondary);
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
   position: relative;
+  padding: 0.25rem;
 }
 
 .toggleCheckboxInput {
@@ -227,10 +233,10 @@
   pointer-events: none;
 }
 
-.toggleCheckbox {
+.inlineToggleCheckbox {
   flex-shrink: 0;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -244,23 +250,124 @@
   opacity: 0.8;
 }
 
-.toggleCheckbox:hover {
+.inlineToggleCheckbox:hover {
   border-color: var(--color-accent);
   opacity: 1;
 }
 
-.toggleCheckboxChecked {
+.inlineToggleCheckboxChecked {
   background: var(--color-accent);
   border-color: var(--color-accent);
-  color: var(--color-accent-text);
+  color: var(--color-bg);
 }
 
-.toggleCheckboxInput:focus-visible + .toggleCheckbox {
+/* Settings editor - block version */
+.settingsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-bg-subtle);
+  border-radius: var(--radius-md);
+  margin: var(--space-3) 0;
+}
+
+/* Settings editor - inline version */
+.settingsEditorInline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.settingsRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settingsRowInline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.settingsLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  min-width: auto;
+  white-space: nowrap;
+}
+
+.settingsUnit {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-left: -4px;
+}
+
+.settingsInput {
+  width: 50px;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-mono);
+}
+
+.settingsInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.settingsActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.btnSmall,
+.btnSmallGhost {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.btnSmall {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+
+.btnSmall:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.btnSmallGhost {
+  background: transparent;
+  color: var(--color-text);
+  border: 1px solid var(--border-color);
+}
+
+.btnSmallGhost:hover:not(:disabled) {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.toggleCheckboxInput:focus-visible + .inlineToggleCheckbox {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-.toggleLabel:hover {
+.inlineToggleLabel:hover {
   color: var(--color-text);
 }
 
@@ -295,6 +402,10 @@
     letter-spacing: -0.02em;
   }
 
+  .displaySmall {
+    font-size: clamp(1.25rem, 8vw, 2rem);
+  }
+
   .controls {
     gap: var(--space-2);
     justify-content: center;
@@ -302,7 +413,7 @@
 
   .inputRow,
   .sessions,
-  .autoCycleToggle {
+  .settingsEditor {
     justify-content: center;
   }
 

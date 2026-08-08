@@ -19,6 +19,7 @@ import {
   ChevronRight,
   BarChart3,
   Check,
+  Settings,
 } from "lucide-react";
 import { beep } from "../lib/beep";
 import { PomodoroStats } from "./PomodoroStats";
@@ -182,13 +183,16 @@ function Countdown() {
 type PomodoroPhase = "work" | "break";
 
 function Pomodoro() {
-  const { settings } = useSettings();
+  const { settings, updateSettings } = useSettings();
   const { recordSession } = usePomodoroStats();
   const [phase, setPhase] = useState<PomodoroPhase>("work");
   const [sessions, setSessions] = useState(0);
   const [waitingNext, setWaitingNext] = useState(false);
   const [autoCycle, setAutoCycle] = useState(true);
   const [showStats, setShowStats] = useState(false);
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [workInput, setWorkInput] = useState(settings.pomodoroWorkMinutes);
+  const [breakInput, setBreakInput] = useState(settings.pomodoroBreakMinutes);
 
   const workMs = settings.pomodoroWorkMinutes * 60_000;
   const breakMs = settings.pomodoroBreakMinutes * 60_000;
@@ -248,28 +252,76 @@ function Pomodoro() {
     lastTickRef.current = -1;
   };
 
+  const handleSaveSettings = () => {
+    updateSettings({
+      pomodoroWorkMinutes: workInput,
+      pomodoroBreakMinutes: breakInput,
+    });
+    setEditingSettings(false);
+  };
+
   return (
     <div className={styles.timerBody}>
-      <div className={styles.phaseBadge} data-phase={phase}>
-        {phase === "work" ? (
-          <>
-            <Target size={12} />
-            Work
-          </>
-        ) : (
-          <>
-            <Coffee size={12} />
-            Break
-          </>
+      <div className={styles.pomodoroHeader}>
+        <div className={styles.phaseBadge} data-phase={phase}>
+          {phase === "work" ? (
+            <>
+              <Target size={12} />
+              Work
+            </>
+          ) : (
+            <>
+              <Coffee size={12} />
+              Break
+            </>
+          )}
+        </div>
+
+        {/* Inline settings editor after phase badge */}
+        {editingSettings && state === "idle" && !waitingNext && (
+          <div className={styles.settingsEditorInline}>
+            <div className={styles.settingsRowInline}>
+              <label className={styles.settingsLabel}>Work</label>
+              <input
+                className={styles.settingsInput}
+                type="number"
+                min={1}
+                max={60}
+                value={workInput}
+                onChange={(e) => setWorkInput(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+              <span className={styles.settingsUnit}>min</span>
+            </div>
+            <div className={styles.settingsRowInline}>
+              <label className={styles.settingsLabel}>Break</label>
+              <input
+                className={styles.settingsInput}
+                type="number"
+                min={1}
+                max={30}
+                value={breakInput}
+                onChange={(e) => setBreakInput(Math.max(1, parseInt(e.target.value) || 1))}
+              />
+              <span className={styles.settingsUnit}>min</span>
+            </div>
+            <button className={styles.btnSmall} onClick={handleSaveSettings}>
+              Save
+            </button>
+            <button className={styles.btnSmallGhost} onClick={() => setEditingSettings(false)}>
+              Cancel
+            </button>
+          </div>
         )}
       </div>
-      <div className={styles.display}>{formatMs(remaining)}</div>
+
+      <div className={`${styles.display} ${styles.displaySmall}`}>{formatMs(remaining)}</div>
       {sessions > 0 && (
         <div className={styles.sessions}>
           <StopCircle size={11} />
           {sessions} session{sessions !== 1 ? "s" : ""} completed
         </div>
       )}
+
       <div className={styles.controls}>
         {state === "idle" && !waitingNext && (
           <button className={styles.btnPrimary} onClick={start}>
@@ -308,24 +360,31 @@ function Pomodoro() {
         >
           <BarChart3 size={14} />
         </button>
-        {/* Auto-cycle toggle */}
-        <div className={styles.autoCycleToggle}>
-          <label className={styles.toggleLabel}>
-            <input
-              type="checkbox"
-              checked={autoCycle}
-              onChange={(e) => setAutoCycle(e.target.checked)}
-              className={styles.toggleCheckboxInput}
-            />
-            <span
-              className={`${styles.toggleCheckbox} ${autoCycle ? styles.toggleCheckboxChecked : ""}`}
-              aria-hidden="true"
-            >
-              {autoCycle && <Check size={14} />}
-            </span>
-            <span>Auto-cycle breaks</span>
-          </label>
-        </div>
+        {state === "idle" && !waitingNext && !editingSettings && (
+          <button
+            className={styles.btnGhost}
+            onClick={() => setEditingSettings(true)}
+            title="Edit settings"
+          >
+            <Settings size={14} />
+          </button>
+        )}
+
+        {/* Auto-cycle toggle inline */}
+        <label className={styles.inlineToggleLabel}>
+          <input
+            type="checkbox"
+            checked={autoCycle}
+            onChange={(e) => setAutoCycle(e.target.checked)}
+            className={styles.toggleCheckboxInput}
+          />
+          <span
+            className={`${styles.inlineToggleCheckbox} ${autoCycle ? styles.inlineToggleCheckboxChecked : ""}`}
+            aria-hidden="true"
+          >
+            {autoCycle && <Check size={12} />}
+          </span>
+        </label>
       </div>
 
       {/* Stats section */}
