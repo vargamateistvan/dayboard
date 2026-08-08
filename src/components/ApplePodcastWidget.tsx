@@ -1,5 +1,3 @@
-const APPLE_PODCAST_EMBED_URL = 'https://embed.podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272'
-
 interface ApplePodcastWidgetProps {
   readonly isFullscreen?: boolean
 }
@@ -14,11 +12,9 @@ export function ApplePodcastWidget({ isFullscreen = false }: ApplePodcastWidgetP
         minHeight: isFullscreen ? 'clamp(28rem, 68vh, 58rem)' : '10rem',
         border: 'none',
       }}
-      src={APPLE_PODCAST_EMBED_URL}
-      title="Apple Podcast"
+      src="https://podcasts.apple.com"
+      title="Apple Podcasts"
       loading="lazy"
-      allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-      allowFullScreen
     />
   )
 }

@@ -22,35 +22,35 @@ describe('music widgets', () => {
     localStorage.clear()
   })
 
-  it('renders a Spotify iframe', () => {
+  it('renders a Spotify iframe with full web app', () => {
     renderWithSettings(<SpotifyWidget />)
-    expect(screen.getByTitle('Spotify Player')).toHaveAttribute(
+    expect(screen.getByTitle('Spotify')).toHaveAttribute(
       'src',
-      'https://open.spotify.com/embed/track/4cOdK2wGLETKBW3PvgPWqT',
+      'https://open.spotify.com',
     )
   })
 
-  it('renders an Apple Music iframe', () => {
+  it('renders an Apple Music iframe with full web app', () => {
     renderWithSettings(<AppleMusicWidget />)
-    expect(screen.getByTitle('Apple Music Player')).toHaveAttribute(
+    expect(screen.getByTitle('Apple Music')).toHaveAttribute(
       'src',
-      'https://embed.music.apple.com/us/album/blinding-lights/1499378108?i=1499378110',
+      'https://music.apple.com',
     )
   })
 
-  it('renders a Spotify Podcast iframe', () => {
+  it('renders a Spotify Podcast iframe with full web app', () => {
     renderWithSettings(<SpotifyPodcastWidget />)
-    expect(screen.getByTitle('Spotify Podcast')).toHaveAttribute(
+    expect(screen.getByTitle('Spotify')).toHaveAttribute(
       'src',
-      'https://open.spotify.com/embed/show/4rOoJ6Egrf8K2IrywzwOMk',
+      'https://open.spotify.com',
     )
   })
 
-  it('renders an Apple Podcast iframe', () => {
+  it('renders an Apple Podcasts iframe with full web app', () => {
     renderWithSettings(<ApplePodcastWidget />)
-    expect(screen.getByTitle('Apple Podcast')).toHaveAttribute(
+    expect(screen.getByTitle('Apple Podcasts')).toHaveAttribute(
       'src',
-      'https://embed.podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272',
+      'https://podcasts.apple.com',
     )
   })
 })
