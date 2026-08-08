@@ -1044,15 +1044,16 @@ export function SettingsDialog({ onClose }: Props) {
               <button
                 className={[
                   styles.widgetToggle,
-                  calendarHidePastEvents ? styles.widgetVisible : "",
+                  !calendarHidePastEvents ? styles.widgetVisible : "",
                 ].join(" ")}
                 onClick={() => setCalendarHidePastEvents((value) => !value)}
                 type="button"
+                aria-pressed={!calendarHidePastEvents}
               >
-                {calendarHidePastEvents ? (
-                  <EyeOff size={14} />
-                ) : (
+                {!calendarHidePastEvents ? (
                   <Eye size={14} />
+                ) : (
+                  <EyeOff size={14} />
                 )}
                 <span>Show past events</span>
               </button>

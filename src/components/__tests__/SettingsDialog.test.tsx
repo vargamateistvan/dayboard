@@ -86,4 +86,14 @@ describe('SettingsDialog', () => {
       calendarWeekStartsOn: 'sunday',
     })
   })
+
+  it('shows the past events toggle as pressed only when past events are visible', () => {
+    renderSettingsDialog()
+
+    const toggle = screen.getByRole('button', { name: /Show past events/i })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  })
 })
