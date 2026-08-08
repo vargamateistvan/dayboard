@@ -1,4 +1,3 @@
-import { createSavedMediaLink, normalizeSavedMediaLinks, type SavedMediaLink } from './mediaLinks'
 
 export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
@@ -33,14 +32,6 @@ export interface Settings {
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
-  spotifyEmbedUrl: string
-  spotifyEmbedLinks: SavedMediaLink[]
-  appleMusicEmbedUrl: string
-  appleMusicEmbedLinks: SavedMediaLink[]
-  spotifyPodcastEmbedUrl: string
-  spotifyPodcastEmbedLinks: SavedMediaLink[]
-  applePodcastEmbedUrl: string
-  applePodcastEmbedLinks: SavedMediaLink[]
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -128,14 +119,6 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
-  spotifyEmbedUrl: '',
-  spotifyEmbedLinks: [],
-  appleMusicEmbedUrl: '',
-  appleMusicEmbedLinks: [],
-  spotifyPodcastEmbedUrl: '',
-  spotifyPodcastEmbedLinks: [],
-  applePodcastEmbedUrl: '',
-  applePodcastEmbedLinks: [],
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -235,10 +218,6 @@ function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   return value
 }
 
-function normalizeEmbedUrl(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
-}
-
 function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
   if (typeof value !== 'boolean') {
     return DEFAULT_SETTINGS.showBuyMeACoffeeWidget
@@ -307,34 +286,6 @@ export function loadSettings(): Settings {
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
-      spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
-      spotifyEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { spotifyEmbedLinks?: unknown }).spotifyEmbedLinks,
-        (rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl
-          ? createSavedMediaLink((rest as { spotifyEmbedUrl?: string }).spotifyEmbedUrl!)
-          : undefined,
-      ),
-      appleMusicEmbedUrl: normalizeEmbedUrl((rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl),
-      appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { appleMusicEmbedLinks?: unknown }).appleMusicEmbedLinks,
-        (rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl
-          ? createSavedMediaLink((rest as { appleMusicEmbedUrl?: string }).appleMusicEmbedUrl!)
-          : undefined,
-      ),
-      spotifyPodcastEmbedUrl: normalizeEmbedUrl((rest as { spotifyPodcastEmbedUrl?: unknown }).spotifyPodcastEmbedUrl),
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { spotifyPodcastEmbedLinks?: unknown }).spotifyPodcastEmbedLinks,
-        (rest as { spotifyPodcastEmbedUrl?: unknown }).spotifyPodcastEmbedUrl
-          ? createSavedMediaLink((rest as { spotifyPodcastEmbedUrl?: string }).spotifyPodcastEmbedUrl!)
-          : undefined,
-      ),
-      applePodcastEmbedUrl: normalizeEmbedUrl((rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl),
-      applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { applePodcastEmbedLinks?: unknown }).applePodcastEmbedLinks,
-        (rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl
-          ? createSavedMediaLink((rest as { applePodcastEmbedUrl?: string }).applePodcastEmbedUrl!)
-          : undefined,
-      ),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
@@ -347,22 +298,6 @@ export function saveSettings(settings: Settings): void {
     JSON.stringify({
       ...settings,
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
-      spotifyEmbedLinks: normalizeSavedMediaLinks(
-        settings.spotifyEmbedLinks,
-        settings.spotifyEmbedUrl ? createSavedMediaLink(settings.spotifyEmbedUrl) : undefined,
-      ),
-      appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        settings.appleMusicEmbedLinks,
-        settings.appleMusicEmbedUrl ? createSavedMediaLink(settings.appleMusicEmbedUrl) : undefined,
-      ),
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        settings.spotifyPodcastEmbedLinks,
-        settings.spotifyPodcastEmbedUrl ? createSavedMediaLink(settings.spotifyPodcastEmbedUrl) : undefined,
-      ),
-      applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        settings.applePodcastEmbedLinks,
-        settings.applePodcastEmbedUrl ? createSavedMediaLink(settings.applePodcastEmbedUrl) : undefined,
-      ),
     }),
   )
 }

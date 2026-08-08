@@ -1,19 +1,5 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useRef, useState } from "react";
 import { useSettings } from "../lib/useSettings";
-import {
-  createSavedMediaLink,
-  formatSavedLinkLabel,
-  normalizeSavedMediaLinks,
-  removeSavedMediaLink,
-  type SavedMediaLink,
-  resolveMediaLinkTitle,
-} from "../lib/mediaLinks";
-import {
-  normalizeAppleMusicEmbedUrl,
-  normalizeApplePodcastEmbedUrl,
-  normalizeSpotifyEmbedUrl,
-  normalizeSpotifyPodcastEmbedUrl,
-} from "../lib/musicEmbeds";
 import {
   WIDGET_GRID_COLUMNS,
   MIN_GRID_ROWS,
@@ -58,7 +44,6 @@ import {
   EyeOff,
   GripVertical,
 } from "lucide-react";
-import { MediaBrandIcon } from "./MediaBrandIcon";
 import styles from "./SettingsDialog.module.css";
 
 const THEMES: { id: Theme; label: string; icon: React.ReactNode }[] = [
@@ -107,98 +92,6 @@ interface WidgetLayoutEditorProps {
   readonly onToggleWidget: (widget: Widget, visible?: boolean) => void;
   readonly onAddRow: () => void;
   readonly onRemoveRow: () => void;
-}
-
-interface MediaLinkEditorProps {
-  readonly title: string;
-  readonly brand: "spotify" | "apple-music" | "apple-podcasts";
-  readonly activeUrl: string;
-  readonly savedLinks: SavedMediaLink[];
-  readonly addUrl: string;
-  readonly addPlaceholder: string;
-  readonly onSelectUrl: (url: string) => void;
-  readonly onRemoveSelected: () => void;
-  readonly onAddUrlChange: (value: string) => void;
-  readonly onAddLink: () => void;
-  readonly error: string | null;
-}
-
-function MediaLinkEditor({
-  title,
-  brand,
-  activeUrl,
-  savedLinks,
-  addUrl,
-  addPlaceholder,
-  onSelectUrl,
-  onRemoveSelected,
-  onAddUrlChange,
-  onAddLink,
-  error,
-}: MediaLinkEditorProps) {
-  return (
-    <div className={styles.mediaLinkEditor}>
-      <label className={styles.intervalLabel}>
-        <span className={styles.mediaLinkLabel}>
-          <MediaBrandIcon brand={brand} size={20} className={styles.mediaLinkLogo} />
-          <span>{title} saved links</span>
-        </span>
-        <div className={styles.mediaLinkSelectRow}>
-          <select
-            className={styles.input}
-            value={activeUrl}
-            onChange={(e) => onSelectUrl(e.target.value)}
-            disabled={savedLinks.length === 0}
-          >
-            {savedLinks.length === 0 ? (
-              <option value="">No saved links yet</option>
-            ) : (
-              savedLinks.map((entry) => (
-                <option key={entry.url} value={entry.url}>
-                  {formatSavedLinkLabel(entry)}
-                </option>
-              ))
-            )}
-          </select>
-          <button
-            className={styles.mediaLinkRemoveButton}
-            type="button"
-            onClick={onRemoveSelected}
-            disabled={!activeUrl}
-            aria-label={`Remove selected ${title} link`}
-            title={`Remove selected ${title} link`}
-          >
-            <Trash2 size={14} />
-          </button>
-        </div>
-      </label>
-
-      <label className={styles.intervalLabel}>
-        <span className={styles.mediaLinkLabel}>
-          <MediaBrandIcon brand={brand} size={20} className={styles.mediaLinkLogo} />
-          <span>Add link</span>
-        </span>
-        <div className={styles.mediaLinkRow}>
-          <input
-            className={[styles.input, styles.mediaLinkInput].join(" ")}
-            type="url"
-            placeholder={addPlaceholder}
-            value={addUrl}
-            onChange={(e) => onAddUrlChange(e.target.value)}
-          />
-          <button
-            className={styles.mediaLinkButton}
-            type="button"
-            onClick={onAddLink}
-          >
-            Add
-          </button>
-        </div>
-      </label>
-
-      {error && <p className={styles.mediaLinkError}>{error}</p>}
-    </div>
-  );
 }
 
 function WidgetLayoutEditor({
@@ -539,30 +432,6 @@ export function SettingsDialog({ onClose }: Props) {
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
   );
-  const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState(settings.spotifyEmbedUrl);
-  const [spotifyEmbedLinks, setSpotifyEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.spotifyEmbedLinks, settings.spotifyEmbedUrl),
-  );
-  const [spotifyAddUrl, setSpotifyAddUrl] = useState("");
-  const [spotifyLinkError, setSpotifyLinkError] = useState<string | null>(null);
-  const [appleMusicEmbedUrl, setAppleMusicEmbedUrl] = useState(settings.appleMusicEmbedUrl);
-  const [appleMusicEmbedLinks, setAppleMusicEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.appleMusicEmbedLinks, settings.appleMusicEmbedUrl),
-  );
-  const [appleMusicAddUrl, setAppleMusicAddUrl] = useState("");
-  const [appleMusicLinkError, setAppleMusicLinkError] = useState<string | null>(null);
-  const [spotifyPodcastEmbedUrl, setSpotifyPodcastEmbedUrl] = useState(settings.spotifyPodcastEmbedUrl);
-  const [spotifyPodcastEmbedLinks, setSpotifyPodcastEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.spotifyPodcastEmbedLinks, settings.spotifyPodcastEmbedUrl),
-  );
-  const [spotifyPodcastAddUrl, setSpotifyPodcastAddUrl] = useState("");
-  const [spotifyPodcastLinkError, setSpotifyPodcastLinkError] = useState<string | null>(null);
-  const [applePodcastEmbedUrl, setApplePodcastEmbedUrl] = useState(settings.applePodcastEmbedUrl);
-  const [applePodcastEmbedLinks, setApplePodcastEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.applePodcastEmbedLinks, settings.applePodcastEmbedUrl),
-  );
-  const [applePodcastAddUrl, setApplePodcastAddUrl] = useState("");
-  const [applePodcastLinkError, setApplePodcastLinkError] = useState<string | null>(null);
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(
     settings.showBuyMeACoffeeWidget,
   );
@@ -613,87 +482,12 @@ export function SettingsDialog({ onClose }: Props) {
     });
   };
 
-  const addMediaLink = ({
-    value,
-    setValue,
-    links,
-    setLinks,
-    validate,
-    setActiveUrl,
-    setError,
-    errorMessage,
-  }: {
-    value: string;
-    setValue: Dispatch<SetStateAction<string>>;
-    links: SavedMediaLink[];
-    setLinks: Dispatch<SetStateAction<SavedMediaLink[]>>;
-    validate: (url: string) => string | null;
-    setActiveUrl: (url: string) => void;
-    setError: Dispatch<SetStateAction<string | null>>;
-    errorMessage: string;
-  }) => {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-      setError(null);
-      return;
-    }
-
-    const normalized = validate(trimmed);
-    if (!normalized) {
-      setError(errorMessage);
-      return;
-    }
-
-    const title = resolveMediaLinkTitle(normalized);
-    setLinks((current) =>
-      normalizeSavedMediaLinks([
-        createSavedMediaLink(normalized, title),
-        ...current,
-        ...links,
-      ]),
-    );
-    setActiveUrl(normalized);
-    setValue("");
-    setError(null);
-  };
-
-  const removeMediaLink = (
-    links: SavedMediaLink[],
-    url: string,
-    setLinks: Dispatch<SetStateAction<SavedMediaLink[]>>,
-    setActiveUrl: (url: string) => void,
-  ) => {
-    const nextLinks = removeSavedMediaLink(links, url);
-    setLinks(nextLinks);
-    setActiveUrl(nextLinks[0]?.url ?? '');
-  };
-
   const save = () => {
     updateSettings({
       calendarFeeds,
       weatherRefreshMinutes: weatherRefreshMin,
       weatherUnitSystem,
       weatherShowExtraDetails,
-      spotifyEmbedUrl,
-      spotifyEmbedLinks: normalizeSavedMediaLinks(
-        spotifyEmbedLinks,
-        spotifyEmbedUrl ? createSavedMediaLink(spotifyEmbedUrl) : undefined,
-      ),
-      appleMusicEmbedUrl,
-      appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        appleMusicEmbedLinks,
-        appleMusicEmbedUrl ? createSavedMediaLink(appleMusicEmbedUrl) : undefined,
-      ),
-      spotifyPodcastEmbedUrl,
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        spotifyPodcastEmbedLinks,
-        spotifyPodcastEmbedUrl ? createSavedMediaLink(spotifyPodcastEmbedUrl) : undefined,
-      ),
-      applePodcastEmbedUrl,
-      applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        applePodcastEmbedLinks,
-        applePodcastEmbedUrl ? createSavedMediaLink(applePodcastEmbedUrl) : undefined,
-      ),
       showBuyMeACoffeeWidget,
       calendarHidePastEvents,
       calendarShowMonthlyOverview,
@@ -1133,149 +927,6 @@ export function SettingsDialog({ onClose }: Props) {
             <p className={styles.hint}>
               Weather updates automatically using this interval. You can still
               refresh it manually anytime.
-            </p>
-          </section>
-
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Music Embeds</h3>
-            <MediaLinkEditor
-              title="Spotify"
-              brand="spotify"
-              activeUrl={spotifyEmbedUrl}
-              savedLinks={spotifyEmbedLinks}
-              addUrl={spotifyAddUrl}
-              addPlaceholder="https://open.spotify.com/track/..."
-              onSelectUrl={(url) => {
-                setSpotifyEmbedUrl(url);
-                setSpotifyLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  spotifyEmbedLinks,
-                  spotifyEmbedUrl,
-                  setSpotifyEmbedLinks,
-                  setSpotifyEmbedUrl,
-                )
-              }
-              onAddUrlChange={setSpotifyAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: spotifyAddUrl,
-                  setValue: setSpotifyAddUrl,
-                  links: spotifyEmbedLinks,
-                  setLinks: setSpotifyEmbedLinks,
-                  validate: normalizeSpotifyEmbedUrl,
-                  setActiveUrl: setSpotifyEmbedUrl,
-                  setError: setSpotifyLinkError,
-                  errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
-                })
-              }
-              error={spotifyLinkError}
-            />
-            <MediaLinkEditor
-              title="Apple Music"
-              brand="apple-music"
-              activeUrl={appleMusicEmbedUrl}
-              savedLinks={appleMusicEmbedLinks}
-              addUrl={appleMusicAddUrl}
-              addPlaceholder="https://music.apple.com/..."
-              onSelectUrl={(url) => {
-                setAppleMusicEmbedUrl(url);
-                setAppleMusicLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  appleMusicEmbedLinks,
-                  appleMusicEmbedUrl,
-                  setAppleMusicEmbedLinks,
-                  setAppleMusicEmbedUrl,
-                )
-              }
-              onAddUrlChange={setAppleMusicAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: appleMusicAddUrl,
-                  setValue: setAppleMusicAddUrl,
-                  links: appleMusicEmbedLinks,
-                  setLinks: setAppleMusicEmbedLinks,
-                  validate: normalizeAppleMusicEmbedUrl,
-                  setActiveUrl: setAppleMusicEmbedUrl,
-                  setError: setAppleMusicLinkError,
-                  errorMessage: "Please paste a valid Apple Music album, playlist, song, or artist link.",
-                })
-              }
-              error={appleMusicLinkError}
-            />
-            <MediaLinkEditor
-              title="Spotify Podcast"
-              brand="spotify"
-              activeUrl={spotifyPodcastEmbedUrl}
-              savedLinks={spotifyPodcastEmbedLinks}
-              addUrl={spotifyPodcastAddUrl}
-              addPlaceholder="https://open.spotify.com/show/..."
-              onSelectUrl={(url) => {
-                setSpotifyPodcastEmbedUrl(url);
-                setSpotifyPodcastLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  spotifyPodcastEmbedLinks,
-                  spotifyPodcastEmbedUrl,
-                  setSpotifyPodcastEmbedLinks,
-                  setSpotifyPodcastEmbedUrl,
-                )
-              }
-              onAddUrlChange={setSpotifyPodcastAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: spotifyPodcastAddUrl,
-                  setValue: setSpotifyPodcastAddUrl,
-                  links: spotifyPodcastEmbedLinks,
-                  setLinks: setSpotifyPodcastEmbedLinks,
-                  validate: normalizeSpotifyPodcastEmbedUrl,
-                  setActiveUrl: setSpotifyPodcastEmbedUrl,
-                  setError: setSpotifyPodcastLinkError,
-                  errorMessage: "Please paste a valid Spotify podcast show or episode link.",
-                })
-              }
-              error={spotifyPodcastLinkError}
-            />
-            <MediaLinkEditor
-              title="Apple Podcast"
-              brand="apple-podcasts"
-              activeUrl={applePodcastEmbedUrl}
-              savedLinks={applePodcastEmbedLinks}
-              addUrl={applePodcastAddUrl}
-              addPlaceholder="https://podcasts.apple.com/..."
-              onSelectUrl={(url) => {
-                setApplePodcastEmbedUrl(url);
-                setApplePodcastLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  applePodcastEmbedLinks,
-                  applePodcastEmbedUrl,
-                  setApplePodcastEmbedLinks,
-                  setApplePodcastEmbedUrl,
-                )
-              }
-              onAddUrlChange={setApplePodcastAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: applePodcastAddUrl,
-                  setValue: setApplePodcastAddUrl,
-                  links: applePodcastEmbedLinks,
-                  setLinks: setApplePodcastEmbedLinks,
-                  validate: normalizeApplePodcastEmbedUrl,
-                  setActiveUrl: setApplePodcastEmbedUrl,
-                  setError: setApplePodcastLinkError,
-                  errorMessage: "Please paste a valid Apple Podcast show or episode link.",
-                })
-              }
-              error={applePodcastLinkError}
-            />
-            <p className={styles.hint}>
-              Paste a public share link. Dayboard converts it to an embeddable player automatically.
             </p>
           </section>
 
