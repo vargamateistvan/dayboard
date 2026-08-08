@@ -2,6 +2,7 @@ export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 export type WeatherUnitSystem = 'metric' | 'imperial'
+export type CalendarWeekStartsOn = 'sunday' | 'monday'
 
 export interface CalendarFeed {
   url: string
@@ -24,7 +25,9 @@ export interface Settings {
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
   calendarHidePastEvents: boolean
+  calendarShowMonthlyOverview: boolean
   calendarShowAllDayEvents: boolean
+  calendarWeekStartsOn: CalendarWeekStartsOn
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
@@ -113,7 +116,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
   calendarHidePastEvents: false,
+  calendarShowMonthlyOverview: true,
   calendarShowAllDayEvents: true,
+  calendarWeekStartsOn: 'monday',
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
@@ -248,6 +253,18 @@ function normalizeCalendarShowAllDayEvents(value: unknown): boolean {
   return value
 }
 
+function normalizeCalendarShowMonthlyOverview(value: unknown): boolean {
+  if (typeof value !== 'boolean') {
+    return DEFAULT_SETTINGS.calendarShowMonthlyOverview
+  }
+
+  return value
+}
+
+function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
+  return value === 'sunday' ? 'sunday' : DEFAULT_SETTINGS.calendarWeekStartsOn
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -268,8 +285,14 @@ export function loadSettings(): Settings {
       calendarHidePastEvents: normalizeCalendarHidePastEvents(
         (rest as { calendarHidePastEvents?: unknown }).calendarHidePastEvents,
       ),
+      calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(
+        (rest as { calendarShowMonthlyOverview?: unknown }).calendarShowMonthlyOverview,
+      ),
       calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(
         (rest as { calendarShowAllDayEvents?: unknown }).calendarShowAllDayEvents,
+      ),
+      calendarWeekStartsOn: normalizeCalendarWeekStartsOn(
+        (rest as { calendarWeekStartsOn?: unknown }).calendarWeekStartsOn,
       ),
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),

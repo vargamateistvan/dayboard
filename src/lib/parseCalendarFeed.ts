@@ -8,27 +8,52 @@ export interface CalendarEvent {
   calendarColor?: string
 }
 
-function todayRange(): { startOfDay: Date; endOfDay: Date } {
-  const now = new Date()
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
-  const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
-  return { startOfDay, endOfDay }
+export interface CalendarRange {
+  start: Date
+  end: Date
 }
 
-function isToday(start: Date, end: Date): boolean {
-  const { startOfDay, endOfDay } = todayRange()
-  return start <= endOfDay && end >= startOfDay
+function dayRange(referenceDate = new Date()): CalendarRange {
+  const start = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+    0,
+    0,
+    0,
+    0,
+  )
+  const end = new Date(
+    referenceDate.getFullYear(),
+    referenceDate.getMonth(),
+    referenceDate.getDate(),
+    23,
+    59,
+    59,
+    999,
+  )
+  return { start, end }
 }
 
-function toCalendarEvent(title: string, start: Date, end: Date, allDay: boolean): CalendarEvent | null {
-  return isToday(start, end) ? { title, start, end, allDay } : null
+function isInRange(start: Date, end: Date, range: CalendarRange): boolean {
+  return start <= range.end && end >= range.start
+}
+
+function toCalendarEvent(
+  title: string,
+  start: Date,
+  end: Date,
+  allDay: boolean,
+  range: CalendarRange,
+): CalendarEvent | null {
+  return isInRange(start, end, range) ? { title, start, end, allDay } : null
 }
 
 function isCancelledEvent(event: ICalEvent): boolean {
   return event.component.getFirstPropertyValue('status') === 'CANCELLED'
 }
 
-function parseRecurringEvent(event: ICalEvent, startOfDay: Date, endOfDay: Date): CalendarEvent[] {
+function parseRecurringEvent(event: ICalEvent, range: CalendarRange): CalendarEvent[] {
   const iterator = event.iterator()
   const events: CalendarEvent[] = []
 
@@ -38,8 +63,8 @@ function parseRecurringEvent(event: ICalEvent, startOfDay: Date, endOfDay: Date)
 
     const details = event.getOccurrenceDetails(occurrenceTime)
     const start = details.startDate.toJSDate()
-    if (start > endOfDay) break
-    if (start < startOfDay) continue
+    if (start > range.end) break
+    if (start < range.start) continue
 
     if (isCancelledEvent(details.item)) {
       continue
@@ -50,6 +75,7 @@ function parseRecurringEvent(event: ICalEvent, startOfDay: Date, endOfDay: Date)
       start,
       details.endDate.toJSDate(),
       details.startDate.isDate,
+      range,
     )
 
     if (nextEvent) {
@@ -60,7 +86,7 @@ function parseRecurringEvent(event: ICalEvent, startOfDay: Date, endOfDay: Date)
   return events
 }
 
-export function parseIcs(text: string): CalendarEvent[] {
+export function parseIcs(text: string, range = dayRange()): CalendarEvent[] {
   if (!text || !text.includes('BEGIN:VEVENT')) return []
 
   try {
@@ -69,7 +95,6 @@ export function parseIcs(text: string): CalendarEvent[] {
     const eventsByUid = new Map<string, ICalEvent>()
     const deferredExceptions: ICalEvent[] = []
     const calendarEvents: CalendarEvent[] = []
-    const { startOfDay, endOfDay } = todayRange()
 
     for (const [index, event] of sourceEvents.entries()) {
       if (event.isRecurrenceException()) {
@@ -96,7 +121,7 @@ export function parseIcs(text: string): CalendarEvent[] {
 
     for (const event of eventsByUid.values()) {
       if (event.isRecurring()) {
-        calendarEvents.push(...parseRecurringEvent(event, startOfDay, endOfDay))
+        calendarEvents.push(...parseRecurringEvent(event, range))
         continue
       }
 
@@ -109,6 +134,7 @@ export function parseIcs(text: string): CalendarEvent[] {
         event.startDate.toJSDate(),
         event.endDate.toJSDate(),
         event.startDate.isDate,
+        range,
       )
 
       if (nextEvent) {
@@ -122,7 +148,7 @@ export function parseIcs(text: string): CalendarEvent[] {
   }
 }
 
-export function parseCsv(text: string): CalendarEvent[] {
+export function parseCsv(text: string, range = dayRange()): CalendarEvent[] {
   if (!text.trim()) return []
   const lines = text.trim().split(/\r?\n/)
   if (lines.length < 2) return []
@@ -142,7 +168,7 @@ export function parseCsv(text: string): CalendarEvent[] {
       const start = new Date(cols[startIdx])
       const end = endIdx !== -1 && cols[endIdx] ? new Date(cols[endIdx]) : new Date(start.getTime() + 3600_000)
       if (isNaN(start.getTime())) continue
-      if (isToday(start, end)) {
+      if (isInRange(start, end, range)) {
         events.push({ title, start, end, allDay: false })
       }
     } catch {
@@ -153,10 +179,10 @@ export function parseCsv(text: string): CalendarEvent[] {
   return events.sort((a, b) => a.start.getTime() - b.start.getTime())
 }
 
-export function parseCalendarFeed(text: string): CalendarEvent[] {
+export function parseCalendarFeed(text: string, range = dayRange()): CalendarEvent[] {
   if (!text || !text.trim()) return []
   if (text.includes('BEGIN:VCALENDAR') || text.includes('BEGIN:VEVENT')) {
-    return parseIcs(text)
+    return parseIcs(text, range)
   }
-  return parseCsv(text)
+  return parseCsv(text, range)
 }

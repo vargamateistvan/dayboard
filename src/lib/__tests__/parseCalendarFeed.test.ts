@@ -215,4 +215,17 @@ describe('parseCalendarFeed — auto-detection', () => {
   it('returns empty array for empty input', () => {
     expect(parseCalendarFeed('')).toEqual([])
   })
+
+  it('can parse events across a supplied month range', () => {
+    const events = parseCalendarFeed(MULTI_EVENT_ICS, {
+      start: new Date('2024-08-01T00:00:00'),
+      end: new Date('2024-08-31T23:59:59'),
+    })
+
+    expect(events.map((event) => event.title)).toEqual([
+      'Morning sync',
+      'Lunch',
+      'Next week',
+    ])
+  })
 })

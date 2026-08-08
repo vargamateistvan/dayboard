@@ -53,7 +53,15 @@ function renderWidget(widget: Widget) {
 }
 
 function getWidgetTypeClass(widget: Widget) {
-  return widget === 'clock' ? styles.widgetClock : ''
+  if (widget === 'clock') {
+    return styles.widgetClock
+  }
+
+  if (widget === 'calendar') {
+    return styles.widgetCalendar
+  }
+
+  return ''
 }
 
 function Dashboard() {

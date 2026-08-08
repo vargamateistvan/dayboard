@@ -19,6 +19,7 @@ import {
   DEFAULT_CUSTOM_COLORS,
   FONT_PRESET_OPTIONS,
   type CalendarFeed,
+  type CalendarWeekStartsOn,
   type Theme,
   type ColorScheme,
   type CustomColors,
@@ -67,6 +68,11 @@ const COLOR_SCHEMES: {
 const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
   { id: "metric", label: "Metric" },
   { id: "imperial", label: "Imperial" },
+];
+
+const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
+  { id: "monday", label: "Monday" },
+  { id: "sunday", label: "Sunday" },
 ];
 
 const WIDGETS: {
@@ -449,9 +455,14 @@ export function SettingsDialog({ onClose }: Props) {
   const [calendarHidePastEvents, setCalendarHidePastEvents] = useState(
     settings.calendarHidePastEvents,
   );
+  const [calendarShowMonthlyOverview, setCalendarShowMonthlyOverview] = useState(
+    settings.calendarShowMonthlyOverview,
+  );
   const [calendarShowAllDayEvents, setCalendarShowAllDayEvents] = useState(
     settings.calendarShowAllDayEvents,
   );
+  const [calendarWeekStartsOn, setCalendarWeekStartsOn] =
+    useState<CalendarWeekStartsOn>(settings.calendarWeekStartsOn);
   const [workMin, setWorkMin] = useState(settings.pomodoroWorkMinutes);
   const [breakMin, setBreakMin] = useState(settings.pomodoroBreakMinutes);
   const [customColors, setCustomColors] = useState<CustomColors>(
@@ -500,7 +511,9 @@ export function SettingsDialog({ onClose }: Props) {
       applePodcastEmbedUrl,
       showBuyMeACoffeeWidget,
       calendarHidePastEvents,
+      calendarShowMonthlyOverview,
       calendarShowAllDayEvents,
+      calendarWeekStartsOn,
       pomodoroWorkMinutes: workMin,
       pomodoroBreakMinutes: breakMin,
       ...(settings.theme === "custom" && { customColors }),
@@ -807,6 +820,22 @@ export function SettingsDialog({ onClose }: Props) {
 
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Calendar Display</h3>
+            <div className={styles.segmented}>
+              {CALENDAR_WEEK_STARTS.map((option) => (
+                <button
+                  key={option.id}
+                  className={[
+                    styles.segment,
+                    calendarWeekStartsOn === option.id ? styles.segmentActive : "",
+                  ].join(" ")}
+                  onClick={() => setCalendarWeekStartsOn(option.id)}
+                  aria-pressed={calendarWeekStartsOn === option.id}
+                  type="button"
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
             <div className={styles.widgetGrid}>
               <button
                 className={[
@@ -837,6 +866,23 @@ export function SettingsDialog({ onClose }: Props) {
                   <EyeOff size={14} />
                 )}
                 <span>Show all-day events</span>
+              </button>
+              <button
+                className={[
+                  styles.widgetToggle,
+                  calendarShowMonthlyOverview ? styles.widgetVisible : "",
+                ].join(" ")}
+                onClick={() =>
+                  setCalendarShowMonthlyOverview((value) => !value)
+                }
+                type="button"
+              >
+                {calendarShowMonthlyOverview ? (
+                  <Eye size={14} />
+                ) : (
+                  <EyeOff size={14} />
+                )}
+                <span>Show monthly overview</span>
               </button>
             </div>
           </section>

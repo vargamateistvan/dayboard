@@ -80,6 +80,42 @@ END:VEVENT
 END:VCALENDAR`
 
 describe('CalendarWidget', () => {
+  it('shows the monthly overview by default', () => {
+    renderWithSettings([])
+
+    expect(screen.getByLabelText('Current month calendar')).toBeInTheDocument()
+    expect(screen.getByText(new Date().toLocaleDateString(undefined, { month: 'short' }))).toBeInTheDocument()
+    expect(screen.getByText(`${new Date().getFullYear()}.`)).toBeInTheDocument()
+  })
+
+  it('starts the calendar week on Monday by default', () => {
+    renderWithSettings([])
+
+    const monthCalendar = screen.getByLabelText('Current month calendar')
+    const weekdayLabels = Array.from(monthCalendar.querySelectorAll('[class*="weekdayLabel"]')).map(
+      (element) => element.textContent,
+    )
+
+    expect(weekdayLabels).toEqual(['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+  })
+
+  it('can start the calendar week on Sunday', () => {
+    renderWithSettings([], { calendarWeekStartsOn: 'sunday' })
+
+    const monthCalendar = screen.getByLabelText('Current month calendar')
+    const weekdayLabels = Array.from(monthCalendar.querySelectorAll('[class*="weekdayLabel"]')).map(
+      (element) => element.textContent,
+    )
+
+    expect(weekdayLabels).toEqual(['S', 'M', 'T', 'W', 'T', 'F', 'S'])
+  })
+
+  it('hides the monthly overview when disabled in settings', () => {
+    renderWithSettings([], { calendarShowMonthlyOverview: false })
+
+    expect(screen.queryByLabelText('Current month calendar')).not.toBeInTheDocument()
+  })
+
   it('shows "no calendar connected" when no URL is set', () => {
     renderWithSettings([])
     expect(screen.getByText(/No calendars connected/)).toBeInTheDocument()
@@ -99,7 +135,15 @@ describe('CalendarWidget', () => {
     )
     renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
-    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    expect(screen.getAllByText('Team Standup')[0]).toBeInTheDocument()
+    const todayLabel = new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+    const todayCell = screen.getByLabelText(todayLabel)
+    expect(todayCell.querySelector('[aria-hidden="true"]')).not.toBeNull()
+    expect(todayCell.textContent).toContain('Team Standup')
     vi.unstubAllGlobals()
   })
 
@@ -110,9 +154,9 @@ describe('CalendarWidget', () => {
     )
     renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[1] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
-    expect(screen.getByText('Focus Day')).toBeInTheDocument()
-    expect(screen.getByText('All day')).toBeInTheDocument()
-    expect(window.getComputedStyle(screen.getByText('Focus Day').closest('li') as HTMLElement).color).toBe(
+    expect(screen.getAllByText('Focus Day')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('All day')[0]).toBeInTheDocument()
+    expect(window.getComputedStyle(screen.getAllByText('Focus Day')[0].closest('li') as HTMLElement).color).toBe(
       hexToRgb(DEFAULT_CALENDAR_COLORS[1]),
     )
     vi.unstubAllGlobals()
@@ -128,7 +172,7 @@ describe('CalendarWidget', () => {
     })
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/No events today/)).toBeInTheDocument()
-    expect(screen.queryByText('Focus Day')).not.toBeInTheDocument()
+    expect(screen.queryAllByText('Focus Day')).toHaveLength(0)
     vi.unstubAllGlobals()
   })
 
@@ -139,7 +183,7 @@ describe('CalendarWidget', () => {
     )
     renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[2] }])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
-    expect(screen.getByText('Recurring Team Sync')).toBeInTheDocument()
+    expect(screen.getAllByText('Recurring Team Sync')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -165,7 +209,7 @@ END:VCALENDAR`
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
 
     expect(screen.getByText('Now')).toBeInTheDocument()
-    expect(screen.getByText('Ongoing Meeting')).toBeInTheDocument()
+    expect(screen.getAllByText('Ongoing Meeting')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -198,8 +242,8 @@ END:VCALENDAR`
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
 
     expect(screen.getAllByText('Now')).toHaveLength(2)
-    expect(screen.getByText('First Ongoing')).toBeInTheDocument()
-    expect(screen.getByText('Second Ongoing')).toBeInTheDocument()
+    expect(screen.getAllByText('First Ongoing')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Second Ongoing')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -220,7 +264,6 @@ END:VCALENDAR`
     })
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(screen.getByText(/No events today/)).toBeInTheDocument()
-    expect(screen.queryByText('Old Meeting')).not.toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -237,7 +280,7 @@ END:VCALENDAR`
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/calendar?url=https%3A%2F%2Fcalendar.google.com%2Fcalendar%2Fical%2Fmateistvanvarga%2540gmail.com%2Fpublic%2Fbasic.ics',
     )
-    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    expect(screen.getAllByText('Team Standup')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -251,7 +294,7 @@ END:VCALENDAR`
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
     expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/calendar?url=https%3A%2F%2Fexample.com%2Fcal.ics')
     expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://example.com/cal.ics')
-    expect(screen.getByText('Team Standup')).toBeInTheDocument()
+    expect(screen.getAllByText('Team Standup')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 
@@ -307,8 +350,8 @@ END:VCALENDAR`
       { url: 'https://example.com/two.ics', color: DEFAULT_CALENDAR_COLORS[1] },
     ])
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
-    expect(screen.getByText('Team Standup')).toBeInTheDocument()
-    expect(screen.getByText('Client Call')).toBeInTheDocument()
+    expect(screen.getAllByText('Team Standup')[0]).toBeInTheDocument()
+    expect(screen.getAllByText('Client Call')[0]).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 })

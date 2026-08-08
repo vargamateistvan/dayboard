@@ -96,6 +96,12 @@
   align-items: center;
 }
 
+.widgetCalendar {
+  overflow: visible;
+  position: relative;
+  z-index: 20;
+}
+
 .app.focusMode .widgetClock {
   justify-content: center;
   min-height: 15rem;

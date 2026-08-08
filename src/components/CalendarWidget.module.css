@@ -4,7 +4,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .header {
@@ -18,6 +18,76 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--color-text-muted);
+}
+
+.content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8.4rem, 9.4rem);
+  gap: clamp(0.45rem, 0.9vw, 0.75rem);
+  align-items: start;
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+
+.contentFull {
+  grid-template-columns: 1fr;
+}
+
+.sectionHeader {
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.sectionTitle {
+  font-size: 0.64rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.eventsColumn {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.monthlyOverview {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  position: relative;
+  z-index: 30;
+}
+
+.monthYear {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+  opacity: 0.82;
+  line-height: 1;
+}
+
+.monthName {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.monthLabelSrOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .loading,
@@ -43,20 +113,20 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-right: var(--space-1);
+  padding-right: 0.2rem;
 }
 
 /* Separator line only — no card/box */
 .event {
   border-top: 1px solid var(--color-border);
   border-left: 3px solid currentColor;
-  padding-top: var(--space-2);
-  padding-left: var(--space-3);
+  padding-top: 0.35rem;
+  padding-left: 0.5rem;
   transition: opacity var(--transition-fast);
 }
 
@@ -73,8 +143,8 @@
   border-left-width: 4px;
   background: color-mix(in srgb, currentColor 10%, transparent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 22%, transparent);
-  border-radius: 0.35rem;
-  padding-bottom: var(--space-2);
+  border-radius: 0.3rem;
+  padding-bottom: 0.35rem;
 }
 
 .past {
@@ -82,25 +152,26 @@
 }
 
 .eventTime {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--color-text-muted);
   letter-spacing: 0.04em;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .eventTitle {
-  font-size: clamp(0.82rem, 1.1vw, 0.98rem);
+  font-size: clamp(0.75rem, 0.95vw, 0.9rem);
   font-weight: 500;
   line-height: 1.15;
   color: inherit;
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .nextBadge {
   display: inline-block;
-  font-size: 0.62rem;
+  font-size: 0.54rem;
   font-weight: 600;
   color: currentColor;
   opacity: 0.8;
@@ -110,10 +181,181 @@
 
 .currentBadge {
   display: inline-block;
-  font-size: 0.62rem;
+  font-size: 0.54rem;
   font-weight: 700;
   color: currentColor;
   opacity: 0.95;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.weekdayRow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+}
+
+.weekdayLabel {
+  text-align: center;
+  font-size: 0.52rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  opacity: 0.75;
+  padding: 0.22rem 0 0.25rem;
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  border-left: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
+  flex: 1;
+}
+
+.monthCell {
+  min-width: 0;
+  aspect-ratio: 1;
+  border-right: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
+  padding: 0.14rem 0.14rem 0.22rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  background: transparent;
+  position: relative;
+  overflow: visible;
+}
+
+.monthCellMuted {
+  opacity: 0.28;
+}
+
+.monthCellToday {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.monthCellHasEvent {
+  background: color-mix(in srgb, var(--color-surface, var(--color-bg)) 16%, transparent);
+}
+
+.monthCellNumber {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 88%, var(--color-text-muted));
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.monthEventBar {
+  align-self: stretch;
+  height: 0.24rem;
+  border-radius: 999px;
+  opacity: 0.92;
+}
+
+.monthEventCount {
+  align-self: flex-start;
+  font-size: 0.42rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1;
+  opacity: 0.82;
+}
+
+.monthTooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  width: 12rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--color-bg) 86%, #000 14%);
+  border: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(0.2rem);
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
+  z-index: 200;
+}
+
+.monthCell:hover .monthTooltip,
+.monthCell:focus-visible .monthTooltip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.monthTooltipHeader {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.monthTooltipList {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.monthTooltipItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.monthTooltipDot {
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 999px;
+  margin-top: 0.22rem;
+  flex-shrink: 0;
+}
+
+.monthTooltipContent {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+}
+
+.monthTooltipTime {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.monthTooltipTitle {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.monthTooltipMore {
+  padding-top: 0.1rem;
+  font-size: 0.52rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 900px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
 }

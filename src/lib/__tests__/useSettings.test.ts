@@ -31,7 +31,9 @@ describe('settings persistence', () => {
     expect(loaded.weatherRefreshMinutes).toBe(DEFAULT_SETTINGS.weatherRefreshMinutes)
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
     expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
+    expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
+    expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
   })
 
   it('returns defaults when localStorage contains invalid JSON', () => {
@@ -58,7 +60,9 @@ describe('settings persistence', () => {
         { url: 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics', color: '#654321' },
       ],
       calendarHidePastEvents: true,
+      calendarShowMonthlyOverview: false,
       calendarShowAllDayEvents: false,
+      calendarWeekStartsOn: 'sunday' as const,
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,
@@ -89,7 +93,9 @@ describe('settings persistence', () => {
       'dayboard:settings',
       JSON.stringify({
         calendarHidePastEvents: 'no',
+        calendarShowMonthlyOverview: 'sometimes',
         calendarShowAllDayEvents: 'yes',
+        calendarWeekStartsOn: 'friday',
         weatherUnitSystem: 'kelvin',
         weatherShowExtraDetails: 'nope',
         showBuyMeACoffeeWidget: 'sometimes',
@@ -100,7 +106,9 @@ describe('settings persistence', () => {
     expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
     expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
+    expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
+    expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
   })
 })
 

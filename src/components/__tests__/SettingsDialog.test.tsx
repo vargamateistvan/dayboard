@@ -4,6 +4,7 @@ import { SettingsDialog } from '../SettingsDialog'
 import { SettingsProvider } from '../../lib/useSettings'
 
 const LAYOUT_STORAGE_KEY = 'dayboard_widget_layout'
+const SETTINGS_STORAGE_KEY = 'dayboard:settings'
 
 function renderSettingsDialog() {
   return render(
@@ -62,5 +63,27 @@ describe('SettingsDialog', () => {
 
     // The palette should show weather as a hidden chip (with grip icon present)
     expect(screen.getByTitle('Drag to add Weather')).toBeInTheDocument()
+  })
+
+  it('persists the monthly overview toggle with calendar display settings', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: /Show monthly overview/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      calendarShowMonthlyOverview: false,
+    })
+  })
+
+  it('persists the calendar week start setting', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sunday' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      calendarWeekStartsOn: 'sunday',
+    })
   })
 })
