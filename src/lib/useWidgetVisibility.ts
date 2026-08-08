@@ -60,19 +60,19 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
 };
 
 const DEFAULT_PLACEMENTS: WidgetPlacements = {
-  clock:    { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
-  weather:  { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
+  clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+  weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
-  timer:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-  tasks:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-  notes:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-  spotify:  { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  notes: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  spotify: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
   appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
   spotifyPodcast: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
-  applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
+  applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
 };
 
-const MIN_WIDGET_SIZE: Record<
+export const MIN_WIDGET_SIZE: Record<
   Widget,
   Pick<WidgetPlacement, "columnSpan" | "rowSpan">
 > = {
@@ -85,7 +85,7 @@ const MIN_WIDGET_SIZE: Record<
   spotify: { columnSpan: 1, rowSpan: 1 },
   appleMusic: { columnSpan: 1, rowSpan: 2 },
   spotifyPodcast: { columnSpan: 1, rowSpan: 1 },
-  applePodcast: { columnSpan: 1, rowSpan: 1 },
+  applePodcast: { columnSpan: 1, rowSpan: 2 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {
@@ -202,7 +202,10 @@ function normalizePlacementForWidget(
   return { column, row, columnSpan, rowSpan };
 }
 
-function normalizePlacements(value: unknown, rowCount: number): WidgetPlacements {
+function normalizePlacements(
+  value: unknown,
+  rowCount: number,
+): WidgetPlacements {
   const candidate =
     value && typeof value === "object"
       ? (value as Partial<Record<Widget, unknown>>)
@@ -637,10 +640,17 @@ export function useWidgetVisibility() {
       // Clamp rowSpan so the widget fits within the new row count
       const maxSpan = newRowCount - nextPlacements[widget].row + 1;
       if (nextPlacements[widget].rowSpan > maxSpan) {
-        nextPlacements[widget] = { ...nextPlacements[widget], rowSpan: Math.max(1, maxSpan) };
+        nextPlacements[widget] = {
+          ...nextPlacements[widget],
+          rowSpan: Math.max(1, maxSpan),
+        };
       }
     }
-    writeLayout({ ...currentLayout, rowCount: newRowCount, placements: nextPlacements });
+    writeLayout({
+      ...currentLayout,
+      rowCount: newRowCount,
+      placements: nextPlacements,
+    });
   }, []);
 
   return {

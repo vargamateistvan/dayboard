@@ -5,6 +5,7 @@ import {
   MIN_GRID_ROWS,
   MAX_GRID_ROWS,
   canPlaceWidget,
+  MIN_WIDGET_SIZE,
   type WidgetColumnSpan,
   type WidgetGridColumn,
   type WidgetGridRow,
@@ -293,6 +294,9 @@ function WidgetLayoutEditor({
               >
                 {!isVisible && <GripVertical size={12} />}
                 <span>{getWidgetLabel(widget)}</span>
+                <span className={styles.widgetSizeLabel}>
+                  {MIN_WIDGET_SIZE[widget].columnSpan}×{MIN_WIDGET_SIZE[widget].rowSpan}
+                </span>
               </div>
             );
           })}
