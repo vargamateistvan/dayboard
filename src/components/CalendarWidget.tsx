@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { createPortal } from 'react-dom'
 import { fetchCalendarFeeds } from '../lib/fetchCalendarFeed'
-import { parseCalendarFeed, type CalendarEvent, type CalendarRange } from '../lib/parseCalendarFeed'
+import {
+  parseCalendarFeed,
+  type CalendarEvent,
+  type CalendarPerson,
+  type CalendarRange,
+} from '../lib/parseCalendarFeed'
 import { DEFAULT_CALENDAR_COLOR, type CalendarWeekStartsOn } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
@@ -155,11 +161,116 @@ function buildMonthCells(
   })
 }
 
+function formatResponseStatus(status: string | undefined): string | null {
+  if (!status) {
+    return null
+  }
+
+  switch (status) {
+    case 'ACCEPTED':
+      return 'Accepted'
+    case 'DECLINED':
+      return 'Declined'
+    case 'TENTATIVE':
+      return 'Tentative'
+    case 'NEEDS-ACTION':
+      return 'Awaiting reply'
+    default:
+      return status
+        .toLowerCase()
+        .split(/[-_\s]+/)
+        .filter(Boolean)
+        .map((part) => part[0]?.toUpperCase() + part.slice(1))
+        .join(' ')
+  }
+}
+
+function formatPerson(person: CalendarPerson): string {
+  return person.email ? `${person.name} <${person.email}>` : person.name
+}
+
+function hasEventTooltipDetails(event: CalendarEvent): boolean {
+  return Boolean(event.location || event.notes || event.organizer || event.attendees?.length)
+}
+
+function EventDetailsTooltipContent({ event }: Readonly<{ event: CalendarEvent }>) {
+  const hasGuests = Boolean(event.attendees && event.attendees.length > 0)
+
+  return (
+    <>
+      <div className={styles.eventTooltipHeader}>
+        <span className={styles.eventTooltipTitle}>{event.title}</span>
+        <span className={styles.eventTooltipTime}>
+          {event.allDay ? 'All day' : `${formatTime(event.start)} - ${formatTime(event.end)}`}
+        </span>
+      </div>
+
+      <div className={styles.eventTooltipBody}>
+        {event.location && (
+          <div className={styles.eventTooltipSection}>
+            <span className={styles.eventTooltipLabel}>Location</span>
+            <span className={styles.eventTooltipValue}>{event.location}</span>
+          </div>
+        )}
+
+        {event.organizer && (
+          <div className={styles.eventTooltipSection}>
+            <span className={styles.eventTooltipLabel}>Host</span>
+            <span className={styles.eventTooltipValue}>{formatPerson(event.organizer)}</span>
+          </div>
+        )}
+
+        {hasGuests && (
+          <div className={styles.eventTooltipSection}>
+            <span className={styles.eventTooltipLabel}>Guests</span>
+            <ul className={styles.eventTooltipPeople}>
+              {event.attendees?.map((attendee) => {
+                const responseStatus = formatResponseStatus(attendee.responseStatus)
+
+                return (
+                  <li key={`${attendee.name}-${attendee.email ?? 'no-email'}`} className={styles.eventTooltipPerson}>
+                    <span className={styles.eventTooltipValue}>{formatPerson(attendee)}</span>
+                    {responseStatus && (
+                      <span className={styles.eventTooltipBadge}>{responseStatus}</span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
+
+        {event.notes && (
+          <div className={styles.eventTooltipSection}>
+            <span className={styles.eventTooltipLabel}>Notes</span>
+            <p className={styles.eventTooltipNotes}>{event.notes}</p>
+          </div>
+        )}
+
+        {event.eventUrl && (
+          <div className={styles.eventTooltipSection}>
+            <span className={styles.eventTooltipLabel}>Invite</span>
+            <span className={styles.eventTooltipValue}>{event.eventUrl}</span>
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
+
 export function CalendarWidget() {
   const { settings } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activeTooltip, setActiveTooltip] = useState<{
+    event: CalendarEvent
+    anchorElement: HTMLLIElement
+  } | null>(null)
+  const [tooltipStyle, setTooltipStyle] = useState<CSSProperties>()
+  const widgetRef = useRef<HTMLDivElement | null>(null)
+  const tooltipRef = useRef<HTMLDivElement | null>(null)
+  const listRef = useRef<HTMLUListElement | null>(null)
   const hasCalendarFeeds = settings.calendarFeeds.length > 0
   const now = new Date()
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
@@ -170,10 +281,70 @@ export function CalendarWidget() {
   const todayRange = useMemo(() => getTodayRange(now), [now.getFullYear(), now.getMonth(), now.getDate()])
 
   useEffect(() => {
+    if (!activeTooltip) {
+      setTooltipStyle(undefined)
+      return
+    }
+
+    const updateTooltipPosition = () => {
+      const anchorRect = activeTooltip.anchorElement.getBoundingClientRect()
+      const widgetRect = widgetRef.current?.getBoundingClientRect()
+      const tooltipRect = tooltipRef.current?.getBoundingClientRect()
+
+      const gap = 12
+      const viewportPadding = 12
+      const tooltipWidth = tooltipRect?.width ?? 304
+      const tooltipHeight = tooltipRect?.height ?? 220
+      const preferredRight = (widgetRect?.right ?? anchorRect.right) + gap
+      const availableRight = window.innerWidth - preferredRight - viewportPadding
+      const hasRightSpace = availableRight >= tooltipWidth
+
+      let left = hasRightSpace
+        ? preferredRight
+        : (widgetRect?.left ?? anchorRect.left) - tooltipWidth - gap
+
+      if (left < viewportPadding) {
+        left = Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding)
+      }
+
+      let top = anchorRect.top + anchorRect.height / 2 - tooltipHeight / 2
+      if (top < viewportPadding) {
+        top = viewportPadding
+      }
+      if (top + tooltipHeight > window.innerHeight - viewportPadding) {
+        top = window.innerHeight - tooltipHeight - viewportPadding
+      }
+
+      setTooltipStyle({
+        top,
+        left,
+      })
+    }
+
+    updateTooltipPosition()
+
+    const handleViewportChange = () => {
+      updateTooltipPosition()
+    }
+
+    const currentList = listRef.current
+    window.addEventListener('resize', handleViewportChange)
+    window.addEventListener('scroll', handleViewportChange, true)
+    currentList?.addEventListener('scroll', handleViewportChange)
+
+    return () => {
+      window.removeEventListener('resize', handleViewportChange)
+      window.removeEventListener('scroll', handleViewportChange, true)
+      currentList?.removeEventListener('scroll', handleViewportChange)
+    }
+  }, [activeTooltip])
+
+  useEffect(() => {
     if (settings.calendarFeeds.length === 0) {
       setEvents([])
       setError(null)
       setLoading(false)
+      setActiveTooltip(null)
       return
     }
 
@@ -242,7 +413,7 @@ export function CalendarWidget() {
   const { year, month } = formatMonthParts(now)
 
   return (
-    <div className={styles.widget}>
+    <div className={styles.widget} ref={widgetRef}>
       <div className={styles.header}>
         <span className={styles.title}>Calendar</span>
       </div>
@@ -279,12 +450,13 @@ export function CalendarWidget() {
           )}
 
           {hasCalendarFeeds && !loading && !error && visibleEvents.length > 0 && (
-            <ul className={styles.list}>
+            <ul className={styles.list} ref={listRef}>
               {visibleEvents.map((event) => {
                 const eventKey = getEventKey(event)
                 const isCurrent = currentEvents.has(eventKey)
                 const isNext = eventKey === nextEventKey
                 const isPast = event.end < now
+                const hasTooltipDetails = hasEventTooltipDetails(event)
 
                 return (
                   <li
@@ -296,6 +468,35 @@ export function CalendarWidget() {
                       isPast ? styles.past : '',
                     ].join(' ')}
                     style={{ color: event.calendarColor ?? DEFAULT_CALENDAR_COLOR }}
+                    onMouseEnter={(currentEvent) => {
+                      if (!hasTooltipDetails) {
+                        return
+                      }
+
+                      setActiveTooltip({ event, anchorElement: currentEvent.currentTarget })
+                    }}
+                    onMouseLeave={() => {
+                      setActiveTooltip((currentTooltip) =>
+                        currentTooltip?.event === event ? null : currentTooltip,
+                      )
+                    }}
+                    onFocusCapture={(currentEvent) => {
+                      if (!hasTooltipDetails) {
+                        return
+                      }
+
+                      setActiveTooltip({ event, anchorElement: currentEvent.currentTarget })
+                    }}
+                    onBlurCapture={(currentEvent) => {
+                      const nextFocusedElement = currentEvent.relatedTarget
+                      if (nextFocusedElement instanceof Node && currentEvent.currentTarget.contains(nextFocusedElement)) {
+                        return
+                      }
+
+                      setActiveTooltip((currentTooltip) =>
+                        currentTooltip?.event === event ? null : currentTooltip,
+                      )
+                    }}
                   >
                     <div className={styles.eventTime}>
                       {event.allDay ? 'All day' : `${formatTime(event.start)} – ${formatTime(event.end)}`}
@@ -305,6 +506,19 @@ export function CalendarWidget() {
                       {isNext && <span className={styles.nextBadge}>Next</span>}
                       {event.title}
                     </div>
+                    {event.eventUrl && (
+                      <div className={styles.eventMeta}>
+                        <a
+                          className={styles.eventLink}
+                          href={event.eventUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open link for ${event.title}`}
+                        >
+                          <span className={styles.eventLinkText}>Open link</span>
+                        </a>
+                      </div>
+                    )}
                   </li>
                 )
               })}
@@ -399,6 +613,17 @@ export function CalendarWidget() {
           </aside>
         )}
       </div>
+      {activeTooltip && tooltipStyle && createPortal(
+        <div
+          ref={tooltipRef}
+          className={[styles.eventTooltip, styles.eventTooltipFloating].join(' ')}
+          style={tooltipStyle}
+          role="tooltip"
+        >
+          <EventDetailsTooltipContent event={activeTooltip.event} />
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

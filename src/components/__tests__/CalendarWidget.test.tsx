@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { CalendarWidget } from '../CalendarWidget'
 import { SettingsProvider } from '../../lib/useSettings'
 import { saveSettings, DEFAULT_SETTINGS, DEFAULT_CALENDAR_COLORS } from '../../lib/settings'
@@ -56,6 +56,31 @@ BEGIN:VEVENT
 SUMMARY:Team Standup
 DTSTART:${Y}${M}${D}T090000Z
 DTEND:${Y}${M}${D}T093000Z
+END:VEVENT
+END:VCALENDAR`
+
+const TODAY_ICS_WITH_URL = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Team Standup
+DTSTART:${Y}${M}${D}T090000Z
+DTEND:${Y}${M}${D}T093000Z
+URL:https://meet.example.com/standup
+END:VEVENT
+END:VCALENDAR`
+
+const TODAY_ICS_WITH_DETAILS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Team Standup
+DTSTART:${Y}${M}${D}T090000Z
+DTEND:${Y}${M}${D}T093000Z
+URL:https://meet.example.com/standup
+LOCATION:HQ Room 4
+DESCRIPTION:Bring roadmap notes
+ORGANIZER;CN=Alex Lead:mailto:alex@example.com
+ATTENDEE;CN=Jamie Guest;PARTSTAT=ACCEPTED:mailto:jamie@example.com
+ATTENDEE;CN=Taylor Invitee;PARTSTAT=NEEDS-ACTION:mailto:taylor@example.com
 END:VEVENT
 END:VCALENDAR`
 
@@ -144,6 +169,47 @@ describe('CalendarWidget', () => {
     const todayCell = screen.getByLabelText(todayLabel)
     expect(todayCell.querySelector('[aria-hidden="true"]')).not.toBeNull()
     expect(todayCell.textContent).toContain('Team Standup')
+    vi.unstubAllGlobals()
+  })
+
+  it('shows an event link when the event includes one', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS_WITH_URL }),
+    )
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    expect(screen.getByRole('link', { name: 'Open link for Team Standup' })).toHaveAttribute(
+      'href',
+      'https://meet.example.com/standup',
+    )
+    vi.unstubAllGlobals()
+  })
+
+  it('renders hover tooltip details for notes, location, organizer, and attendees', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS_WITH_DETAILS }),
+    )
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    fireEvent.mouseEnter(screen.getAllByText('Team Standup')[0].closest('li') as HTMLElement)
+
+    expect(screen.getByText('Location')).toBeInTheDocument()
+    expect(screen.getByText('HQ Room 4')).toBeInTheDocument()
+    expect(screen.getByText('Host')).toBeInTheDocument()
+    expect(screen.getByText('Alex Lead <alex@example.com>')).toBeInTheDocument()
+    expect(screen.getByText('Guests')).toBeInTheDocument()
+    expect(screen.getByText('Jamie Guest <jamie@example.com>')).toBeInTheDocument()
+    expect(screen.getByText('Taylor Invitee <taylor@example.com>')).toBeInTheDocument()
+    expect(screen.getByText('Accepted')).toBeInTheDocument()
+    expect(screen.getByText('Awaiting reply')).toBeInTheDocument()
+    expect(screen.getByText('Notes')).toBeInTheDocument()
+    expect(screen.getByText('Bring roadmap notes')).toBeInTheDocument()
+    expect(screen.getByText('Invite')).toBeInTheDocument()
+    expect(screen.getByText('https://meet.example.com/standup')).toBeInTheDocument()
     vi.unstubAllGlobals()
   })
 

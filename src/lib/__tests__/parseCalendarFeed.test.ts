@@ -63,6 +63,40 @@ DTSTART;VALUE=DATE;X-MICROSOFT-CDO-ALLDAYEVENT=TRUE:20240807
 END:VEVENT
 END:VCALENDAR`
 
+const ICS_WITH_URL = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Join call
+DTSTART:20240807T090000Z
+DTEND:20240807T093000Z
+URL:https://meet.example.com/room
+END:VEVENT
+END:VCALENDAR`
+
+const ICS_WITH_DESCRIPTION_LINK = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Join call
+DTSTART:20240807T090000Z
+DTEND:20240807T093000Z
+DESCRIPTION:Join with this link https://meet.example.com/description-room
+END:VEVENT
+END:VCALENDAR`
+
+const ICS_WITH_DETAILS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Planning Session
+DTSTART:20240807T090000Z
+DTEND:20240807T100000Z
+LOCATION:HQ Room 4
+DESCRIPTION:Bring roadmap notes
+ORGANIZER;CN=Alex Lead:mailto:alex@example.com
+ATTENDEE;CN=Jamie Guest;PARTSTAT=ACCEPTED:mailto:jamie@example.com
+ATTENDEE;CN=Taylor Invitee;PARTSTAT=NEEDS-ACTION:mailto:taylor@example.com
+END:VEVENT
+END:VCALENDAR`
+
 const RECURRING_ICS = `BEGIN:VCALENDAR
 VERSION:2.0
 BEGIN:VEVENT
@@ -113,6 +147,15 @@ Morning sync,2024-08-07T08:00:00,2024-08-07T08:30:00
 Lunch,2024-08-07T12:00:00,2024-08-07T13:00:00
 Tomorrow,2024-08-08T10:00:00,2024-08-08T11:00:00`
 
+const CSV_WITH_LINK = `title,start,end,link
+Join call,2024-08-07T09:00:00,2024-08-07T09:30:00,https://meet.example.com/room`
+
+const CSV_WITH_DESCRIPTION_LINK = `title,start,end,description
+Join call,2024-08-07T09:00:00,2024-08-07T09:30:00,Use https://meet.example.com/csv-room to join`
+
+const CSV_WITH_DETAILS = `title,start,end,location,notes,organizer,guests
+Planning Session,2024-08-07T09:00:00,2024-08-07T10:00:00,HQ Room 4,Bring roadmap notes,Alex Lead,Jamie Guest;Taylor Invitee`
+
 describe('parseCalendarFeed — ICS', () => {
   it('parses a single event for today', () => {
     const events = parseIcs(TODAY_ICS_EVENT)
@@ -143,6 +186,41 @@ describe('parseCalendarFeed — ICS', () => {
     expect(events).toHaveLength(1)
     expect(events[0].title).toBe('Bank Holiday')
     expect(events[0].allDay).toBe(true)
+  })
+
+  it('parses event urls from ICS events', () => {
+    const events = parseIcs(ICS_WITH_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0].eventUrl).toBe('https://meet.example.com/room')
+  })
+
+  it('parses event urls from ICS descriptions when URL is missing', () => {
+    const events = parseIcs(ICS_WITH_DESCRIPTION_LINK)
+    expect(events).toHaveLength(1)
+    expect(events[0].eventUrl).toBe('https://meet.example.com/description-room')
+  })
+
+  it('parses ICS event details for notes, location, organizer, and attendees', () => {
+    const events = parseIcs(ICS_WITH_DETAILS)
+    expect(events).toHaveLength(1)
+    expect(events[0].location).toBe('HQ Room 4')
+    expect(events[0].notes).toBe('Bring roadmap notes')
+    expect(events[0].organizer).toEqual({
+      name: 'Alex Lead',
+      email: 'alex@example.com',
+    })
+    expect(events[0].attendees).toEqual([
+      {
+        name: 'Jamie Guest',
+        email: 'jamie@example.com',
+        responseStatus: 'ACCEPTED',
+      },
+      {
+        name: 'Taylor Invitee',
+        email: 'taylor@example.com',
+        responseStatus: 'NEEDS-ACTION',
+      },
+    ])
   })
 
   it('expands recurring events for today', () => {
@@ -185,6 +263,30 @@ describe('parseCalendarFeed — CSV', () => {
     const events = parseCsv(MULTI_CSV)
     expect(events).toHaveLength(2)
     expect(events.map((e) => e.title)).toEqual(['Morning sync', 'Lunch'])
+  })
+
+  it('parses event urls from CSV link columns', () => {
+    const events = parseCsv(CSV_WITH_LINK)
+    expect(events).toHaveLength(1)
+    expect(events[0].eventUrl).toBe('https://meet.example.com/room')
+  })
+
+  it('parses event urls from CSV descriptions when link columns are missing', () => {
+    const events = parseCsv(CSV_WITH_DESCRIPTION_LINK)
+    expect(events).toHaveLength(1)
+    expect(events[0].eventUrl).toBe('https://meet.example.com/csv-room')
+  })
+
+  it('parses CSV event details for notes, location, organizer, and guests', () => {
+    const events = parseCsv(CSV_WITH_DETAILS)
+    expect(events).toHaveLength(1)
+    expect(events[0].location).toBe('HQ Room 4')
+    expect(events[0].notes).toBe('Bring roadmap notes')
+    expect(events[0].organizer).toEqual({ name: 'Alex Lead' })
+    expect(events[0].attendees).toEqual([
+      { name: 'Jamie Guest' },
+      { name: 'Taylor Invitee' },
+    ])
   })
 
   it('returns empty array for empty string', () => {

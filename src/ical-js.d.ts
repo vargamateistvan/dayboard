@@ -36,6 +36,7 @@ declare module 'ical.js' {
   export class Property {
     getFirstValue(): unknown
     getValues(): unknown[]
+    getParameter(name: string): string | null
   }
 
   export interface OccurrenceDetails {
