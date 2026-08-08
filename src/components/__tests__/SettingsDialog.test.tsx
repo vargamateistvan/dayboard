@@ -96,4 +96,56 @@ describe('SettingsDialog', () => {
     fireEvent.click(toggle)
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
   })
+
+  it('persists appearance, font, and support visibility settings', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Orbitron' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show Buy Me a Coffee button' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      colorScheme: 'dark',
+      fontPreset: 'orbitron',
+      showBuyMeACoffeeWidget: false,
+    })
+  })
+
+  it('persists weather display and refresh settings', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show past events' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show all-day events' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show extra weather details' }))
+    fireEvent.change(screen.getByLabelText('Refresh every (min)'), { target: { value: '15' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      calendarHidePastEvents: true,
+      calendarShowAllDayEvents: false,
+      weatherShowExtraDetails: false,
+      weatherRefreshMinutes: 15,
+    })
+  })
+
+  it('persists custom theme colors when the custom theme is selected', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Custom' }))
+    const customColorsSection = screen.getByText('Custom Colors').closest('section')
+    const primaryColorInput = customColorsSection?.querySelector('input[type="color"]')
+    expect(primaryColorInput).not.toBeNull()
+    fireEvent.change(primaryColorInput as HTMLInputElement, {
+      target: { value: '#112233' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      theme: 'custom',
+      customColors: expect.objectContaining({
+        primary: '#112233',
+      }),
+    })
+  })
 })
