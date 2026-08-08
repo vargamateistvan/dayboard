@@ -11,9 +11,10 @@ import { Trash2 } from 'lucide-react'
 import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { PodcastEmbedWidget } from './PodcastEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './SpotifyWidget.module.css'
+
+const DEFAULT_APPLE_PODCAST_URL = 'https://podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272'
 
 interface ApplePodcastWidgetProps {
   readonly isFullscreen?: boolean
@@ -85,16 +86,23 @@ export function ApplePodcastWidget({ isFullscreen = false }: ApplePodcastWidgetP
           isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
         ].join(' ')}
       >
-        <PodcastEmbedWidget
-          title="Apple Podcast"
-          provider="apple-podcast"
-          shareUrl={activeUrl}
-          showHeader={false}
-          showStatus={false}
-          showActions={false}
-          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-          colorScheme={resolvedColorScheme}
-        />
+        {(() => {
+          const resolvedUrl = activeUrl || DEFAULT_APPLE_PODCAST_URL
+          const embedUrl = normalizeApplePodcastEmbedUrl(resolvedUrl)
+          if (!embedUrl) return null
+          const themed = new URL(embedUrl)
+          themed.searchParams.set('theme', resolvedColorScheme)
+          return (
+            <iframe
+              style={{ display: 'block', width: '100%', height: '100%', border: 'none', borderRadius: 'var(--radius-sm)' }}
+              src={themed.toString()}
+              title="Apple Podcast"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          )
+        })()}
       </div>
 
       <label className={styles.selectorRow}>

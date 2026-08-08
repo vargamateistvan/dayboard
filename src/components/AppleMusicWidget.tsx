@@ -11,9 +11,10 @@ import { Trash2 } from 'lucide-react'
 import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { MusicEmbedWidget } from './MusicEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './AppleMusicWidget.module.css'
+
+const DEFAULT_APPLE_MUSIC_URL = 'https://music.apple.com/us/album/blinding-lights/1499378108?i=1499378110'
 
 interface AppleMusicWidgetProps {
   readonly isFullscreen?: boolean
@@ -82,16 +83,23 @@ export function AppleMusicWidget({ isFullscreen = false }: AppleMusicWidgetProps
           isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
         ].join(' ')}
       >
-        <MusicEmbedWidget
-          title="Apple Music Player"
-          provider="apple-music"
-          shareUrl={activeUrl}
-          showHeader={false}
-          showStatus={false}
-          showActions={false}
-          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-          colorScheme={resolvedColorScheme}
-        />
+        {(() => {
+          const resolvedUrl = activeUrl || DEFAULT_APPLE_MUSIC_URL
+          const embedUrl = normalizeAppleMusicEmbedUrl(resolvedUrl)
+          if (!embedUrl) return null
+          const themed = new URL(embedUrl)
+          themed.searchParams.set('theme', resolvedColorScheme)
+          return (
+            <iframe
+              style={{ display: 'block', width: '100%', height: '100%', border: 'none', borderRadius: 'var(--radius-sm)' }}
+              src={themed.toString()}
+              title="Apple Music Player"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          )
+        })()}
       </div>
 
       <label className={styles.selectorRow}>

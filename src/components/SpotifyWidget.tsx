@@ -11,9 +11,10 @@ import { Trash2 } from 'lucide-react'
 import { resolveColorScheme } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
-import { MusicEmbedWidget } from './MusicEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './SpotifyWidget.module.css'
+
+const DEFAULT_SPOTIFY_URL = 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT'
 
 interface SpotifyWidgetProps {
   readonly isFullscreen?: boolean
@@ -78,20 +79,27 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       <div
         className={[
           styles.embedArea,
-         isFullscreen ? styles.embedAreaFullscreen : '',
-         isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
-       ].join(' ')}
-     >
-        <MusicEmbedWidget
-          title="Spotify Player"
-          provider="spotify"
-          shareUrl={activeUrl}
-          showHeader={false}
-          showStatus={false}
-          showActions={false}
-          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-          colorScheme={resolvedColorScheme}
-        />
+          isFullscreen ? styles.embedAreaFullscreen : '',
+          isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
+        ].join(' ')}
+      >
+        {(() => {
+          const resolvedUrl = activeUrl || DEFAULT_SPOTIFY_URL
+          const embedUrl = normalizeSpotifyEmbedUrl(resolvedUrl)
+          if (!embedUrl) return null
+          const themed = new URL(embedUrl)
+          themed.searchParams.set('theme', resolvedColorScheme === 'dark' ? '0' : '1')
+          return (
+            <iframe
+              style={{ display: 'block', width: '100%', height: '100%', border: 'none', borderRadius: 'var(--radius-sm)' }}
+              src={themed.toString()}
+              title="Spotify Player"
+              loading="lazy"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              allowFullScreen
+            />
+          )
+        })()}
       </div>
 
       <label className={styles.selectorRow}>
