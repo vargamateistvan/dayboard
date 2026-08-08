@@ -13,7 +13,11 @@ const STORAGE_KEY = 'dayboard_notes'
 
 const COLORS = ['yellow', 'pink', 'blue', 'green'] as const
 
-export function NotesWidget() {
+interface NotesWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function NotesWidget({ isFullscreen = false }: NotesWidgetProps) {
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedColor, setSelectedColor] = useState<Note['color']>('yellow')
 
@@ -55,7 +59,7 @@ export function NotesWidget() {
   }
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <h2>Notes</h2>
         <button onClick={addNote} className={styles.addBtn} title="Add note">

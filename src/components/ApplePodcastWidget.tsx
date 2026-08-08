@@ -15,7 +15,11 @@ import { PodcastEmbedWidget } from './PodcastEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './SpotifyWidget.module.css'
 
-export function ApplePodcastWidget() {
+interface ApplePodcastWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function ApplePodcastWidget({ isFullscreen = false }: ApplePodcastWidgetProps) {
   const { settings, updateSettings } = useSettings()
   const { placements } = useWidgetVisibility()
   const savedLinks = normalizeSavedMediaLinks(
@@ -73,10 +77,11 @@ export function ApplePodcastWidget() {
   }
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
       <div
         className={[
           styles.embedArea,
+          isFullscreen ? styles.embedAreaFullscreen : '',
           isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
         ].join(' ')}
       >
@@ -87,7 +92,7 @@ export function ApplePodcastWidget() {
           showHeader={false}
           showStatus={false}
           showActions={false}
-          embedSize={isLargeEmbed ? 'large' : 'normal'}
+          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
           colorScheme={resolvedColorScheme}
         />
       </div>

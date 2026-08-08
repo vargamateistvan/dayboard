@@ -32,6 +32,10 @@ interface ActiveMonthTooltip {
   anchorElement: HTMLDivElement
 }
 
+interface CalendarWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
 function formatTime(d: Date): string {
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
@@ -293,7 +297,7 @@ function MonthTooltipContent({
   )
 }
 
-export function CalendarWidget() {
+export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const { settings } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
@@ -500,7 +504,7 @@ export function CalendarWidget() {
   const { year, month } = formatMonthParts(now)
 
   return (
-    <div className={styles.widget} ref={widgetRef}>
+    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} ref={widgetRef}>
       <div className={styles.header}>
         <span className={styles.title}>Calendar</span>
       </div>
@@ -508,10 +512,18 @@ export function CalendarWidget() {
       <div
         className={[
           styles.content,
+          isFullscreen && !hasCalendarFeeds ? styles.contentNoFeedsFullscreen : '',
+          isFullscreen && hasCalendarFeeds && visibleEvents.length === 0 ? styles.contentEmptyFullscreen : '',
           settings.calendarShowMonthlyOverview ? '' : styles.contentFull,
         ].join(' ')}
       >
-        <section className={styles.eventsColumn}>
+        <section
+          className={[
+            styles.eventsColumn,
+            isFullscreen && !hasCalendarFeeds ? styles.eventsColumnCentered : '',
+            isFullscreen && hasCalendarFeeds && visibleEvents.length === 0 ? styles.eventsColumnCentered : '',
+          ].join(' ')}
+        >
           {!hasCalendarFeeds && (
             <div className={styles.empty}>
               No calendars connected.{` `}
@@ -614,7 +626,13 @@ export function CalendarWidget() {
         </section>
 
         {settings.calendarShowMonthlyOverview && (
-          <aside className={styles.monthlyOverview} aria-label="Current month calendar">
+          <aside
+            className={[
+              styles.monthlyOverview,
+              isFullscreen && !hasCalendarFeeds ? styles.monthlyOverviewCentered : '',
+            ].join(' ')}
+            aria-label="Current month calendar"
+          >
             <div className={styles.sectionHeader}>
               <span className={styles.monthYear}>{year}.</span>
               <span className={styles.monthName}>{month}</span>

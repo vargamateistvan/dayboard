@@ -15,7 +15,11 @@ import { MusicEmbedWidget } from './MusicEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './AppleMusicWidget.module.css'
 
-export function AppleMusicWidget() {
+interface AppleMusicWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function AppleMusicWidget({ isFullscreen = false }: AppleMusicWidgetProps) {
   const { settings, updateSettings } = useSettings()
   const { placements } = useWidgetVisibility()
   const savedLinks = normalizeSavedMediaLinks(settings.appleMusicEmbedLinks, settings.appleMusicEmbedUrl)
@@ -70,10 +74,11 @@ export function AppleMusicWidget() {
   }
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
       <div
         className={[
           styles.embedArea,
+          isFullscreen ? styles.embedAreaFullscreen : '',
           isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
         ].join(' ')}
       >
@@ -84,7 +89,7 @@ export function AppleMusicWidget() {
           showHeader={false}
           showStatus={false}
           showActions={false}
-          embedSize={isLargeEmbed ? 'large' : 'normal'}
+          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
           colorScheme={resolvedColorScheme}
         />
       </div>

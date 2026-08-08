@@ -259,7 +259,11 @@ async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSys
   };
 }
 
-export function WeatherWidget() {
+interface WeatherWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
   const { settings } = useSettings();
   const [data, setData] = useState<WeatherData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -318,7 +322,7 @@ export function WeatherWidget() {
     : null;
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <span className={styles.title}>Weather</span>
         {!loading && (
@@ -352,13 +356,13 @@ export function WeatherWidget() {
           <div className={styles.summary}>
             <div className={styles.temp}>
               <span className={styles.weatherIcon}>
-                <WeatherIcon name={info.icon} size={40} />
+                <WeatherIcon name={info.icon} size={isFullscreen ? 88 : 40} />
               </span>
               <span className={styles.degrees}>{data.temperature}{temperatureUnit}</span>
             </div>
             <div className={styles.condition}>{info.label}</div>
             <div className={styles.location}>
-              <MapPin size={12} />
+              <MapPin size={isFullscreen ? 18 : 12} />
               {data.location}
             </div>
             <div className={styles.todayForecast}>
@@ -379,7 +383,7 @@ export function WeatherWidget() {
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
-                <Droplets size={12} />
+                <Droplets size={isFullscreen ? 18 : 12} />
                 Humidity
               </span>
               <span className={styles.detailValue}>
@@ -388,7 +392,7 @@ export function WeatherWidget() {
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
-                <Wind size={12} />
+                <Wind size={isFullscreen ? 18 : 12} />
                 Wind
               </span>
               <span className={styles.detailValue}>
@@ -398,7 +402,7 @@ export function WeatherWidget() {
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
-                <Cloud size={12} />
+                <Cloud size={isFullscreen ? 18 : 12} />
                 Clouds
               </span>
               <span className={styles.detailValue}>
@@ -407,14 +411,14 @@ export function WeatherWidget() {
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
-                <Sunrise size={12} />
+                <Sunrise size={isFullscreen ? 18 : 12} />
                 Sunrise
               </span>
               <span className={styles.detailValue}>{sunrise ?? "—"}</span>
             </div>
             <div className={styles.detail}>
               <span className={styles.detailLabel}>
-                <Sunset size={12} />
+                <Sunset size={isFullscreen ? 18 : 12} />
                 Sunset
               </span>
               <span className={styles.detailValue}>{sunset ?? "—"}</span>

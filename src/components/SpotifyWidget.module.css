@@ -111,3 +111,32 @@
   font-size: 0.78rem;
   padding: 0.45rem 0.6rem;
 }
+
+.widgetFullscreen {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.embedAreaFullscreen {
+  min-height: clamp(28rem, 68vh, 58rem);
+}
+
+.widgetFullscreen .selectorRow {
+  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
+}
+
+.widgetFullscreen .labelRow {
+  gap: 0.5rem;
+}
+
+.widgetFullscreen .input,
+.widgetFullscreen .select {
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  padding: 0.8rem 0.95rem;
+}
+
+.widgetFullscreen .button,
+.widgetFullscreen .removeButton {
+  font-size: clamp(0.95rem, 1.3vw, 1.05rem);
+}

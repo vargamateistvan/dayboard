@@ -8,7 +8,7 @@ interface PodcastEmbedWidgetProps {
   readonly showHeader?: boolean
   readonly showStatus?: boolean
   readonly showActions?: boolean
-  readonly embedSize?: 'normal' | 'large'
+  readonly embedSize?: 'normal' | 'large' | 'fullscreen'
   readonly colorScheme?: 'light' | 'dark'
 }
 
@@ -91,6 +91,7 @@ export function PodcastEmbedWidget({
           className={[
             styles.playerFrame,
             embedSize === 'large' ? styles.playerFrameLarge : '',
+            embedSize === 'fullscreen' ? styles.playerFrameFullscreen : '',
           ].join(' ')}
         >
           <iframe

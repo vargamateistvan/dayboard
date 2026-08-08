@@ -11,7 +11,11 @@ interface Task {
 
 const STORAGE_KEY = 'dayboard_tasks'
 
-export function TaskWidget() {
+interface TaskWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
   // Initialize from localStorage to avoid hydration mismatch
   const [tasks, setTasks] = useState<Task[]>(() => {
     if (typeof window === 'undefined') return []
@@ -92,7 +96,7 @@ export function TaskWidget() {
   const totalCount = tasks.length
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <h2>Tasks</h2>
         {totalCount > 0 && (

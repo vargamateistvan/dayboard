@@ -28,6 +28,7 @@ import {
   type Widget,
   useWidgetVisibility,
 } from "../lib/useWidgetVisibility";
+import { getWidgetLabel } from "../lib/widgetMetadata";
 import {
   DEFAULT_CALENDAR_COLORS,
   DEFAULT_CUSTOM_COLORS,
@@ -90,28 +91,8 @@ const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
   { id: "sunday", label: "Sunday" },
 ];
 
-const WIDGETS: {
-  id: Widget;
-  label: string;
-}[] = [
-  { id: "clock", label: "Clock" },
-  { id: "weather", label: "Weather" },
-  { id: "calendar", label: "Calendar" },
-  { id: "timer", label: "Timer" },
-  { id: "tasks", label: "Tasks" },
-  { id: "notes", label: "Sticky Notes" },
-  { id: "spotify", label: "Spotify Player" },
-  { id: "appleMusic", label: "Apple Music Player" },
-  { id: "spotifyPodcast", label: "Spotify Podcast" },
-  { id: "applePodcast", label: "Apple Podcast" },
-];
-
 interface Props {
   readonly onClose: () => void;
-}
-
-function getWidgetLabel(widget: Widget): string {
-  return WIDGETS.find((entry) => entry.id === widget)?.label ?? widget;
 }
 
 interface WidgetLayoutEditorProps {

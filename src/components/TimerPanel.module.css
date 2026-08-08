@@ -374,6 +374,77 @@
   color: var(--color-text);
 }
 
+.fullscreen {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  justify-content: center;
+}
+
+.fullscreen .tabs {
+  justify-content: center;
+  gap: clamp(1rem, 3vw, 3rem);
+  margin-bottom: clamp(1.5rem, 4vh, 2.5rem);
+}
+
+.fullscreen .tab {
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+}
+
+.fullscreen .content {
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen .timerBody {
+  align-items: center;
+  text-align: center;
+  gap: clamp(1rem, 2vh, 1.75rem);
+}
+
+.fullscreen .display {
+  font-size: clamp(6.5rem, 24vw, 16rem);
+}
+
+.fullscreen .displaySmall {
+  font-size: clamp(6.5rem, 24vw, 16rem);
+}
+
+.fullscreen .controls,
+.fullscreen .inputRow,
+.fullscreen .sessions,
+.fullscreen .settingsEditor,
+.fullscreen .settingsEditorInline,
+.fullscreen .settingsRow,
+.fullscreen .settingsRowInline {
+  justify-content: center;
+}
+
+.fullscreen .btnPrimary,
+.fullscreen .btnSecondary,
+.fullscreen .btnGhost {
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  padding: 0.8rem 1.5rem;
+}
+
+.fullscreen .inputLabel,
+.fullscreen .phaseBadge,
+.fullscreen .sessions,
+.fullscreen .inlineToggleLabel,
+.fullscreen .settingsLabel,
+.fullscreen .settingsUnit {
+  font-size: clamp(0.9rem, 1.2vw, 1rem);
+}
+
+.fullscreen .numberInput {
+  width: 8rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.fullscreen .settingsInput {
+  width: 4.5rem;
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+}
+
 @media (max-width: 700px) {
   .tabs {
     gap: var(--space-2);

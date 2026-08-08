@@ -35,6 +35,16 @@
   grid-template-columns: 1fr;
 }
 
+.contentNoFeedsFullscreen {
+  grid-template-columns: minmax(20rem, 30rem) minmax(24rem, 34rem) !important;
+  justify-content: center;
+  align-items: center;
+}
+
+.contentEmptyFullscreen {
+  align-items: center;
+}
+
 .sectionHeader {
   margin-bottom: 0.35rem;
   display: flex;
@@ -60,6 +70,10 @@
   z-index: 80;
 }
 
+.eventsColumnCentered {
+  justify-content: center;
+}
+
 .monthlyOverview {
   min-height: 0;
   height: 100%;
@@ -70,6 +84,10 @@
   z-index: 10;
   flex-shrink: 0;
   align-self: stretch;
+}
+
+.monthlyOverviewCentered {
+  justify-content: center;
 }
 
 .monthYear {
@@ -115,6 +133,12 @@
   opacity: 0.6;
   font-size: var(--font-size-xs);
   margin-top: var(--space-1);
+}
+
+.eventsColumnCentered .empty,
+.eventsColumnCentered .loading,
+.eventsColumnCentered .error {
+  text-align: center;
 }
 
 .list {
@@ -489,6 +513,123 @@
   font-size: 0.52rem;
   font-weight: 600;
   color: var(--color-text-muted);
+}
+
+.fullscreen {
+  width: min(100%, 1600px);
+  height: 100%;
+  margin: 0 auto;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.fullscreen .title {
+  font-size: clamp(1rem, 2vw, 1.45rem);
+}
+
+.fullscreen .header {
+  margin-bottom: 0.75rem;
+}
+
+.fullscreen .content {
+  grid-template-columns: minmax(0, 1.15fr) minmax(26rem, 0.85fr);
+  gap: clamp(1rem, 2vw, 2rem);
+}
+
+.fullscreen .sectionTitle {
+  font-size: clamp(0.8rem, 1.3vw, 1rem);
+}
+
+.fullscreen .monthYear {
+  font-size: clamp(1rem, 1.8vw, 1.35rem);
+}
+
+.fullscreen .monthName {
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+}
+
+.fullscreen .list {
+  gap: 1rem;
+}
+
+.fullscreen .eventsColumn,
+.fullscreen .monthlyOverview {
+  min-width: 0;
+}
+
+.fullscreen .empty,
+.fullscreen .loading,
+.fullscreen .error {
+  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  line-height: 1.45;
+}
+
+.fullscreen .hint {
+  font-size: clamp(0.9rem, 1.3vw, 1.1rem);
+}
+
+.fullscreen .eventsColumnCentered .empty,
+.fullscreen .eventsColumnCentered .loading,
+.fullscreen .eventsColumnCentered .error {
+  max-width: 28rem;
+}
+
+.fullscreen .event {
+  padding-top: 0.65rem;
+  padding-left: 0.85rem;
+}
+
+.fullscreen .eventTime {
+  font-size: clamp(0.9rem, 1.4vw, 1.1rem);
+  margin-bottom: 0.2rem;
+}
+
+.fullscreen .eventTitle {
+  font-size: clamp(1.15rem, 2vw, 1.7rem);
+  line-height: 1.25;
+}
+
+.fullscreen .eventLink,
+.fullscreen .currentBadge,
+.fullscreen .nextBadge {
+  font-size: clamp(0.7rem, 1vw, 0.95rem);
+}
+
+.fullscreen .weekdayLabel {
+  font-size: clamp(0.72rem, 1vw, 0.88rem);
+  padding: 0.45rem 0;
+}
+
+.fullscreen .monthGrid {
+  align-content: stretch;
+}
+
+.fullscreen .monthCell {
+  min-height: clamp(4.2rem, 11vh, 7rem);
+  aspect-ratio: auto;
+  padding: 0.35rem 0.4rem 0.45rem;
+}
+
+.fullscreen .monthCellNumber {
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+}
+
+.fullscreen .monthEventBar {
+  height: 0.4rem;
+}
+
+.fullscreen .monthEventCount {
+  font-size: clamp(0.62rem, 0.85vw, 0.8rem);
+}
+
+@media (max-width: 1200px) {
+  .fullscreen .content {
+    grid-template-columns: 1fr;
+  }
+
+  .fullscreen .monthCell {
+    min-height: clamp(3.5rem, 9vh, 5.5rem);
+  }
 }
 
 @media (max-width: 900px) {

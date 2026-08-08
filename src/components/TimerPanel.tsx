@@ -401,7 +401,11 @@ const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
   { id: "pomodoro", label: "Pomodoro", icon: <AlarmClock size={14} /> },
 ];
 
-export function TimerPanel() {
+interface TimerPanelProps {
+  readonly isFullscreen?: boolean
+}
+
+export function TimerPanel({ isFullscreen = false }: TimerPanelProps) {
   const [mode, setMode] = useState<Mode>(() => loadStoredMode());
 
   const handleModeChange = (nextMode: Mode) => {
@@ -410,7 +414,7 @@ export function TimerPanel() {
   };
 
   return (
-    <div className={styles.panel}>
+    <div className={[styles.panel, isFullscreen ? styles.fullscreen : ""].join(" ")}>
       <div className={styles.tabs} role="tablist">
         {TABS.map((t) => (
           <button

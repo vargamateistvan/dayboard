@@ -40,6 +40,26 @@
   text-overflow: ellipsis;
 }
 
+.fullscreen {
+  justify-content: center;
+  align-items: center;
+  gap: clamp(1rem, 2vh, 2rem);
+}
+
+.fullscreen .time {
+  font-size: clamp(5rem, 22vw, 22rem);
+  line-height: 0.84;
+  text-align: center;
+}
+
+.fullscreen .date {
+  align-self: center;
+  width: auto;
+  max-width: 100%;
+  text-align: center;
+  font-size: clamp(1.4rem, 4vw, 3rem);
+}
+
 /* Mobile optimizations */
 @media (max-width: 700px) {
   .time {

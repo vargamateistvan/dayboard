@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import styles from './ClockWidget.module.css'
 
-export function ClockWidget() {
+interface ClockWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function ClockWidget({ isFullscreen = false }: ClockWidgetProps) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -23,7 +27,7 @@ export function ClockWidget() {
   })
 
   return (
-    <div className={styles.widget}>
+    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.time}>{time}</div>
       <div className={styles.date}>{date}</div>
     </div>

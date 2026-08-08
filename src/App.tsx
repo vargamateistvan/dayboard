@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Settings, Maximize2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Maximize2, Minimize2, Settings } from 'lucide-react'
 import { SettingsProvider } from './lib/useSettings'
 import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
 import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
+import { getWidgetLabel } from './lib/widgetMetadata'
 import { ClockWidget } from './components/ClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
 import { CalendarWidget } from './components/CalendarWidget'
@@ -27,28 +28,28 @@ import './themes/sunset.css'
 import './themes/custom.css'
 import styles from './App.module.css'
 
-function renderWidget(widget: Widget) {
+function renderWidget(widget: Widget, isFullscreen: boolean) {
   switch (widget) {
     case 'clock':
-      return <ClockWidget />
+      return <ClockWidget isFullscreen={isFullscreen} />
     case 'weather':
-      return <WeatherWidget />
+      return <WeatherWidget isFullscreen={isFullscreen} />
     case 'calendar':
-      return <CalendarWidget />
+      return <CalendarWidget isFullscreen={isFullscreen} />
     case 'timer':
-      return <TimerPanel />
+      return <TimerPanel isFullscreen={isFullscreen} />
     case 'tasks':
-      return <TaskWidget />
+      return <TaskWidget isFullscreen={isFullscreen} />
     case 'notes':
-      return <NotesWidget />
+      return <NotesWidget isFullscreen={isFullscreen} />
     case 'spotify':
-      return <SpotifyWidget />
+      return <SpotifyWidget isFullscreen={isFullscreen} />
     case 'appleMusic':
-      return <AppleMusicWidget />
+      return <AppleMusicWidget isFullscreen={isFullscreen} />
     case 'spotifyPodcast':
-      return <SpotifyPodcastWidget />
+      return <SpotifyPodcastWidget isFullscreen={isFullscreen} />
     case 'applePodcast':
-      return <ApplePodcastWidget />
+      return <ApplePodcastWidget isFullscreen={isFullscreen} />
   }
 }
 
@@ -66,8 +67,9 @@ function getWidgetTypeClass(widget: Widget) {
 
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const { notifications, dismissNotification } = useEventNotifications()
-  const { focusMode, toggleFocusMode } = useFocusMode()
+  const { focusMode } = useFocusMode()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
@@ -81,8 +83,35 @@ function Dashboard() {
     return true
   })
 
+  useEffect(() => {
+    if (fullscreenWidget && !orderedVisibleWidgets.includes(fullscreenWidget)) {
+      setFullscreenWidget(null)
+    }
+  }, [fullscreenWidget, orderedVisibleWidgets])
+
+  useEffect(() => {
+    if (!fullscreenWidget) {
+      return undefined
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setFullscreenWidget(null)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [fullscreenWidget])
+
   return (
-    <div className={`${styles.app} ${focusMode ? styles.focusMode : ''}`}>
+    <div
+      className={[
+        styles.app,
+        focusMode ? styles.focusMode : '',
+        fullscreenWidget ? styles.fullscreenMode : '',
+      ].join(' ')}
+    >
       <button
         className={styles.settingsBtn}
         onClick={() => setSettingsOpen(true)}
@@ -93,16 +122,6 @@ function Dashboard() {
         <Settings size={18} />
       </button>
 
-      <button
-        className={`${styles.focusModeBtn} ${focusMode ? styles.active : ''}`}
-        onClick={() => toggleFocusMode()}
-        aria-label={`${focusMode ? 'Exit' : 'Enter'} focus mode`}
-        title="Focus Mode (Cmd+K)"
-        type="button"
-      >
-        <Maximize2 size={18} />
-      </button>
-
       <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
         {orderedVisibleWidgets.map((widget) => (
           <div
@@ -110,7 +129,10 @@ function Dashboard() {
             className={[
               styles.widgetCell,
               getWidgetTypeClass(widget),
+              fullscreenWidget === widget ? styles.widgetCellFullscreen : '',
+              fullscreenWidget && fullscreenWidget !== widget ? styles.widgetCellHidden : '',
             ].join(' ')}
+            data-widget-id={widget}
             style={
               focusMode
                 ? undefined
@@ -120,7 +142,16 @@ function Dashboard() {
                   }
             }
           >
-            {renderWidget(widget)}
+            <button
+              className={styles.widgetFullscreenBtn}
+              onClick={() => setFullscreenWidget(fullscreenWidget === widget ? null : widget)}
+              aria-label={`${fullscreenWidget === widget ? 'Exit' : 'Enter'} fullscreen for ${getWidgetLabel(widget)}`}
+              title={`${fullscreenWidget === widget ? 'Exit' : 'Enter'} fullscreen`}
+              type="button"
+            >
+              {fullscreenWidget === widget ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            </button>
+            <div className={styles.widgetContentFrame}>{renderWidget(widget, fullscreenWidget === widget)}</div>
           </div>
         ))}
       </main>

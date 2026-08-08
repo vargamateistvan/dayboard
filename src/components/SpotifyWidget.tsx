@@ -15,7 +15,11 @@ import { MusicEmbedWidget } from './MusicEmbedWidget'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import styles from './SpotifyWidget.module.css'
 
-export function SpotifyWidget() {
+interface SpotifyWidgetProps {
+  readonly isFullscreen?: boolean
+}
+
+export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const { settings, updateSettings } = useSettings()
   const { placements } = useWidgetVisibility()
   const savedLinks = normalizeSavedMediaLinks(settings.spotifyEmbedLinks, settings.spotifyEmbedUrl)
@@ -70,13 +74,14 @@ export function SpotifyWidget() {
   }
 
   return (
-   <div className={styles.widget}>
+   <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
       <div
         className={[
           styles.embedArea,
-          isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
-        ].join(' ')}
-      >
+         isFullscreen ? styles.embedAreaFullscreen : '',
+         isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal,
+       ].join(' ')}
+     >
         <MusicEmbedWidget
           title="Spotify Player"
           provider="spotify"
@@ -84,7 +89,7 @@ export function SpotifyWidget() {
           showHeader={false}
           showStatus={false}
           showActions={false}
-          embedSize={isLargeEmbed ? 'large' : 'normal'}
+          embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
           colorScheme={resolvedColorScheme}
         />
       </div>

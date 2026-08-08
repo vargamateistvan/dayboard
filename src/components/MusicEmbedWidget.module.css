@@ -55,6 +55,10 @@
   min-height: 22rem;
 }
 
+.playerFrameFullscreen {
+  min-height: clamp(28rem, 68vh, 58rem);
+}
+
 .player {
   display: block;
   flex: 1 1 auto;

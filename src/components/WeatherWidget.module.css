@@ -183,6 +183,68 @@
   font-variant-numeric: tabular-nums;
 }
 
+.fullscreen {
+  justify-content: center;
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  gap: clamp(1rem, 2vh, 2rem);
+}
+
+.fullscreen .header {
+  margin-bottom: 0.8rem;
+}
+
+.fullscreen .title,
+.fullscreen .refreshHint {
+  font-size: clamp(1rem, 2vw, 1.45rem);
+}
+
+.fullscreen .refresh {
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+}
+
+.fullscreen .content {
+  align-items: center;
+  gap: clamp(1.5rem, 3vw, 3rem);
+}
+
+.fullscreen .summary {
+  gap: 0.75rem;
+}
+
+.fullscreen .degrees {
+  font-size: clamp(4rem, 12vw, 9rem);
+}
+
+.fullscreen .condition {
+  font-size: clamp(1.25rem, 2.8vw, 2rem);
+}
+
+.fullscreen .location {
+  font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.fullscreen .todayForecast {
+  font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+}
+
+.fullscreen .detailsGrid {
+  gap: 1rem 1.5rem;
+}
+
+.fullscreen .detail {
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+}
+
+.fullscreen .detailLabel {
+  font-size: clamp(0.8rem, 1.4vw, 1rem);
+}
+
+.fullscreen .detailValue {
+  font-size: clamp(1rem, 1.9vw, 1.45rem);
+}
+
 @media (max-width: 700px) {
   .widget {
     height: auto;

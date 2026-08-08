@@ -233,6 +233,61 @@
   color: #ef4444;
 }
 
+.fullscreen {
+  width: min(100%, 1200px);
+  margin: 0 auto;
+  gap: 1rem;
+}
+
+.fullscreen .header h2 {
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
+}
+
+.fullscreen .addBtn {
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.5rem;
+}
+
+.fullscreen .colorPicker {
+  gap: 0.75rem;
+}
+
+.fullscreen .colorBtn {
+  width: 2rem;
+  height: 2rem;
+}
+
+.fullscreen .notesGrid {
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1rem;
+}
+
+.fullscreen .note {
+  min-height: 16rem;
+  padding: 1rem;
+}
+
+.fullscreen .textarea {
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+  min-height: 8rem;
+}
+
+.fullscreen .colorOption {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.fullscreen .deleteBtn {
+  width: 2rem;
+  height: 2rem;
+  opacity: 1;
+}
+
+.fullscreen .empty {
+  font-size: clamp(1rem, 1.6vw, 1.25rem);
+}
+
 @media (max-width: 700px) {
   .widget {
     height: auto;
