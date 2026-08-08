@@ -473,6 +473,21 @@ export function SettingsDialog({ onClose }: Props) {
         </div>
 
         <div className={styles.body}>
+          {/* Widget Layout */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Widget Layout</h3>
+            <WidgetLayoutEditor
+              order={order}
+              visibility={visibility}
+              placements={placements}
+              onSetWidgetPlacement={setWidgetPlacement}
+              onToggleWidget={toggleWidget}
+            />
+            <p className={styles.hint}>
+              Drag widgets from the palette onto the 3×2 grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
+            </p>
+          </section>
+
           {/* Theme */}
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Theme</h3>
@@ -490,59 +505,6 @@ export function SettingsDialog({ onClose }: Props) {
                 >
                   <span className={styles.themeEmoji}>{t.icon}</span>
                   <span className={styles.themeLabel}>{t.label}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Appearance */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Appearance</h3>
-            <div className={styles.segmented}>
-              {COLOR_SCHEMES.map((s) => (
-                <button
-                  key={s.id}
-                  className={[
-                    styles.segment,
-                    settings.colorScheme === s.id ? styles.segmentActive : "",
-                  ].join(" ")}
-                  onClick={() => updateSettings({ colorScheme: s.id })}
-                  aria-pressed={settings.colorScheme === s.id}
-                  type="button"
-                >
-                  {s.icon}
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {/* Fonts */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Fonts</h3>
-            <div className={styles.fontGrid}>
-              {FONT_PRESET_OPTIONS.map((fontOption) => (
-                <button
-                  key={fontOption.id}
-                  className={[
-                    styles.fontSwatch,
-                    settings.fontPreset === fontOption.id
-                      ? styles.fontActive
-                      : "",
-                  ].join(" ")}
-                  onClick={() => updateSettings({ fontPreset: fontOption.id })}
-                  aria-pressed={settings.fontPreset === fontOption.id}
-                  type="button"
-                >
-                  <span className={styles.fontIcon}>
-                    <Type size={14} />
-                  </span>
-                  <span
-                    className={styles.fontLabel}
-                    style={{ fontFamily: fontOption.fontFamily }}
-                  >
-                    {fontOption.label}
-                  </span>
                 </button>
               ))}
             </div>
@@ -667,44 +629,57 @@ export function SettingsDialog({ onClose }: Props) {
             </section>
           )}
 
-          {/* Widgets */}
+          {/* Appearance */}
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Widget Layout</h3>
-            <WidgetLayoutEditor
-              order={order}
-              visibility={visibility}
-              placements={placements}
-              onSetWidgetPlacement={setWidgetPlacement}
-              onToggleWidget={toggleWidget}
-            />
-            <p className={styles.hint}>
-              Drag widgets from the palette onto the 3×2 grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
-            </p>
+            <h3 className={styles.sectionTitle}>Appearance</h3>
+            <div className={styles.segmented}>
+              {COLOR_SCHEMES.map((s) => (
+                <button
+                  key={s.id}
+                  className={[
+                    styles.segment,
+                    settings.colorScheme === s.id ? styles.segmentActive : "",
+                  ].join(" ")}
+                  onClick={() => updateSettings({ colorScheme: s.id })}
+                  aria-pressed={settings.colorScheme === s.id}
+                  type="button"
+                >
+                  {s.icon}
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </section>
 
+          {/* Fonts */}
           <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Support</h3>
-            <div className={styles.widgetGrid}>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  showBuyMeACoffeeWidget ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() => setShowBuyMeACoffeeWidget((value) => !value)}
-                type="button"
-              >
-                {showBuyMeACoffeeWidget ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
-                )}
-                <span>Show Buy Me a Coffee button</span>
-              </button>
+            <h3 className={styles.sectionTitle}>Fonts</h3>
+            <div className={styles.fontGrid}>
+              {FONT_PRESET_OPTIONS.map((fontOption) => (
+                <button
+                  key={fontOption.id}
+                  className={[
+                    styles.fontSwatch,
+                    settings.fontPreset === fontOption.id
+                      ? styles.fontActive
+                      : "",
+                  ].join(" ")}
+                  onClick={() => updateSettings({ fontPreset: fontOption.id })}
+                  aria-pressed={settings.fontPreset === fontOption.id}
+                  type="button"
+                >
+                  <span className={styles.fontIcon}>
+                    <Type size={14} />
+                  </span>
+                  <span
+                    className={styles.fontLabel}
+                    style={{ fontFamily: fontOption.fontFamily }}
+                  >
+                    {fontOption.label}
+                  </span>
+                </button>
+              ))}
             </div>
-            <p className={styles.hint}>
-              Hide the floating support button anytime without affecting the
-              rest of your layout.
-            </p>
           </section>
 
           {/* Calendar */}
@@ -808,32 +783,7 @@ export function SettingsDialog({ onClose }: Props) {
             </div>
           </section>
 
-          {/* Pomodoro */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Weather Refresh</h3>
-            <div className={styles.intervalRow}>
-              <label className={styles.intervalLabel}>
-                <span>Refresh every (min)</span>
-                <input
-                  className={styles.numberInput}
-                  type="number"
-                  min={1}
-                  max={180}
-                  value={weatherRefreshMin}
-                  onChange={(e) =>
-                    setWeatherRefreshMin(
-                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                    )
-                  }
-                />
-              </label>
-            </div>
-            <p className={styles.hint}>
-              Weather updates automatically using this interval. You can still
-              refresh it manually anytime.
-            </p>
-          </section>
-
+          {/* Weather */}
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Weather Display</h3>
             <div className={styles.segmented}>
@@ -871,6 +821,31 @@ export function SettingsDialog({ onClose }: Props) {
             </div>
           </section>
 
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Weather Refresh</h3>
+            <div className={styles.intervalRow}>
+              <label className={styles.intervalLabel}>
+                <span>Refresh every (min)</span>
+                <input
+                  className={styles.numberInput}
+                  type="number"
+                  min={1}
+                  max={180}
+                  value={weatherRefreshMin}
+                  onChange={(e) =>
+                    setWeatherRefreshMin(
+                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                    )
+                  }
+                />
+              </label>
+            </div>
+            <p className={styles.hint}>
+              Weather updates automatically using this interval. You can still
+              refresh it manually anytime.
+            </p>
+          </section>
+
           {/* Pomodoro */}
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
@@ -906,6 +881,32 @@ export function SettingsDialog({ onClose }: Props) {
                 />
               </label>
             </div>
+          </section>
+
+          {/* Support */}
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Support</h3>
+            <div className={styles.widgetGrid}>
+              <button
+                className={[
+                  styles.widgetToggle,
+                  showBuyMeACoffeeWidget ? styles.widgetVisible : "",
+                ].join(" ")}
+                onClick={() => setShowBuyMeACoffeeWidget((value) => !value)}
+                type="button"
+              >
+                {showBuyMeACoffeeWidget ? (
+                  <Eye size={14} />
+                ) : (
+                  <EyeOff size={14} />
+                )}
+                <span>Show Buy Me a Coffee button</span>
+              </button>
+            </div>
+            <p className={styles.hint}>
+              Hide the floating support button anytime without affecting the
+              rest of your layout.
+            </p>
           </section>
         </div>
 
