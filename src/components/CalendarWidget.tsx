@@ -302,6 +302,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
   const [activeTooltip, setActiveTooltip] = useState<{
     event: CalendarEvent
     anchorElement: HTMLLIElement
@@ -317,10 +318,10 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const now = new Date()
   const nowYear = now.getFullYear()
   const nowMonth = now.getMonth()
-  const nowDate = now.getDate()
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
   const monthGridRange = useMemo(() => getMonthGridRange(now, settings.calendarWeekStartsOn), [nowYear, nowMonth, settings.calendarWeekStartsOn])
-  const todayRange = useMemo(() => getTodayRange(now), [nowYear, nowMonth, nowDate])
+  const selectedRange = useMemo(() => getTodayRange(selectedDate), [selectedDate])
+  const isToday = getDayKey(selectedDate) === getDayKey(now)
 
   useEffect(() => {
     if (!activeTooltip) {
@@ -466,24 +467,24 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     }
   }, [monthGridRange, settings.calendarFeeds])
 
-  const todaysEvents = events.filter((event) => isEventWithinRange(event, todayRange))
+  const todaysEvents = events.filter((event) => isEventWithinRange(event, selectedRange))
   const visibleEvents = todaysEvents.filter((event) => {
     if (!settings.calendarShowAllDayEvents && event.allDay) {
       return false
     }
 
-    if (settings.calendarHidePastEvents && event.end <= now) {
+    if (settings.calendarHidePastEvents && isToday && event.end <= now) {
       return false
     }
 
     return true
   })
   const currentEvents = new Set(
-    visibleEvents
-      .filter((event) => event.start <= now && event.end > now)
-      .map(getEventKey),
+    isToday
+      ? visibleEvents.filter((event) => event.start <= now && event.end > now).map(getEventKey)
+      : [],
   )
-  const nextEvent = visibleEvents.find((event) => event.start > now)
+  const nextEvent = isToday ? visibleEvents.find((event) => event.start > now) : null
   const nextEventKey = nextEvent ? getEventKey(nextEvent) : null
   const monthEvents = events.filter((event) => {
     if (!settings.calendarShowAllDayEvents && event.allDay) {
@@ -545,7 +546,9 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
           )}
 
           {hasCalendarFeeds && !loading && !error && visibleEvents.length === 0 && (
-            <div className={styles.empty}>No events today ✓</div>
+            <div className={styles.empty}>
+              {isToday ? 'No events today ✓' : 'No events on this day'}
+            </div>
           )}
 
           {hasCalendarFeeds && !loading && !error && visibleEvents.length > 0 && (
@@ -634,9 +637,20 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
             aria-label="Current month calendar"
           >
             <div className={styles.sectionHeader}>
-              <span className={styles.monthYear}>{year}.</span>
-              <span className={styles.monthName}>{month}</span>
-              <span className={styles.monthLabelSrOnly}>{monthLabel}</span>
+              <div className={styles.sectionHeaderLabel}>
+                <span className={styles.monthYear}>{year}.</span>
+                <span className={styles.monthName}>{month}</span>
+                <span className={styles.monthLabelSrOnly}>{monthLabel}</span>
+              </div>
+              {!isToday && (
+                <button
+                  className={styles.todayButton}
+                  onClick={() => { setSelectedDate(new Date()) }}
+                  aria-label="Jump to today"
+                >
+                  Today
+                </button>
+              )}
             </div>
 
             <div className={styles.weekdayRow} aria-hidden="true">
@@ -648,7 +662,10 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
             </div>
 
             <div className={styles.monthGrid}>
-              {monthCells.map((cell) => (
+              {monthCells.map((cell) => {
+                const isSelected = getDayKey(cell.date) === getDayKey(selectedDate)
+
+                return (
                 <div
                   key={getDayKey(cell.date)}
                   className={[
@@ -656,13 +673,26 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                     cell.inCurrentMonth ? '' : styles.monthCellMuted,
                     cell.isToday ? styles.monthCellToday : '',
                     cell.eventCount > 0 ? styles.monthCellHasEvent : '',
+                    isSelected && !cell.isToday ? styles.monthCellSelected : '',
                   ].join(' ')}
                   aria-label={cell.date.toLocaleDateString(undefined, {
                     weekday: 'long',
                     month: 'long',
                     day: 'numeric',
                   })}
-                  tabIndex={cell.previewEvents.length > 0 ? 0 : undefined}
+                  tabIndex={0}
+                  role="button"
+                  onClick={() => {
+                    setSelectedDate(new Date(cell.date))
+                    setActiveMonthTooltip(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSelectedDate(new Date(cell.date))
+                      setActiveMonthTooltip(null)
+                    }
+                  }}
                   onMouseEnter={(currentEvent) => {
                     if (cell.previewEvents.length === 0) {
                       return
@@ -728,7 +758,8 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                     </>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           </aside>
         )}

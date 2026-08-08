@@ -48,6 +48,13 @@
 .sectionHeader {
   margin-bottom: 0.35rem;
   display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  justify-content: space-between;
+}
+
+.sectionHeaderLabel {
+  display: flex;
   align-items: baseline;
   gap: 0.3rem;
 }
@@ -401,6 +408,12 @@
   background: transparent;
   position: relative;
   overflow: visible;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.monthCell:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 
 .monthCellMuted {
@@ -409,6 +422,31 @@
 
 .monthCellToday {
   background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.monthCellSelected {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  outline: 1.5px solid color-mix(in srgb, var(--color-accent) 60%, transparent);
+  outline-offset: -1.5px;
+}
+
+.todayButton {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, transparent);
+  border-radius: 4px;
+  padding: 0.15em 0.55em;
+  cursor: pointer;
+  line-height: 1.6;
+  transition: background 0.15s ease;
+}
+
+.todayButton:hover {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
 }
 
 .monthCellHasEvent {
