@@ -14,35 +14,41 @@
     Keep the clock visually dominant, but compact enough to leave room for
     the weather/calendar/tasks rows beneath it.
   */
-  font-size: clamp(4rem, max(16vw, 23dvh), 20rem);
+  font-size: clamp(2.8rem, min(12vw, 16dvh), 14rem);
   font-weight: 700;
   letter-spacing: -0.04em;
-  line-height: 0.8;
+  line-height: 0.88;
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .date {
-  margin-top: clamp(0.4rem, 1.2vw, 1.5rem);
-  font-size: clamp(1rem, 1.6vw, 2rem);
+  margin-top: clamp(0.2rem, 0.8vw, 0.7rem);
+  font-size: clamp(0.85rem, min(1.8vw, 2.4dvh), 1.5rem);
   font-weight: 400;
   color: var(--color-text-muted);
   letter-spacing: -0.01em;
   align-self: flex-end;
   text-align: right;
   width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Mobile optimizations */
 @media (max-width: 700px) {
   .time {
-    font-size: clamp(2.2rem, 9.6vw, 3.3rem);
+    font-size: clamp(2.2rem, 10.5vw, 4.2rem);
     line-height: 0.88;
   }
 
   .date {
-    font-size: clamp(0.7rem, 2.1vw, 0.85rem);
+    font-size: clamp(0.75rem, 2.4vw, 0.95rem);
     margin-top: 0.1rem;
   }
 }
