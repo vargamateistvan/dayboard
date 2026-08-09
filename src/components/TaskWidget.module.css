@@ -318,3 +318,19 @@
     padding: 0.18rem 0;
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .fullscreen {
+    gap: 0.35rem;
+  }
+
+  .fullscreen .list {
+    gap: 0.45rem;
+  }
+
+  .fullscreen .input,
+  .fullscreen .taskEditInput,
+  .fullscreen .taskText {
+    font-size: 0.8rem;
+  }
+}

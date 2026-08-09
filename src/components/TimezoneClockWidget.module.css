@@ -65,3 +65,21 @@
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .fullscreen {
+    gap: 0.6rem;
+  }
+
+  .fullscreen .clockCard {
+    padding: 0.75rem;
+  }
+
+  .fullscreen .time {
+    font-size: clamp(1.65rem, min(7.5vw, 12dvh), 3.4rem);
+  }
+
+  .fullscreen .date {
+    font-size: clamp(0.72rem, min(1.6vw, 3dvh), 0.95rem);
+  }
+}

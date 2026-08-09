@@ -591,3 +591,30 @@
     font-size: clamp(1rem, 6vw, 1.5rem);
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .fullscreen .tabs {
+    margin-bottom: 0.2rem;
+    gap: var(--space-2);
+  }
+
+  .fullscreen .displayShell {
+    min-height: clamp(7.5rem, 18vh, 10rem);
+    padding: 0.65rem;
+  }
+
+  .fullscreen .display {
+    font-size: clamp(1.1rem, 7.2vw, 1.85rem);
+  }
+
+  .fullscreen .displaySmall {
+    font-size: clamp(0.9rem, 5.2vw, 1.3rem);
+  }
+
+  .fullscreen .btnPrimary,
+  .fullscreen .btnSecondary,
+  .fullscreen .btnGhost {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.75rem;
+  }
+}

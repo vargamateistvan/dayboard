@@ -74,3 +74,18 @@
     margin-top: 0.1rem;
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .fullscreen {
+    gap: 0.5rem;
+  }
+
+  .fullscreen .time {
+    font-size: clamp(2.2rem, min(14vw, 20dvh), 5.6rem);
+    line-height: 0.86;
+  }
+
+  .fullscreen .date {
+    font-size: clamp(0.82rem, min(2.1vw, 3.8dvh), 1.2rem);
+  }
+}

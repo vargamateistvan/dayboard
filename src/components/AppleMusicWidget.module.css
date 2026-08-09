@@ -181,3 +181,13 @@
     padding: 0.5rem 0.6rem;
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .embedAreaFullscreen {
+    min-height: min(17rem, 46dvh);
+  }
+
+  .widgetFullscreen .selectorRow {
+    font-size: 0.7rem;
+  }
+}

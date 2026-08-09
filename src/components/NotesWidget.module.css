@@ -348,3 +348,23 @@
     font-size: 0.84rem;
   }
 }
+
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  .fullscreen {
+    gap: 0.35rem;
+  }
+
+  .fullscreen .notesGrid {
+    gap: 0.45rem;
+  }
+
+  .fullscreen .note {
+    min-height: 7.8rem;
+    padding: 0.52rem;
+  }
+
+  .fullscreen .textarea {
+    min-height: 3.8rem;
+    font-size: 0.78rem;
+  }
+}

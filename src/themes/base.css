@@ -77,6 +77,15 @@ body {
   transition: background-color var(--transition-base), color var(--transition-base);
 }
 
+@media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
+  html,
+  body {
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 button {
   cursor: pointer;
   font-family: inherit;
