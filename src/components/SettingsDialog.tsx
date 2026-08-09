@@ -108,6 +108,33 @@ interface WidgetLayoutEditorProps {
   readonly onRemoveRow: () => void;
 }
 
+const WIDGET_CHIP_GROUPS: ReadonlyArray<{
+  id: "core" | "productivity" | "media" | "finance";
+  label: string;
+  widgets: readonly Widget[];
+}> = [
+  {
+    id: "core",
+    label: "Core",
+    widgets: ["clock", "weather", "calendar"],
+  },
+  {
+    id: "productivity",
+    label: "Productivity",
+    widgets: ["timer", "tasks", "notes"],
+  },
+  {
+    id: "media",
+    label: "Media",
+    widgets: ["spotify", "appleMusic", "applePodcast"],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    widgets: ["stocks", "currencies"],
+  },
+] as const;
+
 interface MediaLinkEditorProps {
   readonly title: string;
   readonly brand: "spotify" | "apple-music" | "apple-podcasts";
@@ -228,6 +255,12 @@ function WidgetLayoutEditor({
   const hiddenWidgets = order.filter((w) => !visibility[w]);
   const allWidgets = [...visibleWidgets, ...hiddenWidgets];
   const dragWidget = paletteDragWidget ?? gridDragWidget;
+  const groupedWidgets = WIDGET_CHIP_GROUPS
+    .map((group) => ({
+      ...group,
+      widgets: allWidgets.filter((widget) => group.widgets.includes(widget)),
+    }))
+    .filter((group) => group.widgets.length > 0);
 
   const canUsePlacement = (widget: Widget, patch: Partial<WidgetPlacement>) =>
     canPlaceWidget(placements, visibility, widget, {
@@ -369,30 +402,37 @@ function WidgetLayoutEditor({
         <span className={styles.widgetPaletteLabel}>
           {visibleWidgets.length}/{allWidgets.length} widgets on dashboard
         </span>
-        <div className={styles.widgetPaletteChips}>
-          {allWidgets.map((widget) => {
-            const isVisible = visibility[widget];
-            return (
-              <div
-                key={widget}
-                className={[
-                  styles.widgetChip,
-                  isVisible ? styles.widgetChipVisible : styles.widgetChipHidden,
-                ].join(" ")}
-                draggable={!isVisible}
-                onDragStart={!isVisible ? handlePaletteDragStart(widget) : undefined}
-                onDragEnd={!isVisible ? handlePaletteDragEnd : undefined}
-                aria-label={isVisible ? `${getWidgetLabel(widget)} is on the dashboard` : `Drag ${getWidgetLabel(widget)} onto the grid`}
-                title={isVisible ? `${getWidgetLabel(widget)} (on grid)` : `Drag to add ${getWidgetLabel(widget)}`}
-              >
-                {!isVisible && <GripVertical size={12} />}
-                <span>{getWidgetLabel(widget)}</span>
-                <span className={styles.widgetSizeLabel}>
-                  {MIN_WIDGET_SIZE[widget].columnSpan}×{MIN_WIDGET_SIZE[widget].rowSpan}
-                </span>
+        <div className={styles.widgetPaletteGroups}>
+          {groupedWidgets.map((group) => (
+            <div key={group.id} className={styles.widgetPaletteGroup}>
+              <span className={styles.widgetPaletteGroupTitle}>{group.label}</span>
+              <div className={styles.widgetPaletteChips}>
+                {group.widgets.map((widget) => {
+                  const isVisible = visibility[widget];
+                  return (
+                    <div
+                      key={widget}
+                      className={[
+                        styles.widgetChip,
+                        isVisible ? styles.widgetChipVisible : styles.widgetChipHidden,
+                      ].join(" ")}
+                      draggable={!isVisible}
+                      onDragStart={!isVisible ? handlePaletteDragStart(widget) : undefined}
+                      onDragEnd={!isVisible ? handlePaletteDragEnd : undefined}
+                      aria-label={isVisible ? `${getWidgetLabel(widget)} is on the dashboard` : `Drag ${getWidgetLabel(widget)} onto the grid`}
+                      title={isVisible ? `${getWidgetLabel(widget)} (on grid)` : `Drag to add ${getWidgetLabel(widget)}`}
+                    >
+                      {!isVisible && <GripVertical size={12} />}
+                      <span>{getWidgetLabel(widget)}</span>
+                      <span className={styles.widgetSizeLabel}>
+                        {MIN_WIDGET_SIZE[widget].columnSpan}×{MIN_WIDGET_SIZE[widget].rowSpan}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
         <span className={styles.widgetPaletteHint}>Drag a hidden widget onto the grid to show it</span>
       </div>

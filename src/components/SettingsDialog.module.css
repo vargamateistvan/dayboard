@@ -524,6 +524,26 @@
   color: var(--color-text-muted);
 }
 
+.widgetPaletteGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.widgetPaletteGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.widgetPaletteGroupTitle {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 .widgetPaletteChips {
   display: flex;
   flex-wrap: wrap;
