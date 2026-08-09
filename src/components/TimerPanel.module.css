@@ -448,19 +448,19 @@
 }
 
 .fullscreen {
-  width: min(100%, 1200px);
+  width: min(100%, 1700px);
   margin: 0 auto;
   justify-content: center;
 }
 
 .fullscreen .tabs {
   justify-content: center;
-  gap: clamp(1rem, 3vw, 3rem);
-  margin-bottom: clamp(1.5rem, 4vh, 2.5rem);
+  gap: clamp(1.25rem, 3.5vw, 5rem);
+  margin-bottom: clamp(1.75rem, 4vh, 3.5rem);
 }
 
 .fullscreen .tab {
-  font-size: clamp(1rem, 1.6vw, 1.3rem);
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
 }
 
 .fullscreen .content {
@@ -471,13 +471,13 @@
 .fullscreen .timerBody {
   align-items: stretch;
   text-align: left;
-  gap: clamp(0.5rem, 1.1vh, 0.9rem);
+  gap: clamp(0.9rem, 1.8vh, 1.5rem);
   max-height: 100%;
   width: 100%;
 }
 
 .fullscreen .timerChrome {
-  min-height: 2.25rem;
+  min-height: 3.25rem;
 }
 
 .fullscreen .headerLeft,
@@ -486,16 +486,16 @@
 }
 
 .fullscreen .displayShell {
-  min-height: clamp(9rem, 18vh, 14rem);
-  padding: clamp(0.75rem, 1.5vw, 1.1rem);
+  min-height: clamp(14rem, 30vh, 22rem);
+  padding: clamp(1.1rem, 2.4vw, 1.8rem);
 }
 
 .fullscreen .display {
-  font-size: clamp(4.5rem, 16vw, 9rem);
+  font-size: clamp(7.5rem, 26vw, 16rem);
 }
 
 .fullscreen .displaySmall {
-  font-size: clamp(4rem, 14vw, 8rem);
+  font-size: clamp(7rem, 22vw, 14rem);
 }
 
 .fullscreen .actionStrip,
@@ -511,8 +511,8 @@
 .fullscreen .btnPrimary,
 .fullscreen .btnSecondary,
 .fullscreen .btnGhost {
-  font-size: clamp(0.9rem, 1.1vw, 1.1rem);
-  padding: 0.65rem 1.1rem;
+  font-size: clamp(1.1rem, 1.4vw, 1.35rem);
+  padding: 0.95rem 1.55rem;
 }
 
 .fullscreen .inputLabel,
@@ -521,17 +521,17 @@
 .fullscreen .inlineToggleLabel,
 .fullscreen .settingsLabel,
 .fullscreen .settingsUnit {
-  font-size: clamp(0.9rem, 1.2vw, 1rem);
+  font-size: clamp(1.05rem, 1.4vw, 1.2rem);
 }
 
 .fullscreen .numberInput {
-  width: 6rem;
-  font-size: clamp(1.2rem, 2.8vw, 1.8rem);
+  width: 7.5rem;
+  font-size: clamp(1.5rem, 3.4vw, 2.3rem);
 }
 
 .fullscreen .settingsInput {
-  width: 4rem;
-  font-size: clamp(0.9rem, 1.1vw, 1rem);
+  width: 5rem;
+  font-size: clamp(1.05rem, 1.3vw, 1.2rem);
 }
 
 @media (max-width: 700px) {
