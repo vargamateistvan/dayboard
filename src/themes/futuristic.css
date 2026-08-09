@@ -12,20 +12,20 @@
 
 [data-theme='futuristic'][data-color-scheme='light'],
 [data-theme='futuristic'] {
-  --color-bg: #0a0a1a;
-  --color-surface: rgba(255,255,255,0.07);
-  --color-surface-alt: rgba(255,255,255,0.12);
-  --color-border: rgba(100,200,255,0.2);
-  --color-text: #e0f0ff;
-  --color-text-muted: #7ab8d4;
-  --color-accent: #00d4ff;
-  --color-accent-hover: #00f0ff;
-  --color-accent-text: #000000;
-  --color-danger: #ff2d78;
-  --color-success: #00ffaa;
-  --shadow-sm: 0 0 8px rgba(0,212,255,0.2);
-  --shadow-md: 0 0 20px rgba(0,212,255,0.3);
-  --shadow-lg: 0 0 40px rgba(0,212,255,0.4);
+  --color-bg: #f8f4ff;
+  --color-surface: rgba(255,255,255,0.72);
+  --color-surface-alt: rgba(246,237,255,0.9);
+  --color-border: rgba(163,120,221,0.22);
+  --color-text: #25163d;
+  --color-text-muted: #6f5a8d;
+  --color-accent: #a86bff;
+  --color-accent-hover: #c08cff;
+  --color-accent-text: #1d1030;
+  --color-danger: #e13f8f;
+  --color-success: #15b67a;
+  --shadow-sm: 0 0 8px rgba(168,107,255,0.14);
+  --shadow-md: 0 0 20px rgba(168,107,255,0.2);
+  --shadow-lg: 0 0 40px rgba(168,107,255,0.28);
 }
 
 [data-theme='futuristic'][data-color-scheme='dark'] {
