@@ -289,6 +289,35 @@
 }
 
 @media (max-width: 700px) {
+  .fullscreen {
+    gap: 0.55rem;
+  }
+
+  .fullscreen .header h2 {
+    font-size: 0.95rem;
+  }
+
+  .fullscreen .addBtn {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1.15rem;
+  }
+
+  .fullscreen .notesGrid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .fullscreen .note {
+    min-height: 10rem;
+    padding: 0.75rem;
+  }
+
+  .fullscreen .textarea {
+    min-height: 5.25rem;
+    font-size: 0.9rem;
+  }
+
   .widget {
     height: auto;
     overflow: visible;

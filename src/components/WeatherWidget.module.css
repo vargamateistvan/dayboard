@@ -364,6 +364,44 @@
 }
 
 @media (max-width: 700px) {
+  .fullscreen {
+    gap: 0.45rem;
+  }
+
+  .fullscreen .header {
+    margin-bottom: 0.35rem;
+  }
+
+  .fullscreen .title,
+  .fullscreen .refreshHint {
+    font-size: 0.85rem;
+  }
+
+  .fullscreen .refresh {
+    font-size: 0.95rem;
+  }
+
+  .fullscreen .degrees {
+    font-size: clamp(2rem, min(8.5vw, 8.5dvh), 3.2rem);
+  }
+
+  .fullscreen .condition {
+    font-size: 0.9rem;
+  }
+
+  .fullscreen .location,
+  .fullscreen .todayForecast {
+    font-size: 0.7rem;
+  }
+
+  .fullscreen .detailLabel {
+    font-size: 0.62rem;
+  }
+
+  .fullscreen .detailValue {
+    font-size: 0.78rem;
+  }
+
   .widget {
     height: auto;
     overflow: visible;

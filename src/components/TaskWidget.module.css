@@ -256,6 +256,31 @@
 }
 
 @media (max-width: 700px) {
+  .fullscreen {
+    gap: 0.6rem;
+  }
+
+  .fullscreen .header h2,
+  .fullscreen .counter {
+    font-size: 0.95rem;
+  }
+
+  .fullscreen .input,
+  .fullscreen .taskEditInput,
+  .fullscreen .taskText {
+    font-size: 0.95rem;
+  }
+
+  .fullscreen .checkBtn {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .fullscreen .deleteBtn {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+
   .widget {
     height: auto;
     overflow: visible;

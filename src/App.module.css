@@ -311,6 +311,8 @@
 
   .widgetCellFullscreen {
     inset: 0;
+    align-items: stretch;
+    justify-content: flex-start;
     padding:
       calc(env(safe-area-inset-top, 0px) + 1rem)
       0.9rem
@@ -323,8 +325,22 @@
 
   .widgetCellFullscreen .widgetContentFrame > * {
     width: 100%;
-    height: auto;
-    min-height: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+  }
+
+  .widgetCellFullscreen[data-widget-id='weather'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='calendar'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='tasks'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='notes'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='timer'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='spotify'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='appleMusic'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='applePodcast'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='stocks'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='currencies'] .widgetContentFrame > * {
+    overflow: auto;
   }
 
   .focusModeBtn {

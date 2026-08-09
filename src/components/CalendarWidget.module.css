@@ -688,6 +688,36 @@
 }
 
 @media (max-width: 700px) {
+  .fullscreen {
+    gap: 0.55rem;
+  }
+
+  .fullscreen .header {
+    margin-bottom: 0.35rem;
+  }
+
+  .fullscreen .title {
+    font-size: 0.9rem;
+  }
+
+  .fullscreen .eventTime {
+    font-size: 0.72rem;
+  }
+
+  .fullscreen .eventTitle {
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+
+  .fullscreen .monthCell {
+    min-height: clamp(2.8rem, 7vh, 4.2rem);
+    padding: 0.2rem 0.22rem 0.28rem;
+  }
+
+  .fullscreen .monthCellNumber {
+    font-size: 0.68rem;
+  }
+
   .widget,
   .content,
   .eventsColumn,
