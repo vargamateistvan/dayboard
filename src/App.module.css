@@ -202,7 +202,8 @@
 .widgetCellFullscreen[data-widget-id='clock'] .widgetContentFrame > * > * {
   align-self: center;
   text-align: center;
-  width: auto;
+  width: 100%;
+  max-width: 100%;
 }
 
 .widgetCellFullscreen[data-widget-id='timer'] .widgetContentFrame > * {

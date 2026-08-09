@@ -47,17 +47,19 @@
 }
 
 .fullscreen .time {
-  font-size: clamp(5rem, 22vw, 22rem);
+  font-size: clamp(3.2rem, min(20vw, 26dvh), 22rem);
   line-height: 0.84;
   text-align: center;
 }
 
 .fullscreen .date {
   align-self: center;
-  width: auto;
+  width: 100%;
   max-width: 100%;
   text-align: center;
-  font-size: clamp(1.4rem, 4vw, 3rem);
+  font-size: clamp(1.05rem, min(3.1vw, 4.2dvh), 3rem);
+  white-space: normal;
+  text-wrap: balance;
 }
 
 /* Mobile optimizations */
