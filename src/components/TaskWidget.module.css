@@ -297,3 +297,24 @@
     opacity: 1;
   }
 }
+
+@media (max-width: 700px) and (max-height: 760px) {
+  .fullscreen {
+    gap: 0.45rem;
+  }
+
+  .fullscreen .list {
+    gap: 0.55rem;
+  }
+
+  .fullscreen .input,
+  .fullscreen .taskEditInput,
+  .fullscreen .taskText {
+    font-size: 0.86rem;
+  }
+
+  .fullscreen .taskItem {
+    gap: 0.5rem;
+    padding: 0.18rem 0;
+  }
+}

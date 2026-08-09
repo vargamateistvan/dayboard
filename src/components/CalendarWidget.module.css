@@ -738,3 +738,35 @@
     padding-bottom: 0;
   }
 }
+
+@media (max-width: 700px) and (max-height: 760px) {
+  .fullscreen .content {
+    gap: 0.45rem;
+  }
+
+  .fullscreen .event {
+    padding-top: 0.35rem;
+    padding-left: 0.45rem;
+  }
+
+  .fullscreen .eventTime {
+    font-size: 0.66rem;
+  }
+
+  .fullscreen .eventTitle {
+    font-size: 0.84rem;
+  }
+
+  .fullscreen .monthCell {
+    min-height: clamp(2.35rem, 5.9vh, 3.2rem);
+    padding: 0.14rem 0.16rem 0.2rem;
+  }
+
+  .monthEventBar {
+    height: 0.2rem;
+  }
+
+  .monthEventCount {
+    font-size: 0.38rem;
+  }
+}
