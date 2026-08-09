@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Maximize2, Minimize2, Settings } from 'lucide-react'
+import { Info, Maximize2, Minimize2, Settings } from 'lucide-react'
 import { SettingsProvider } from './lib/useSettings'
 import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
@@ -19,6 +19,7 @@ import { StockWidget } from './components/StockWidget'
 import { CurrencyWidget } from './components/CurrencyWidget'
 import { QuoteWidget } from './components/QuoteWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
+import { InfoDialog } from './components/InfoDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
 import './themes/base.css'
@@ -76,6 +77,8 @@ function getWidgetTypeClass(widget: Widget) {
 
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [appFullscreen, setAppFullscreen] = useState(false)
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
@@ -113,6 +116,26 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [fullscreenWidget])
 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setAppFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    handleFullscreenChange()
+
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  const toggleAppFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+
+    await document.documentElement.requestFullscreen()
+  }
+
   return (
     <div
       className={[
@@ -121,15 +144,37 @@ function Dashboard() {
         fullscreenWidget ? styles.fullscreenMode : '',
       ].join(' ')}
     >
-      <button
-        className={styles.settingsBtn}
-        onClick={() => setSettingsOpen(true)}
-        aria-label="Open settings"
-        title="Settings"
-        type="button"
-      >
-        <Settings size={18} />
-      </button>
+      <div className={styles.toolbarButtons}>
+        <button
+          className={styles.toolbarButton}
+          onClick={() => setInfoOpen(true)}
+          aria-label="Open app info"
+          title="About Dayboard"
+          type="button"
+        >
+          <Info size={18} />
+        </button>
+        <button
+          className={styles.toolbarButton}
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Open settings"
+          title="Settings"
+          type="button"
+        >
+          <Settings size={18} />
+        </button>
+        <button
+          className={styles.toolbarButton}
+          onClick={() => {
+            void toggleAppFullscreen()
+          }}
+          aria-label={appFullscreen ? 'Exit app fullscreen' : 'Enter app fullscreen'}
+          title={appFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          type="button"
+        >
+          {appFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
+      </div>
 
       <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
         {orderedVisibleWidgets.map((widget) => (
@@ -167,6 +212,7 @@ function Dashboard() {
 
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
       <BuyMeCoffeeWidget />
+      {infoOpen && <InfoDialog onClose={() => setInfoOpen(false)} />}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   )

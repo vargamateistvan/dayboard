@@ -90,6 +90,37 @@
   line-height: 1.5;
 }
 
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: 1.1rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+}
+
+.infoList li::marker {
+  color: var(--color-text-muted);
+}
+
+.infoLinkRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.infoLink {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.infoLink:hover {
+  color: var(--color-accent-hover);
+}
+
 /* Theme swatches */
 .themeGrid {
   display: grid;

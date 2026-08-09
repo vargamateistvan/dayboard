@@ -146,4 +146,17 @@ describe('App fullscreen widgets', () => {
     expect(weatherCell).not.toHaveClass(styles.widgetCellFullscreen)
     expect(clockCell).not.toHaveClass(styles.widgetCellHidden)
   })
+
+  it('opens the info dialog with usage guidance and the issue tracker link', () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open app info' }))
+
+    expect(screen.getByRole('dialog', { name: 'About Dayboard' })).toBeInTheDocument()
+    expect(screen.getByText('How it works')).toBeInTheDocument()
+    expect(screen.getByText(/Use the settings button to control widget visibility/i)).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'github.com/vargamateistvan/dayboard/issues' }),
+    ).toHaveAttribute('href', 'https://github.com/vargamateistvan/dayboard/issues')
+  })
 })

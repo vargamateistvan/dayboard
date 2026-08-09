@@ -11,22 +11,29 @@
   overflow: hidden;
 }
 
-/* Floating settings button — barely visible until hovered */
-.settingsBtn {
+/* Floating action buttons — barely visible until hovered */
+.toolbarButtons {
   position: fixed;
   top: 1.25rem;
   right: 1.5rem;
   z-index: 200;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.toolbarButton {
   font-size: 1rem;
   color: var(--color-text-muted);
   opacity: 0.3;
   padding: 0.25rem;
   border-radius: 4px;
+  background: transparent;
+  border: none;
   transition: opacity 200ms ease, color 150ms ease;
   line-height: 1;
 }
 
-.settingsBtn:hover {
+.toolbarButton:hover {
   opacity: 1;
   color: var(--color-text);
 }
@@ -65,7 +72,7 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  padding: clamp(0.75rem, 2vh, 1.5rem) clamp(1.5rem, 4vw, 4rem);
+  padding: clamp(3rem, 7vh, 4rem) clamp(1.5rem, 4vw, 4rem) clamp(0.75rem, 2vh, 1.5rem);
   column-gap: clamp(1rem, 3vw, 3rem);
   row-gap: clamp(0.75rem, 1.5vh, 1.25rem);
   max-width: 2400px;
@@ -314,17 +321,17 @@
     min-height: 100%;
   }
 
-  .settingsBtn,
   .focusModeBtn {
     top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     opacity: 0.75;
   }
 
   .focusModeBtn {
-    right: calc(1rem + 2.5rem);
+    right: calc(1rem + 5rem);
   }
 
-  .settingsBtn {
+  .toolbarButtons {
+    top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
     right: 1rem;
   }
 }
