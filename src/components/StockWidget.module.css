@@ -137,7 +137,7 @@
 }
 
 .chart {
-  width: 90px;
+  width: clamp(64px, 18vw, 90px);
   flex-shrink: 0;
 }
 
@@ -164,5 +164,5 @@
 }
 
 .fullscreen .chart {
-  width: 140px;
+  width: clamp(90px, 14vw, 140px);
 }

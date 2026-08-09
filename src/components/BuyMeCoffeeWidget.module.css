@@ -45,7 +45,7 @@
   z-index: 960;
   width: min(420px, calc(100vw - 36px));
   height: min(72vh, calc(100vh - 126px));
-  min-height: 420px;
+  min-height: min(420px, calc(100vh - 126px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -107,6 +107,6 @@
     left: 18px;
     width: auto;
     height: min(78vh, calc(100vh - 126px));
-    min-height: 360px;
+    min-height: min(360px, calc(100vh - 126px));
   }
 }
