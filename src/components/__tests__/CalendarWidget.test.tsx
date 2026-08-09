@@ -212,6 +212,37 @@ describe('CalendarWidget', () => {
     vi.unstubAllGlobals()
   })
 
+  it('positions the event tooltip to the left like the monthly tooltip', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS_WITH_DETAILS }),
+    )
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    const event = screen.getAllByText('Team Standup')[0].closest('li') as HTMLElement
+    vi.spyOn(event, 'getBoundingClientRect').mockReturnValue({
+      x: 500,
+      y: 120,
+      top: 120,
+      left: 500,
+      right: 620,
+      bottom: 170,
+      width: 120,
+      height: 50,
+      toJSON: () => ({}),
+    } as DOMRect)
+
+    fireEvent.mouseEnter(event)
+
+    await waitFor(() => {
+      const tooltip = screen.getByRole('tooltip')
+      expect(Number.parseFloat(window.getComputedStyle(tooltip).left)).toBeLessThan(500)
+    })
+
+    vi.unstubAllGlobals()
+  })
+
   it('renders all-day events', async () => {
     vi.stubGlobal(
       'fetch',

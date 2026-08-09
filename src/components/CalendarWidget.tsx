@@ -99,6 +99,32 @@ function getEventKey(event: CalendarEvent): string {
   return `${event.title}-${event.start.getTime()}-${event.end.getTime()}-${event.allDay ? 'all-day' : 'timed'}`
 }
 
+function getFloatingTooltipStyle(
+  anchorRect: DOMRect,
+  tooltipWidth: number,
+  tooltipHeight: number,
+  gap = 10,
+  viewportPadding = 12,
+): CSSProperties {
+  let left = anchorRect.left - tooltipWidth - gap
+  if (left < viewportPadding) {
+    left = anchorRect.right + gap
+  }
+  if (left + tooltipWidth > window.innerWidth - viewportPadding) {
+    left = Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding)
+  }
+
+  let top = anchorRect.top + anchorRect.height / 2 - tooltipHeight / 2
+  if (top < viewportPadding) {
+    top = viewportPadding
+  }
+  if (top + tooltipHeight > window.innerHeight - viewportPadding) {
+    top = window.innerHeight - tooltipHeight - viewportPadding
+  }
+
+  return { left, top }
+}
+
 function buildMonthPreviewEvent(event: CalendarEvent): MonthPreviewEvent {
   return {
     key: getEventKey(event),
@@ -331,37 +357,11 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
 
     const updateTooltipPosition = () => {
       const anchorRect = activeTooltip.anchorElement.getBoundingClientRect()
-      const widgetRect = widgetRef.current?.getBoundingClientRect()
       const tooltipRect = tooltipRef.current?.getBoundingClientRect()
 
-      const gap = 12
-      const viewportPadding = 12
       const tooltipWidth = tooltipRect?.width ?? 304
       const tooltipHeight = tooltipRect?.height ?? 220
-      const preferredRight = (widgetRect?.right ?? anchorRect.right) + gap
-      const availableRight = window.innerWidth - preferredRight - viewportPadding
-      const hasRightSpace = availableRight >= tooltipWidth
-
-      let left = hasRightSpace
-        ? preferredRight
-        : (widgetRect?.left ?? anchorRect.left) - tooltipWidth - gap
-
-      if (left < viewportPadding) {
-        left = Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding)
-      }
-
-      let top = anchorRect.top + anchorRect.height / 2 - tooltipHeight / 2
-      if (top < viewportPadding) {
-        top = viewportPadding
-      }
-      if (top + tooltipHeight > window.innerHeight - viewportPadding) {
-        top = window.innerHeight - tooltipHeight - viewportPadding
-      }
-
-      setTooltipStyle({
-        top,
-        left,
-      })
+      setTooltipStyle(getFloatingTooltipStyle(anchorRect, tooltipWidth, tooltipHeight))
     }
 
     updateTooltipPosition()
@@ -391,28 +391,9 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     const updateMonthTooltipPosition = () => {
       const anchorRect = activeMonthTooltip.anchorElement.getBoundingClientRect()
       const tooltipRect = monthTooltipRef.current?.getBoundingClientRect()
-      const gap = 10
-      const viewportPadding = 12
       const tooltipWidth = tooltipRect?.width ?? 192
       const tooltipHeight = tooltipRect?.height ?? 180
-
-      let left = anchorRect.left - tooltipWidth - gap
-      if (left < viewportPadding) {
-        left = anchorRect.right + gap
-      }
-      if (left + tooltipWidth > window.innerWidth - viewportPadding) {
-        left = Math.max(viewportPadding, window.innerWidth - tooltipWidth - viewportPadding)
-      }
-
-      let top = anchorRect.top + anchorRect.height / 2 - tooltipHeight / 2
-      if (top < viewportPadding) {
-        top = viewportPadding
-      }
-      if (top + tooltipHeight > window.innerHeight - viewportPadding) {
-        top = window.innerHeight - tooltipHeight - viewportPadding
-      }
-
-      setMonthTooltipStyle({ top, left })
+      setMonthTooltipStyle(getFloatingTooltipStyle(anchorRect, tooltipWidth, tooltipHeight))
     }
 
     updateMonthTooltipPosition()
