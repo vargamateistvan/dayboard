@@ -281,9 +281,10 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: calc(env(safe-area-inset-top, 0px) + 2.25rem) 0.9rem calc(env(safe-area-inset-bottom, 0px) + 5rem);
+    padding: calc(env(safe-area-inset-top, 0px) + 2.25rem) 0.9rem calc(env(safe-area-inset-bottom, 0px) + 7rem);
     row-gap: 0.6rem;
     gap: 0.6rem;
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7rem);
   }
 
   .widgetClock {
@@ -296,6 +297,10 @@
     min-height: 0;
     flex: 0 0 auto;
     overflow: visible;
+  }
+
+  .main > .widgetCell:last-child {
+    margin-bottom: 0.5rem;
   }
 
   .widgetFullscreenBtn {
