@@ -628,6 +628,9 @@ export function SettingsDialog({ onClose }: Props) {
     visibility.spotify ||
     visibility.appleMusic ||
     visibility.applePodcast;
+  const isSpotifyOnLayout = visibility.spotify;
+  const isAppleMusicOnLayout = visibility.appleMusic;
+  const isApplePodcastOnLayout = visibility.applePodcast;
   const isTimerOnLayout = visibility.timer;
 
   const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
@@ -1330,108 +1333,114 @@ export function SettingsDialog({ onClose }: Props) {
           {isMusicOnLayout && (
             <section className={styles.section}>
               <h3 className={styles.sectionTitle}>Music Embeds</h3>
-            <MediaLinkEditor
-              title="Spotify"
-              brand="spotify"
-              activeUrl={spotifyEmbedUrl}
-              savedLinks={spotifyEmbedLinks}
-              addUrl={spotifyAddUrl}
-              addPlaceholder="https://open.spotify.com/track/..."
-              onSelectUrl={(url) => {
-                setSpotifyEmbedUrl(url);
-                setSpotifyLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  spotifyEmbedLinks,
-                  spotifyEmbedUrl,
-                  setSpotifyEmbedLinks,
-                  setSpotifyEmbedUrl,
-                )
-              }
-              onAddUrlChange={setSpotifyAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: spotifyAddUrl,
-                  setValue: setSpotifyAddUrl,
-                  links: spotifyEmbedLinks,
-                  setLinks: setSpotifyEmbedLinks,
-                  validate: normalizeSpotifyEmbedUrl,
-                  setActiveUrl: setSpotifyEmbedUrl,
-                  setError: setSpotifyLinkError,
-                  errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
-                })
-              }
-              error={spotifyLinkError}
-            />
-            <MediaLinkEditor
-              title="Apple Music"
-              brand="apple-music"
-              activeUrl={appleMusicEmbedUrl}
-              savedLinks={appleMusicEmbedLinks}
-              addUrl={appleMusicAddUrl}
-              addPlaceholder="https://music.apple.com/..."
-              onSelectUrl={(url) => {
-                setAppleMusicEmbedUrl(url);
-                setAppleMusicLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  appleMusicEmbedLinks,
-                  appleMusicEmbedUrl,
-                  setAppleMusicEmbedLinks,
-                  setAppleMusicEmbedUrl,
-                )
-              }
-              onAddUrlChange={setAppleMusicAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: appleMusicAddUrl,
-                  setValue: setAppleMusicAddUrl,
-                  links: appleMusicEmbedLinks,
-                  setLinks: setAppleMusicEmbedLinks,
-                  validate: normalizeAppleMusicEmbedUrl,
-                  setActiveUrl: setAppleMusicEmbedUrl,
-                  setError: setAppleMusicLinkError,
-                  errorMessage: "Please paste a valid Apple Music album, playlist, song, or artist link.",
-                })
-              }
-              error={appleMusicLinkError}
-            />
-            <MediaLinkEditor
-              title="Apple Podcast"
-              brand="apple-podcasts"
-              activeUrl={applePodcastEmbedUrl}
-              savedLinks={applePodcastEmbedLinks}
-              addUrl={applePodcastAddUrl}
-              addPlaceholder="https://podcasts.apple.com/..."
-              onSelectUrl={(url) => {
-                setApplePodcastEmbedUrl(url);
-                setApplePodcastLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  applePodcastEmbedLinks,
-                  applePodcastEmbedUrl,
-                  setApplePodcastEmbedLinks,
-                  setApplePodcastEmbedUrl,
-                )
-              }
-              onAddUrlChange={setApplePodcastAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: applePodcastAddUrl,
-                  setValue: setApplePodcastAddUrl,
-                  links: applePodcastEmbedLinks,
-                  setLinks: setApplePodcastEmbedLinks,
-                  validate: normalizeApplePodcastEmbedUrl,
-                  setActiveUrl: setApplePodcastEmbedUrl,
-                  setError: setApplePodcastLinkError,
-                  errorMessage: "Please paste a valid Apple Podcast show or episode link.",
-                })
-              }
-              error={applePodcastLinkError}
-            />
+              {isSpotifyOnLayout && (
+                <MediaLinkEditor
+                  title="Spotify"
+                  brand="spotify"
+                  activeUrl={spotifyEmbedUrl}
+                  savedLinks={spotifyEmbedLinks}
+                  addUrl={spotifyAddUrl}
+                  addPlaceholder="https://open.spotify.com/track/..."
+                  onSelectUrl={(url) => {
+                    setSpotifyEmbedUrl(url);
+                    setSpotifyLinkError(null);
+                  }}
+                  onRemoveSelected={() =>
+                    removeMediaLink(
+                      spotifyEmbedLinks,
+                      spotifyEmbedUrl,
+                      setSpotifyEmbedLinks,
+                      setSpotifyEmbedUrl,
+                    )
+                  }
+                  onAddUrlChange={setSpotifyAddUrl}
+                  onAddLink={() =>
+                    addMediaLink({
+                      value: spotifyAddUrl,
+                      setValue: setSpotifyAddUrl,
+                      links: spotifyEmbedLinks,
+                      setLinks: setSpotifyEmbedLinks,
+                      validate: normalizeSpotifyEmbedUrl,
+                      setActiveUrl: setSpotifyEmbedUrl,
+                      setError: setSpotifyLinkError,
+                      errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
+                    })
+                  }
+                  error={spotifyLinkError}
+                />
+              )}
+              {isAppleMusicOnLayout && (
+                <MediaLinkEditor
+                  title="Apple Music"
+                  brand="apple-music"
+                  activeUrl={appleMusicEmbedUrl}
+                  savedLinks={appleMusicEmbedLinks}
+                  addUrl={appleMusicAddUrl}
+                  addPlaceholder="https://music.apple.com/..."
+                  onSelectUrl={(url) => {
+                    setAppleMusicEmbedUrl(url);
+                    setAppleMusicLinkError(null);
+                  }}
+                  onRemoveSelected={() =>
+                    removeMediaLink(
+                      appleMusicEmbedLinks,
+                      appleMusicEmbedUrl,
+                      setAppleMusicEmbedLinks,
+                      setAppleMusicEmbedUrl,
+                    )
+                  }
+                  onAddUrlChange={setAppleMusicAddUrl}
+                  onAddLink={() =>
+                    addMediaLink({
+                      value: appleMusicAddUrl,
+                      setValue: setAppleMusicAddUrl,
+                      links: appleMusicEmbedLinks,
+                      setLinks: setAppleMusicEmbedLinks,
+                      validate: normalizeAppleMusicEmbedUrl,
+                      setActiveUrl: setAppleMusicEmbedUrl,
+                      setError: setAppleMusicLinkError,
+                      errorMessage: "Please paste a valid Apple Music album, playlist, song, or artist link.",
+                    })
+                  }
+                  error={appleMusicLinkError}
+                />
+              )}
+              {isApplePodcastOnLayout && (
+                <MediaLinkEditor
+                  title="Apple Podcast"
+                  brand="apple-podcasts"
+                  activeUrl={applePodcastEmbedUrl}
+                  savedLinks={applePodcastEmbedLinks}
+                  addUrl={applePodcastAddUrl}
+                  addPlaceholder="https://podcasts.apple.com/..."
+                  onSelectUrl={(url) => {
+                    setApplePodcastEmbedUrl(url);
+                    setApplePodcastLinkError(null);
+                  }}
+                  onRemoveSelected={() =>
+                    removeMediaLink(
+                      applePodcastEmbedLinks,
+                      applePodcastEmbedUrl,
+                      setApplePodcastEmbedLinks,
+                      setApplePodcastEmbedUrl,
+                    )
+                  }
+                  onAddUrlChange={setApplePodcastAddUrl}
+                  onAddLink={() =>
+                    addMediaLink({
+                      value: applePodcastAddUrl,
+                      setValue: setApplePodcastAddUrl,
+                      links: applePodcastEmbedLinks,
+                      setLinks: setApplePodcastEmbedLinks,
+                      validate: normalizeApplePodcastEmbedUrl,
+                      setActiveUrl: setApplePodcastEmbedUrl,
+                      setError: setApplePodcastLinkError,
+                      errorMessage: "Please paste a valid Apple Podcast show or episode link.",
+                    })
+                  }
+                  error={applePodcastLinkError}
+                />
+              )}
               <p className={styles.hint}>
                 Paste a public share link. Dayboard converts it to an embeddable player automatically.
               </p>

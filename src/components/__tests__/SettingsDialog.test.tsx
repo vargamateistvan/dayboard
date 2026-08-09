@@ -171,6 +171,47 @@ describe('SettingsDialog', () => {
     expect(screen.queryByText('Pomodoro Intervals')).not.toBeInTheDocument()
   })
 
+  it('shows only the matching music settings for widgets on the layout', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: {
+          clock: true,
+          weather: false,
+          calendar: false,
+          timer: false,
+          tasks: false,
+          notes: false,
+          spotify: false,
+          appleMusic: true,
+          applePodcast: false,
+          stocks: false,
+          currencies: false,
+        },
+        placements: {
+          clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+          weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
+          calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
+          timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          notes: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          spotify: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
+          applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
+          stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
+          currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+        },
+      }),
+    )
+
+    renderSettingsDialog()
+
+    expect(screen.getByText('Music Embeds')).toBeInTheDocument()
+    expect(screen.getByText('Apple Music saved links')).toBeInTheDocument()
+    expect(screen.queryByText('Spotify saved links')).not.toBeInTheDocument()
+    expect(screen.queryByText('Apple Podcast saved links')).not.toBeInTheDocument()
+  })
+
   it('persists custom theme colors when the custom theme is selected', () => {
     renderSettingsDialog()
 
