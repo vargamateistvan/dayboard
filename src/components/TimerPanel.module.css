@@ -114,6 +114,13 @@
   font-size: clamp(1.4rem, 5.5dvh, 3.1rem);
 }
 
+.displayShell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(4.25rem, 8.5vh, 6rem);
+ }
+
 .done {
   color: var(--color-accent);
   animation: pulse 1s ease-in-out infinite;
@@ -462,20 +469,36 @@
 }
 
 .fullscreen .timerBody {
-  align-items: center;
-  text-align: center;
-  gap: clamp(1rem, 2vh, 1.75rem);
+  align-items: stretch;
+  text-align: left;
+  gap: clamp(0.5rem, 1.1vh, 0.9rem);
+  max-height: 100%;
+  width: 100%;
+}
+
+.fullscreen .timerChrome {
+  min-height: 2.25rem;
+}
+
+.fullscreen .headerLeft,
+.fullscreen .headerRight {
+  flex-wrap: wrap;
+}
+
+.fullscreen .displayShell {
+  min-height: clamp(9rem, 18vh, 14rem);
+  padding: clamp(0.75rem, 1.5vw, 1.1rem);
 }
 
 .fullscreen .display {
-  font-size: clamp(6.5rem, 24vw, 16rem);
+  font-size: clamp(4.5rem, 16vw, 9rem);
 }
 
 .fullscreen .displaySmall {
-  font-size: clamp(6.5rem, 24vw, 16rem);
+  font-size: clamp(4rem, 14vw, 8rem);
 }
 
-.fullscreen .controls,
+.fullscreen .actionStrip,
 .fullscreen .inputRow,
 .fullscreen .sessions,
 .fullscreen .settingsEditor,
@@ -488,8 +511,8 @@
 .fullscreen .btnPrimary,
 .fullscreen .btnSecondary,
 .fullscreen .btnGhost {
-  font-size: clamp(1rem, 1.5vw, 1.25rem);
-  padding: 0.8rem 1.5rem;
+  font-size: clamp(0.9rem, 1.1vw, 1.1rem);
+  padding: 0.65rem 1.1rem;
 }
 
 .fullscreen .inputLabel,
@@ -502,13 +525,13 @@
 }
 
 .fullscreen .numberInput {
-  width: 8rem;
-  font-size: clamp(2rem, 4vw, 3rem);
+  width: 6rem;
+  font-size: clamp(1.2rem, 2.8vw, 1.8rem);
 }
 
 .fullscreen .settingsInput {
-  width: 4.5rem;
-  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  width: 4rem;
+  font-size: clamp(0.9rem, 1.1vw, 1rem);
 }
 
 @media (max-width: 700px) {
