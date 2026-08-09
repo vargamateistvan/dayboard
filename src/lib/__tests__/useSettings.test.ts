@@ -107,13 +107,6 @@ describe('settings persistence', () => {
           title: '1989',
         },
       ],
-      spotifyPodcastEmbedUrl: 'https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk',
-      spotifyPodcastEmbedLinks: [
-        {
-          url: 'https://open.spotify.com/show/4rOoJ6Egrf8K2IrywzwOMk',
-          title: 'The Joe Rogan Experience',
-        },
-      ],
       applePodcastEmbedUrl: 'https://podcasts.apple.com/us/podcast/the-joe-rogan-experience/id360084272',
       applePodcastEmbedLinks: [
         {

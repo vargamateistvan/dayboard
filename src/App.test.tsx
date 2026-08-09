@@ -13,7 +13,6 @@ const widgetVisibility = {
   notes: false,
   spotify: false,
   appleMusic: false,
-  spotifyPodcast: false,
   applePodcast: false,
   stocks: false,
   currencies: false,
@@ -28,8 +27,7 @@ const widgetPlacements = {
   notes: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
   spotify: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
   appleMusic: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
-  spotifyPodcast: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
-  applePodcast: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
+  applePodcast: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   stocks: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
 }
@@ -87,10 +85,6 @@ vi.mock('./components/SpotifyWidget', () => ({
 
 vi.mock('./components/AppleMusicWidget', () => ({
   AppleMusicWidget: () => <div>Apple Music widget</div>,
-}))
-
-vi.mock('./components/SpotifyPodcastWidget', () => ({
-  SpotifyPodcastWidget: () => <div>Spotify podcast widget</div>,
 }))
 
 vi.mock('./components/ApplePodcastWidget', () => ({

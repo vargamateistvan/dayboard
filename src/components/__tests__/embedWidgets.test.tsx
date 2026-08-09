@@ -7,7 +7,6 @@ import { MusicEmbedWidget } from '../MusicEmbedWidget'
 import { PodcastEmbedWidget } from '../PodcastEmbedWidget'
 import { SpotifyWidget } from '../SpotifyWidget'
 import { AppleMusicWidget } from '../AppleMusicWidget'
-import { SpotifyPodcastWidget } from '../SpotifyPodcastWidget'
 import { ApplePodcastWidget } from '../ApplePodcastWidget'
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
@@ -131,33 +130,6 @@ describe('AppleMusicWidget', () => {
     expect(screen.getByTitle('Apple Music Player player')).toHaveAttribute(
       'src',
       expect.stringContaining('https://embed.music.apple.com/us/album/midnights/1625498918'),
-    )
-  })
-})
-
-describe('SpotifyPodcastWidget', () => {
-  beforeEach(() => {
-    localStorage.clear()
-  })
-
-  afterEach(() => {
-    localStorage.clear()
-  })
-
-  it('updates the saved Spotify podcast link list when a new url is added', () => {
-    renderWithSettings(<SpotifyPodcastWidget />)
-
-    fireEvent.change(screen.getByPlaceholderText(/Paste another Spotify podcast show/i), {
-      target: { value: 'https://open.spotify.com/show/1X5myf60r44WZ3h8O9Qe4P' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-
-    expect(
-      JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').spotifyPodcastEmbedUrl,
-    ).toBe('https://open.spotify.com/show/1X5myf60r44WZ3h8O9Qe4P')
-    expect(screen.getByTitle('Spotify Podcast player')).toHaveAttribute(
-      'src',
-      expect.stringContaining('https://open.spotify.com/embed/show/1X5myf60r44WZ3h8O9Qe4P'),
     )
   })
 })

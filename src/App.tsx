@@ -13,7 +13,6 @@ import { TaskWidget } from './components/TaskWidget'
 import { NotesWidget } from './components/NotesWidget'
 import { SpotifyWidget } from './components/SpotifyWidget'
 import { AppleMusicWidget } from './components/AppleMusicWidget'
-import { SpotifyPodcastWidget } from './components/SpotifyPodcastWidget'
 import { ApplePodcastWidget } from './components/ApplePodcastWidget'
 import { StockWidget } from './components/StockWidget'
 import { CurrencyWidget } from './components/CurrencyWidget'
@@ -48,8 +47,6 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <SpotifyWidget isFullscreen={isFullscreen} />
     case 'appleMusic':
       return <AppleMusicWidget isFullscreen={isFullscreen} />
-    case 'spotifyPodcast':
-      return <SpotifyPodcastWidget isFullscreen={isFullscreen} />
     case 'applePodcast':
       return <ApplePodcastWidget isFullscreen={isFullscreen} />
     case 'stocks':

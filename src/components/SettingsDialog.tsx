@@ -12,7 +12,6 @@ import {
   normalizeAppleMusicEmbedUrl,
   normalizeApplePodcastEmbedUrl,
   normalizeSpotifyEmbedUrl,
-  normalizeSpotifyPodcastEmbedUrl,
 } from "../lib/musicEmbeds";
 import {
   WIDGET_GRID_COLUMNS,
@@ -551,12 +550,6 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const [appleMusicAddUrl, setAppleMusicAddUrl] = useState("");
   const [appleMusicLinkError, setAppleMusicLinkError] = useState<string | null>(null);
-  const [spotifyPodcastEmbedUrl, setSpotifyPodcastEmbedUrl] = useState(settings.spotifyPodcastEmbedUrl);
-  const [spotifyPodcastEmbedLinks, setSpotifyPodcastEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.spotifyPodcastEmbedLinks, settings.spotifyPodcastEmbedUrl),
-  );
-  const [spotifyPodcastAddUrl, setSpotifyPodcastAddUrl] = useState("");
-  const [spotifyPodcastLinkError, setSpotifyPodcastLinkError] = useState<string | null>(null);
   const [applePodcastEmbedUrl, setApplePodcastEmbedUrl] = useState(settings.applePodcastEmbedUrl);
   const [applePodcastEmbedLinks, setApplePodcastEmbedLinks] = useState(
     normalizeSavedMediaLinks(settings.applePodcastEmbedLinks, settings.applePodcastEmbedUrl),
@@ -594,7 +587,6 @@ export function SettingsDialog({ onClose }: Props) {
   const isMusicOnLayout =
     visibility.spotify ||
     visibility.appleMusic ||
-    visibility.spotifyPodcast ||
     visibility.applePodcast;
   const isTimerOnLayout = visibility.timer;
 
@@ -698,11 +690,6 @@ export function SettingsDialog({ onClose }: Props) {
       appleMusicEmbedLinks: normalizeSavedMediaLinks(
         appleMusicEmbedLinks,
         appleMusicEmbedUrl ? createSavedMediaLink(appleMusicEmbedUrl) : undefined,
-      ),
-      spotifyPodcastEmbedUrl,
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        spotifyPodcastEmbedLinks,
-        spotifyPodcastEmbedUrl ? createSavedMediaLink(spotifyPodcastEmbedUrl) : undefined,
       ),
       applePodcastEmbedUrl,
       applePodcastEmbedLinks: normalizeSavedMediaLinks(
@@ -1370,40 +1357,6 @@ export function SettingsDialog({ onClose }: Props) {
                 })
               }
               error={appleMusicLinkError}
-            />
-            <MediaLinkEditor
-              title="Spotify Podcast"
-              brand="spotify"
-              activeUrl={spotifyPodcastEmbedUrl}
-              savedLinks={spotifyPodcastEmbedLinks}
-              addUrl={spotifyPodcastAddUrl}
-              addPlaceholder="https://open.spotify.com/show/..."
-              onSelectUrl={(url) => {
-                setSpotifyPodcastEmbedUrl(url);
-                setSpotifyPodcastLinkError(null);
-              }}
-              onRemoveSelected={() =>
-                removeMediaLink(
-                  spotifyPodcastEmbedLinks,
-                  spotifyPodcastEmbedUrl,
-                  setSpotifyPodcastEmbedLinks,
-                  setSpotifyPodcastEmbedUrl,
-                )
-              }
-              onAddUrlChange={setSpotifyPodcastAddUrl}
-              onAddLink={() =>
-                addMediaLink({
-                  value: spotifyPodcastAddUrl,
-                  setValue: setSpotifyPodcastAddUrl,
-                  links: spotifyPodcastEmbedLinks,
-                  setLinks: setSpotifyPodcastEmbedLinks,
-                  validate: normalizeSpotifyPodcastEmbedUrl,
-                  setActiveUrl: setSpotifyPodcastEmbedUrl,
-                  setError: setSpotifyPodcastLinkError,
-                  errorMessage: "Please paste a valid Spotify podcast show or episode link.",
-                })
-              }
-              error={spotifyPodcastLinkError}
             />
             <MediaLinkEditor
               title="Apple Podcast"

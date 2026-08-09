@@ -37,8 +37,6 @@ export interface Settings {
   spotifyEmbedLinks: SavedMediaLink[]
   appleMusicEmbedUrl: string
   appleMusicEmbedLinks: SavedMediaLink[]
-  spotifyPodcastEmbedUrl: string
-  spotifyPodcastEmbedLinks: SavedMediaLink[]
   applePodcastEmbedUrl: string
   applePodcastEmbedLinks: SavedMediaLink[]
   stockSymbols: string[]
@@ -135,8 +133,6 @@ export const DEFAULT_SETTINGS: Settings = {
   spotifyEmbedLinks: [],
   appleMusicEmbedUrl: '',
   appleMusicEmbedLinks: [],
-  spotifyPodcastEmbedUrl: '',
-  spotifyPodcastEmbedLinks: [],
   applePodcastEmbedUrl: '',
   applePodcastEmbedLinks: [],
   stockSymbols: ['AAPL'],
@@ -413,13 +409,6 @@ export function loadSettings(): Settings {
           ? createSavedMediaLink((rest as { appleMusicEmbedUrl?: string }).appleMusicEmbedUrl!)
           : undefined,
       ),
-      spotifyPodcastEmbedUrl: normalizeEmbedUrl((rest as { spotifyPodcastEmbedUrl?: unknown }).spotifyPodcastEmbedUrl),
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { spotifyPodcastEmbedLinks?: unknown }).spotifyPodcastEmbedLinks,
-        (rest as { spotifyPodcastEmbedUrl?: unknown }).spotifyPodcastEmbedUrl
-          ? createSavedMediaLink((rest as { spotifyPodcastEmbedUrl?: string }).spotifyPodcastEmbedUrl!)
-          : undefined,
-      ),
       applePodcastEmbedUrl: normalizeEmbedUrl((rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl),
       applePodcastEmbedLinks: normalizeSavedMediaLinks(
         (rest as { applePodcastEmbedLinks?: unknown }).applePodcastEmbedLinks,
@@ -457,10 +446,6 @@ export function saveSettings(settings: Settings): void {
       appleMusicEmbedLinks: normalizeSavedMediaLinks(
         settings.appleMusicEmbedLinks,
         settings.appleMusicEmbedUrl ? createSavedMediaLink(settings.appleMusicEmbedUrl) : undefined,
-      ),
-      spotifyPodcastEmbedLinks: normalizeSavedMediaLinks(
-        settings.spotifyPodcastEmbedLinks,
-        settings.spotifyPodcastEmbedUrl ? createSavedMediaLink(settings.spotifyPodcastEmbedUrl) : undefined,
       ),
       applePodcastEmbedLinks: normalizeSavedMediaLinks(
         settings.applePodcastEmbedLinks,

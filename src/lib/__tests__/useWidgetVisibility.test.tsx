@@ -123,7 +123,7 @@ describe('useWidgetVisibility', () => {
 
     // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer(1,3); tasks hidden but placement ties at (1,3)
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,spotifyPodcast,applePodcast,stocks,currencies',
+      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,applePodcast,stocks,currencies',
     )
   })
 
