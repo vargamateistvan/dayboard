@@ -41,6 +41,9 @@ interface NetworkInformationLike extends EventTarget {
 }
 
 interface NavigatorWithTelemetry extends Navigator {
+  readonly userAgentData?: {
+    platform?: string
+  }
   readonly connection?: NetworkInformationLike
   readonly mozConnection?: NetworkInformationLike
   readonly webkitConnection?: NetworkInformationLike
@@ -78,10 +81,11 @@ interface NetworkThroughputSample {
 }
 
 function detectOperatingSystem(): string {
+  const navigatorWithTelemetry = navigator as NavigatorWithTelemetry
   const platformRaw = navigator.platform ?? ''
   const platform = platformRaw.toLowerCase()
   const userAgent = navigator.userAgent.toLowerCase()
-  const uaDataPlatform = navigator.userAgentData?.platform?.toLowerCase() ?? ''
+  const uaDataPlatform = navigatorWithTelemetry.userAgentData?.platform?.toLowerCase() ?? ''
   const source = `${uaDataPlatform} ${platform} ${userAgent}`
   const isIpadLikeDevice = platformRaw === 'MacIntel' && navigator.maxTouchPoints > 1
 
@@ -138,6 +142,23 @@ function formatKbps(value: number | null): string {
   }
 
   return `${value.toFixed(1)} kbps`
+}
+
+function getTooltipNumericValue(value: unknown): number | null {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  if (Array.isArray(value) && value.length > 0) {
+    return getTooltipNumericValue(value[0])
+  }
+
+  return null
 }
 
 function getConnectionInfo(): NetworkInformationLike | undefined {
@@ -512,11 +533,12 @@ export function DeviceInfoWidget({ isFullscreen = false }: DeviceInfoWidgetProps
                 <Line type="monotone" dataKey="diskPercent" stroke="#a855f7" dot={false} isAnimationActive={false} />
                 <Tooltip
                   labelFormatter={() => ''}
-                  formatter={(value: number | null, name: string) => {
-                    if (value === null || Number.isNaN(Number(value))) {
+                  formatter={(value, name) => {
+                    const numericValue = getTooltipNumericValue(value)
+                    if (numericValue === null) {
                       return ['Unavailable', name]
                     }
-                    return [`${Math.round(Number(value))}%`, name]
+                    return [`${Math.round(numericValue)}%`, name]
                   }}
                   contentStyle={tooltipContentStyle}
                 />
@@ -557,11 +579,12 @@ export function DeviceInfoWidget({ isFullscreen = false }: DeviceInfoWidgetProps
                 />
                 <Tooltip
                   labelFormatter={() => ''}
-                  formatter={(value: number | null, name: string) => {
-                    if (value === null || Number.isNaN(Number(value))) {
+                  formatter={(value, name) => {
+                    const numericValue = getTooltipNumericValue(value)
+                    if (numericValue === null) {
                       return ['Unavailable', name]
                     }
-                    return [`${Number(value).toFixed(1)} kbps`, name]
+                    return [`${numericValue.toFixed(1)} kbps`, name]
                   }}
                   contentStyle={tooltipContentStyle}
                 />
