@@ -184,10 +184,11 @@
 }
 
 .fullscreen {
-  justify-content: center;
+  justify-content: flex-start;
   width: min(100%, 1200px);
   margin: 0 auto;
-  gap: clamp(1rem, 2vh, 2rem);
+  gap: clamp(0.5rem, 1.2vh, 1.2rem);
+  min-height: 0;
 }
 
 .fullscreen .header {
@@ -204,8 +205,10 @@
 }
 
 .fullscreen .content {
-  align-items: center;
-  gap: clamp(1.5rem, 3vw, 3rem);
+  align-items: start;
+  gap: clamp(0.75rem, 1.8vw, 1.8rem);
+  overflow-y: auto;
+  padding-right: clamp(0.25rem, 0.8vw, 0.75rem);
 }
 
 .fullscreen .summary {
@@ -213,40 +216,40 @@
 }
 
 .fullscreen .degrees {
-  font-size: clamp(4rem, 12vw, 9rem);
+  font-size: clamp(3rem, min(9vw, 11dvh), 7rem);
 }
 
 .fullscreen .condition {
-  font-size: clamp(1.25rem, 2.8vw, 2rem);
+  font-size: clamp(1rem, min(2.1vw, 2.6dvh), 1.6rem);
 }
 
 .fullscreen .location {
-  font-size: clamp(1rem, 2vw, 1.35rem);
+  font-size: clamp(0.85rem, min(1.5vw, 2.1dvh), 1.15rem);
 }
 
 .fullscreen .todayForecast {
-  font-size: clamp(0.95rem, 1.8vw, 1.25rem);
+  font-size: clamp(0.75rem, min(1.25vw, 1.9dvh), 1rem);
 }
 
 .fullscreen .detailsGrid {
-  gap: 1rem 1.5rem;
+  gap: 0.6rem 0.9rem;
 }
 
 .fullscreen .detail {
-  gap: 0.35rem;
-  padding-top: 0.75rem;
+  gap: 0.2rem;
+  padding-top: 0.45rem;
 }
 
 .fullscreen .detailLabel {
-  font-size: clamp(0.8rem, 1.4vw, 1rem);
+  font-size: clamp(0.65rem, min(1vw, 1.6dvh), 0.85rem);
 }
 
 .fullscreen .detailValue {
-  font-size: clamp(1rem, 1.9vw, 1.45rem);
+  font-size: clamp(0.85rem, min(1.4vw, 2.1dvh), 1.15rem);
 }
 
 .fullscreen .detailValue {
-  font-size: clamp(1rem, 1.9vw, 1.45rem);
+  font-size: clamp(0.85rem, min(1.4vw, 2.1dvh), 1.15rem);
 }
 
 .forecastGrid {
