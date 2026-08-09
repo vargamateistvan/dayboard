@@ -57,38 +57,52 @@ function Stopwatch() {
   const { elapsedMs, state, start, pause, resume, reset } = useTimer();
   return (
     <div className={styles.timerBody}>
-      <div className={styles.display}>{formatMs(elapsedMs, true)}</div>
-      <div className={styles.controls}>
-        {state === "idle" && (
-          <button className={styles.btnPrimary} onClick={start}>
-            <Play size={14} />
-            Start
-          </button>
-        )}
-        {state === "running" && (
-          <button className={styles.btnSecondary} onClick={pause}>
-            <Pause size={14} />
-            Pause
-          </button>
-        )}
-        {state === "paused" && (
-          <>
+      <div className={styles.timerChrome}>
+        <div className={styles.headerLeft}>
+          <div className={styles.modeChip}>Stopwatch</div>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.stateChip} data-state={state}>
+            {state === "idle"
+              ? "Ready"
+              : state === "running"
+                ? "Running"
+                : "Paused"}
+          </div>
+        </div>
+      </div>
+      <div className={styles.displayShell}>
+        <div className={styles.display}>{formatMs(elapsedMs, true)}</div>
+      </div>
+      <div className={styles.actionStrip}>
+        <div className={styles.actionPrimary}>
+          {state === "idle" && (
+            <button className={styles.btnPrimary} onClick={start}>
+              <Play size={14} />
+              Start
+            </button>
+          )}
+          {state === "running" && (
+            <button className={styles.btnSecondary} onClick={pause}>
+              <Pause size={14} />
+              Pause
+            </button>
+          )}
+          {state === "paused" && (
             <button className={styles.btnPrimary} onClick={resume}>
               <Play size={14} />
               Resume
             </button>
+          )}
+        </div>
+        <div className={styles.actionSecondary}>
+          {state !== "idle" && (
             <button className={styles.btnGhost} onClick={reset}>
               <RotateCcw size={14} />
               Reset
             </button>
-          </>
-        )}
-        {state === "running" && (
-          <button className={styles.btnGhost} onClick={reset}>
-            <RotateCcw size={14} />
-            Reset
-          </button>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -127,53 +141,77 @@ function Countdown() {
 
   return (
     <div className={styles.timerBody}>
-      {state === "idle" && (
-        <div className={styles.inputRow}>
-          <label className={styles.inputLabel}>Minutes</label>
-          <input
-            className={styles.numberInput}
-            type="number"
-            min={1}
-            max={180}
-            value={inputMin}
-            onChange={(e) =>
-              setInputMin(Math.max(1, parseInt(e.target.value) || 1))
-            }
-          />
+      <div className={styles.timerChrome}>
+        <div className={styles.headerLeft}>
+          <div className={styles.modeChip}>Countdown</div>
         </div>
-      )}
-      <div className={[styles.display, styles.displaySmall, done ? styles.done : ""].join(" ")}>
-        {done ? "Done!" : formatMs(remaining)}
+        <div className={styles.headerRight}>
+          {state === "idle" ? (
+            <div className={styles.inputRow}>
+              <label className={styles.inputLabel}>Minutes</label>
+              <input
+                className={styles.numberInput}
+                type="number"
+                min={1}
+                max={180}
+                value={inputMin}
+                onChange={(e) =>
+                  setInputMin(Math.max(1, parseInt(e.target.value) || 1))
+                }
+              />
+            </div>
+          ) : (
+            <div
+              className={styles.stateChip}
+              data-state={done ? "done" : state}
+            >
+              {done
+                ? "Completed"
+                : state === "running"
+                  ? "Counting down"
+                  : "Paused"}
+            </div>
+          )}
+        </div>
       </div>
-      <div className={styles.controls}>
-        {state === "idle" && (
-          <button className={styles.btnPrimary} onClick={start}>
-            <Play size={14} />
-            Start
-          </button>
-        )}
-        {state === "running" && (
-          <button className={styles.btnSecondary} onClick={pause}>
-            <Pause size={14} />
-            Pause
-          </button>
-        )}
-        {(state === "paused" || state === "done") && (
-          <button
-            className={styles.btnPrimary}
-            onClick={resume}
-            disabled={state === "done"}
-          >
-            <Play size={14} />
-            Resume
-          </button>
-        )}
-        {state !== "idle" && (
-          <button className={styles.btnGhost} onClick={handleReset}>
-            <RotateCcw size={14} />
-            Reset
-          </button>
-        )}
+      <div className={styles.displayShell}>
+        <div className={[styles.display, done ? styles.done : ""].join(" ")}>
+          {done ? "Done!" : formatMs(remaining)}
+        </div>
+      </div>
+      <div className={styles.actionStrip}>
+        <div className={styles.actionPrimary}>
+          {state === "idle" && (
+            <button className={styles.btnPrimary} onClick={start}>
+              <Play size={14} />
+              Start
+            </button>
+          )}
+          {state === "running" && (
+            <button className={styles.btnSecondary} onClick={pause}>
+              <Pause size={14} />
+              Pause
+            </button>
+          )}
+          {(state === "paused" || state === "done") && (
+            <button
+              className={styles.btnPrimary}
+              onClick={resume}
+              disabled={state === "done"}
+            >
+              <Play size={14} />
+              Resume
+            </button>
+          )}
+        </div>
+        <div className={styles.actionSecondary}>
+          {state !== "idle" && (
+            <button className={styles.btnGhost} onClick={handleReset}>
+              <RotateCcw size={14} />
+              Reset
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -204,7 +242,6 @@ function Pomodoro() {
     recordSession(phase === "work" ? settings.pomodoroWorkMinutes : 0);
 
     if (autoCycle) {
-      // Auto-start next phase after 1 second
       setTimeout(() => {
         startNext();
       }, 1000);
@@ -219,7 +256,6 @@ function Pomodoro() {
   });
   const remaining = Math.max(0, durationMs - elapsedMs);
 
-  // Tick beep for last 3 seconds
   const lastTickRef = useRef(-1);
   useEffect(() => {
     if (state !== "running") return;
@@ -230,7 +266,6 @@ function Pomodoro() {
     }
   }, [remaining, state]);
 
-  // Request notification permission on mount
   useEffect(() => {
     requestNotificationPermission();
   }, []);
@@ -262,133 +297,150 @@ function Pomodoro() {
 
   return (
     <div className={styles.timerBody}>
-      <div className={styles.pomodoroHeader}>
-        <div className={styles.phaseBadge} data-phase={phase}>
-          {phase === "work" ? (
-            <>
-              <Target size={12} />
-              Work
-            </>
-          ) : (
-            <>
-              <Coffee size={12} />
-              Break
-            </>
+      <div className={styles.timerChrome}>
+        <div className={styles.headerLeft}>
+          <div className={styles.modeChip}>Pomodoro</div>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.phaseBadge} data-phase={phase}>
+            {phase === "work" ? (
+              <>
+                <Target size={12} />
+                Work
+              </>
+            ) : (
+              <>
+                <Coffee size={12} />
+                Break
+              </>
+            )}
+          </div>
+          {sessions > 0 && (
+            <div className={styles.stateChip} data-state="sessions">
+              <StopCircle size={11} />
+              {sessions} completed
+            </div>
+          )}
+          <label
+            className={styles.inlineToggleLabel}
+            title="Auto-cycle to next phase"
+          >
+            <input
+              type="checkbox"
+              checked={autoCycle}
+              onChange={(e) => setAutoCycle(e.target.checked)}
+              className={styles.toggleCheckboxInput}
+            />
+            <span
+              className={`${styles.inlineToggleCheckbox} ${autoCycle ? styles.inlineToggleCheckboxChecked : ""}`}
+              aria-hidden="true"
+            >
+              {autoCycle && <Check size={12} />}
+            </span>
+            <span>Auto-cycle</span>
+          </label>
+          <button
+            className={styles.btnGhost}
+            onClick={() => setShowStats(!showStats)}
+            title="Show/hide stats"
+          >
+            <BarChart3 size={14} />
+          </button>
+          {state === "idle" && !waitingNext && !editingSettings && (
+            <button
+              className={styles.btnGhost}
+              onClick={() => setEditingSettings(true)}
+              title="Edit settings"
+            >
+              <Settings size={14} />
+            </button>
           )}
         </div>
-
-        {/* Inline settings editor after phase badge */}
-        {editingSettings && state === "idle" && !waitingNext && (
-          <div className={styles.settingsEditorInline}>
-            <div className={styles.settingsRowInline}>
-              <label className={styles.settingsLabel}>Work</label>
-              <input
-                className={styles.settingsInput}
-                type="number"
-                min={1}
-                max={60}
-                value={workInput}
-                onChange={(e) => setWorkInput(Math.max(1, parseInt(e.target.value) || 1))}
-              />
-              <span className={styles.settingsUnit}>min</span>
-            </div>
-            <div className={styles.settingsRowInline}>
-              <label className={styles.settingsLabel}>Break</label>
-              <input
-                className={styles.settingsInput}
-                type="number"
-                min={1}
-                max={30}
-                value={breakInput}
-                onChange={(e) => setBreakInput(Math.max(1, parseInt(e.target.value) || 1))}
-              />
-              <span className={styles.settingsUnit}>min</span>
-            </div>
-            <button className={styles.btnSmall} onClick={handleSaveSettings}>
-              Save
-            </button>
-            <button className={styles.btnSmallGhost} onClick={() => setEditingSettings(false)}>
-              Cancel
-            </button>
-          </div>
-        )}
       </div>
 
-      <div className={`${styles.display} ${styles.displaySmall}`}>{formatMs(remaining)}</div>
-      {sessions > 0 && (
-        <div className={styles.sessions}>
-          <StopCircle size={11} />
-          {sessions} session{sessions !== 1 ? "s" : ""} completed
+      <div className={styles.displayShell}>
+        <div className={`${styles.display}`}>{formatMs(remaining)}</div>
+      </div>
+
+      <div className={styles.actionStrip}>
+        <div className={styles.actionPrimary}>
+          {state === "idle" && !waitingNext && (
+            <button className={styles.btnPrimary} onClick={start}>
+              <Play size={14} />
+              Start
+            </button>
+          )}
+          {state === "running" && (
+            <button className={styles.btnSecondary} onClick={pause}>
+              <Pause size={14} />
+              Pause
+            </button>
+          )}
+          {state === "paused" && (
+            <button className={styles.btnPrimary} onClick={resume}>
+              <Play size={14} />
+              Resume
+            </button>
+          )}
+          {waitingNext && (
+            <button className={styles.btnPrimary} onClick={startNext}>
+              <ChevronRight size={14} />
+              Start {phase === "work" ? "Break" : "Work"}
+            </button>
+          )}
+        </div>
+        <div className={styles.actionSecondary}>
+          {state !== "idle" && (
+            <button className={styles.btnGhost} onClick={handleReset}>
+              <RotateCcw size={14} />
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+
+      {editingSettings && state === "idle" && !waitingNext && (
+        <div className={styles.settingsEditorInline}>
+          <div className={styles.settingsRowInline}>
+            <label className={styles.settingsLabel}>Work</label>
+            <input
+              className={styles.settingsInput}
+              type="number"
+              min={1}
+              max={60}
+              value={workInput}
+              onChange={(e) =>
+                setWorkInput(Math.max(1, parseInt(e.target.value) || 1))
+              }
+            />
+            <span className={styles.settingsUnit}>min</span>
+          </div>
+          <div className={styles.settingsRowInline}>
+            <label className={styles.settingsLabel}>Break</label>
+            <input
+              className={styles.settingsInput}
+              type="number"
+              min={1}
+              max={30}
+              value={breakInput}
+              onChange={(e) =>
+                setBreakInput(Math.max(1, parseInt(e.target.value) || 1))
+              }
+            />
+            <span className={styles.settingsUnit}>min</span>
+          </div>
+          <button className={styles.btnSmall} onClick={handleSaveSettings}>
+            Save
+          </button>
+          <button
+            className={styles.btnSmallGhost}
+            onClick={() => setEditingSettings(false)}
+          >
+            Cancel
+          </button>
         </div>
       )}
 
-      <div className={styles.controls}>
-        {state === "idle" && !waitingNext && (
-          <button className={styles.btnPrimary} onClick={start}>
-            <Play size={14} />
-            Start
-          </button>
-        )}
-        {state === "running" && (
-          <button className={styles.btnSecondary} onClick={pause}>
-            <Pause size={14} />
-            Pause
-          </button>
-        )}
-        {state === "paused" && (
-          <button className={styles.btnPrimary} onClick={resume}>
-            <Play size={14} />
-            Resume
-          </button>
-        )}
-        {waitingNext && (
-          <button className={styles.btnPrimary} onClick={startNext}>
-            <ChevronRight size={14} />
-            Start {phase === "work" ? "Break" : "Work"}
-          </button>
-        )}
-        {state !== "idle" && (
-          <button className={styles.btnGhost} onClick={handleReset}>
-            <RotateCcw size={14} />
-            Reset
-          </button>
-        )}
-        <button
-          className={styles.btnGhost}
-          onClick={() => setShowStats(!showStats)}
-          title="Show/hide stats"
-        >
-          <BarChart3 size={14} />
-        </button>
-        {state === "idle" && !waitingNext && !editingSettings && (
-          <button
-            className={styles.btnGhost}
-            onClick={() => setEditingSettings(true)}
-            title="Edit settings"
-          >
-            <Settings size={14} />
-          </button>
-        )}
-
-        {/* Auto-cycle toggle inline */}
-        <label className={styles.inlineToggleLabel} title="Auto-cycle to next phase">
-          <input
-            type="checkbox"
-            checked={autoCycle}
-            onChange={(e) => setAutoCycle(e.target.checked)}
-            className={styles.toggleCheckboxInput}
-          />
-          <span
-            className={`${styles.inlineToggleCheckbox} ${autoCycle ? styles.inlineToggleCheckboxChecked : ""}`}
-            aria-hidden="true"
-          >
-            {autoCycle && <Check size={12} />}
-          </span>
-          <span>Auto-cycle</span>
-        </label>
-      </div>
-
-      {/* Stats section */}
       {showStats && <PomodoroStats />}
     </div>
   );
@@ -402,7 +454,7 @@ const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
 ];
 
 interface TimerPanelProps {
-  readonly isFullscreen?: boolean
+  readonly isFullscreen?: boolean;
 }
 
 export function TimerPanel({ isFullscreen = false }: TimerPanelProps) {
@@ -414,7 +466,11 @@ export function TimerPanel({ isFullscreen = false }: TimerPanelProps) {
   };
 
   return (
-    <div className={[styles.panel, isFullscreen ? styles.fullscreen : ""].join(" ")}>
+    <div
+      className={[styles.panel, isFullscreen ? styles.fullscreen : ""].join(
+        " ",
+      )}
+    >
       <div className={styles.tabs} role="tablist">
         {TABS.map((t) => (
           <button
