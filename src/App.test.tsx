@@ -15,6 +15,8 @@ const widgetVisibility = {
   appleMusic: false,
   spotifyPodcast: false,
   applePodcast: false,
+  stocks: false,
+  currencies: false,
 } satisfies Record<Widget, boolean>
 
 const widgetPlacements = {
@@ -28,6 +30,8 @@ const widgetPlacements = {
   appleMusic: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
   spotifyPodcast: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   applePodcast: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
+  stocks: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
+  currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
 }
 
 vi.mock('./lib/useEventNotifications', () => ({
@@ -91,6 +95,14 @@ vi.mock('./components/SpotifyPodcastWidget', () => ({
 
 vi.mock('./components/ApplePodcastWidget', () => ({
   ApplePodcastWidget: () => <div>Apple podcast widget</div>,
+}))
+
+vi.mock('./components/StockWidget', () => ({
+  StockWidget: () => <div>Stocks widget</div>,
+}))
+
+vi.mock('./components/CurrencyWidget', () => ({
+  CurrencyWidget: () => <div>Currencies widget</div>,
 }))
 
 vi.mock('./components/BuyMeCoffeeWidget', () => ({

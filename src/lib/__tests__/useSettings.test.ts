@@ -123,6 +123,9 @@ describe('settings persistence', () => {
       ],
       pomodoroWorkMinutes: 50,
       pomodoroBreakMinutes: 10,
+      stockSymbols: ['AAPL', 'TSLA'],
+      currencyPairs: [['USD', 'EUR'], ['GBP', 'JPY']] as [string, string][],
+      financeRefreshMinutes: 5,
       customColors: DEFAULT_SETTINGS.customColors,
     }
     saveSettings(custom)

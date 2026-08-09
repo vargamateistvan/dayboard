@@ -11,6 +11,8 @@ export const WIDGET_IDS = [
   "appleMusic",
   "spotifyPodcast",
   "applePodcast",
+  "stocks",
+  "currencies",
 ] as const;
 export const WIDGET_GRID_COLUMNS = 2;
 export const MIN_GRID_ROWS = 2;
@@ -57,6 +59,8 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
   appleMusic: false,
   spotifyPodcast: false,
   applePodcast: false,
+  stocks: false,
+  currencies: false,
 };
 
 const DEFAULT_PLACEMENTS: WidgetPlacements = {
@@ -70,6 +74,8 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
   spotifyPodcast: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
   applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
+  stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
+  currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
 };
 
 export const MIN_WIDGET_SIZE: Record<
@@ -86,6 +92,8 @@ export const MIN_WIDGET_SIZE: Record<
   appleMusic: { columnSpan: 1, rowSpan: 2 },
   spotifyPodcast: { columnSpan: 1, rowSpan: 1 },
   applePodcast: { columnSpan: 1, rowSpan: 2 },
+  stocks: { columnSpan: 1, rowSpan: 1 },
+  currencies: { columnSpan: 1, rowSpan: 1 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {

@@ -563,6 +563,12 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const [applePodcastAddUrl, setApplePodcastAddUrl] = useState("");
   const [applePodcastLinkError, setApplePodcastLinkError] = useState<string | null>(null);
+  const [stockSymbols, setStockSymbols] = useState<string[]>(settings.stockSymbols);
+  const [stockAddInput, setStockAddInput] = useState("");
+  const [currencyPairs, setCurrencyPairs] = useState<[string, string][]>(settings.currencyPairs);
+  const [currencyAddBase, setCurrencyAddBase] = useState("");
+  const [currencyAddTarget, setCurrencyAddTarget] = useState("");
+  const [financeRefreshMin, setFinanceRefreshMin] = useState(settings.financeRefreshMinutes);
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(
     settings.showBuyMeACoffeeWidget,
   );
@@ -694,6 +700,9 @@ export function SettingsDialog({ onClose }: Props) {
         applePodcastEmbedLinks,
         applePodcastEmbedUrl ? createSavedMediaLink(applePodcastEmbedUrl) : undefined,
       ),
+      stockSymbols,
+      currencyPairs,
+      financeRefreshMinutes: financeRefreshMin,
       showBuyMeACoffeeWidget,
       calendarHidePastEvents,
       calendarShowMonthlyOverview,
@@ -1133,6 +1142,142 @@ export function SettingsDialog({ onClose }: Props) {
             <p className={styles.hint}>
               Weather updates automatically using this interval. You can still
               refresh it manually anytime.
+            </p>
+          </section>
+
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Finance Widgets</h3>
+
+            {/* Auto-refresh interval */}
+            <div className={styles.intervalRow}>
+              <label className={styles.intervalLabel}>
+                <span>Refresh every (minutes)</span>
+                <input
+                  className={styles.input}
+                  type="number"
+                  min={1}
+                  max={1440}
+                  value={financeRefreshMin}
+                  onChange={(e) =>
+                    setFinanceRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+                  }
+                />
+              </label>
+            </div>
+
+            {/* Stocks list */}
+            <p className={styles.hint} style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontWeight: 600 }}>
+              Stock symbols
+            </p>
+            {stockSymbols.map((sym) => (
+              <div key={sym} className={styles.calendarRow}>
+                <span className={[styles.input, styles.calendarUrlInput].join(' ')} style={{ display: 'flex', alignItems: 'center' }}>{sym}</span>
+                <button
+                  type="button"
+                  className={styles.removeCalendarBtn}
+                  onClick={() => setStockSymbols((prev) => prev.filter((s) => s !== sym))}
+                  aria-label={`Remove ${sym}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <div className={styles.calendarRow}>
+              <input
+                className={[styles.input, styles.calendarUrlInput].join(' ')}
+                type="text"
+                maxLength={12}
+                value={stockAddInput}
+                onChange={(e) => setStockAddInput(e.target.value.toUpperCase())}
+                placeholder="e.g. TSLA"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    const sym = stockAddInput.trim().toUpperCase()
+                    if (sym && !stockSymbols.includes(sym)) {
+                      setStockSymbols((prev) => [...prev, sym])
+                    }
+                    setStockAddInput('')
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className={styles.addCalendarBtn}
+                onClick={() => {
+                  const sym = stockAddInput.trim().toUpperCase()
+                  if (sym && !stockSymbols.includes(sym)) {
+                    setStockSymbols((prev) => [...prev, sym])
+                  }
+                  setStockAddInput('')
+                }}
+              >
+                Add
+              </button>
+            </div>
+
+            {/* Currency pairs list */}
+            <p className={styles.hint} style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontWeight: 600 }}>
+              Currency pairs
+            </p>
+            {currencyPairs.map(([base, target]) => (
+              <div key={`${base}/${target}`} className={styles.calendarRow}>
+                <span className={[styles.input, styles.calendarUrlInput].join(' ')} style={{ display: 'flex', alignItems: 'center' }}>{base} → {target}</span>
+                <button
+                  type="button"
+                  className={styles.removeCalendarBtn}
+                  onClick={() =>
+                    setCurrencyPairs((prev) =>
+                      prev.filter(([b, t]) => !(b === base && t === target)),
+                    )
+                  }
+                  aria-label={`Remove ${base}/${target}`}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <div className={styles.calendarRow}>
+              <input
+                className={styles.input}
+                type="text"
+                maxLength={3}
+                value={currencyAddBase}
+                onChange={(e) => setCurrencyAddBase(e.target.value.toUpperCase())}
+                placeholder="USD"
+              />
+              <span style={{ alignSelf: 'center', color: 'var(--color-text-muted)', flexShrink: 0 }}>→</span>
+              <input
+                className={styles.input}
+                type="text"
+                maxLength={3}
+                value={currencyAddTarget}
+                onChange={(e) => setCurrencyAddTarget(e.target.value.toUpperCase())}
+                placeholder="EUR"
+              />
+              <button
+                type="button"
+                className={styles.addCalendarBtn}
+                onClick={() => {
+                  const base = currencyAddBase.trim().toUpperCase()
+                  const target = currencyAddTarget.trim().toUpperCase()
+                  if (
+                    /^[A-Z]{3}$/.test(base) &&
+                    /^[A-Z]{3}$/.test(target) &&
+                    !currencyPairs.some(([b, t]) => b === base && t === target)
+                  ) {
+                    setCurrencyPairs((prev) => [...prev, [base, target]])
+                    setCurrencyAddBase('')
+                    setCurrencyAddTarget('')
+                  }
+                }}
+              >
+                Add
+              </button>
+            </div>
+
+            <p className={styles.hint}>
+              Data refreshes automatically at the selected interval. You can still refresh manually.
             </p>
           </section>
 

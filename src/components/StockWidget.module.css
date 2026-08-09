@@ -1,0 +1,168 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  gap: 0.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+  padding: 0.15rem 0.25rem;
+}
+
+.refresh:hover {
+  opacity: 1;
+}
+
+/* scrollable list of stock rows */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.08));
+}
+
+.row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.rowHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.symbol {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.name {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.rowLoading,
+.rowError {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.rowError {
+  color: var(--color-danger);
+}
+
+.rowBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.rowData {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
+}
+
+.rowMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+}
+
+.chart {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+/* fullscreen */
+.fullscreen {
+  gap: 1rem;
+}
+
+.fullscreen .title {
+  font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+}
+
+.fullscreen .symbol {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}
+
+.fullscreen .price {
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+}
+
+.fullscreen .change,
+.fullscreen .rowMeta {
+  font-size: clamp(0.8rem, 1.2vw, 1rem);
+}
+
+.fullscreen .chart {
+  width: 140px;
+}

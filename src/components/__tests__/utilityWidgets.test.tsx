@@ -7,6 +7,8 @@ import { BuyMeCoffeeWidget } from '../BuyMeCoffeeWidget'
 import { MediaBrandIcon } from '../MediaBrandIcon'
 import { NotesWidget } from '../NotesWidget'
 import { NotificationBadge } from '../NotificationBadge'
+import { StockWidget } from '../StockWidget'
+import { CurrencyWidget } from '../CurrencyWidget'
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
   saveSettings({ ...DEFAULT_SETTINGS, ...settingsPatch })
@@ -126,5 +128,85 @@ describe('BuyMeCoffeeWidget', () => {
     renderWithSettings(<BuyMeCoffeeWidget />, { showBuyMeACoffeeWidget: false })
 
     expect(screen.queryByRole('button', { name: /Buy Me a Coffee widget/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('StockWidget', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('renders the selected stock quote', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          chart: {
+            result: [{
+              meta: {
+                symbol: 'AAPL',
+                longName: 'Apple Inc.',
+                exchangeName: 'NMS',
+                currency: 'USD',
+                regularMarketPrice: 313.33,
+                chartPreviousClose: 312.41,
+                marketState: 'CLOSED',
+              },
+              indicators: {
+                quote: [{ close: [310.0, 311.5, 312.41, 313.33] }],
+              },
+            }],
+            error: null,
+          },
+        }),
+      }),
+    )
+
+    renderWithSettings(<StockWidget />, { stockSymbols: ['AAPL'] })
+
+    expect(await screen.findByText('AAPL')).toBeInTheDocument()
+    expect(screen.getByText(/\$313\.33/)).toBeInTheDocument()
+    // change = 313.33 - 312.41 = 0.92
+    expect(screen.getByText(/\+0\.92/)).toBeInTheDocument()
+    expect(screen.getByText(/○ Closed/)).toBeInTheDocument()
+  })
+})
+
+describe('CurrencyWidget', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('renders the selected currency rate', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          result: 'success',
+          base: 'USD',
+          time_last_update_utc: 'Sun, 09 Aug 2026 00:02:31 +0000',
+          rates: { EUR: 0.92 },
+        }),
+      }),
+    )
+
+    renderWithSettings(<CurrencyWidget />, {
+      currencyPairs: [['USD', 'EUR']],
+    })
+
+    expect(await screen.findByText(/1 USD = 0.92 EUR/)).toBeInTheDocument()
+    expect(screen.getByText(/1 EUR = 1\.086957 USD/)).toBeInTheDocument()
   })
 })

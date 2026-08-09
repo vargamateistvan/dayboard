@@ -41,6 +41,9 @@ export interface Settings {
   spotifyPodcastEmbedLinks: SavedMediaLink[]
   applePodcastEmbedUrl: string
   applePodcastEmbedLinks: SavedMediaLink[]
+  stockSymbols: string[]
+  currencyPairs: [string, string][]
+  financeRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   customColors?: CustomColors
@@ -136,6 +139,9 @@ export const DEFAULT_SETTINGS: Settings = {
   spotifyPodcastEmbedLinks: [],
   applePodcastEmbedUrl: '',
   applePodcastEmbedLinks: [],
+  stockSymbols: ['AAPL'],
+  currencyPairs: [['USD', 'EUR']],
+  financeRefreshMinutes: 10,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -154,6 +160,10 @@ interface StoredSettings extends Partial<Omit<Settings, 'calendarFeeds'>> {
   calendarUrl?: unknown
   calendarUrls?: unknown
   calendarFeeds?: unknown
+  // Legacy single-value finance fields (migrated to arrays)
+  stockSymbol?: unknown
+  currencyBase?: unknown
+  currencyTarget?: unknown
 }
 
 function isHexColor(color: unknown): color is string {
@@ -237,6 +247,88 @@ function normalizeWeatherShowExtraDetails(value: unknown): boolean {
 
 function normalizeEmbedUrl(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
+}
+
+function normalizeTickerSymbol(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback
+  }
+
+  const normalized = value.trim().toUpperCase()
+  return normalized.length > 0 ? normalized : fallback
+}
+
+function normalizeCurrencyCode(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback
+  }
+
+  const normalized = value.trim().toUpperCase()
+  return /^[A-Z]{3}$/.test(normalized) ? normalized : fallback
+}
+
+function normalizeStockSymbols(value: unknown): string[] {
+  // Migrate from legacy single string field
+  if (typeof value === 'string') {
+    const sym = value.trim().toUpperCase()
+    return sym.length > 0 ? [sym] : DEFAULT_SETTINGS.stockSymbols
+  }
+
+  if (!Array.isArray(value) || value.length === 0) {
+    return DEFAULT_SETTINGS.stockSymbols
+  }
+
+  const seen = new Set<string>()
+  const result: string[] = []
+
+  for (const item of value) {
+    const sym = normalizeTickerSymbol(item, '')
+    if (sym && !seen.has(sym)) {
+      seen.add(sym)
+      result.push(sym)
+    }
+  }
+
+  return result.length > 0 ? result : DEFAULT_SETTINGS.stockSymbols
+}
+
+function normalizeCurrencyPairs(
+  pairs: unknown,
+  legacyBase?: unknown,
+  legacyTarget?: unknown,
+): [string, string][] {
+  // Migrate from legacy separate base/target fields
+  if (!Array.isArray(pairs) || pairs.length === 0) {
+    const base = normalizeCurrencyCode(legacyBase, '')
+    const target = normalizeCurrencyCode(legacyTarget, '')
+    if (base && target) return [[base, target]]
+    return DEFAULT_SETTINGS.currencyPairs
+  }
+
+  const seen = new Set<string>()
+  const result: [string, string][] = []
+
+  for (const item of pairs) {
+    if (!Array.isArray(item) || item.length < 2) continue
+    const base = normalizeCurrencyCode(item[0], '')
+    const target = normalizeCurrencyCode(item[1], '')
+    if (!base || !target) continue
+    const key = `${base}/${target}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      result.push([base, target])
+    }
+  }
+
+  return result.length > 0 ? result : DEFAULT_SETTINGS.currencyPairs
+}
+
+function normalizeFinanceRefreshMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.financeRefreshMinutes
+  }
+
+  return Math.max(1, Math.round(value))
 }
 
 function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
@@ -335,6 +427,17 @@ export function loadSettings(): Settings {
           ? createSavedMediaLink((rest as { applePodcastEmbedUrl?: string }).applePodcastEmbedUrl!)
           : undefined,
       ),
+      stockSymbols: normalizeStockSymbols(
+        (rest as { stockSymbols?: unknown }).stockSymbols ?? rest.stockSymbol,
+      ),
+      currencyPairs: normalizeCurrencyPairs(
+        (rest as { currencyPairs?: unknown }).currencyPairs,
+        rest.currencyBase,
+        rest.currencyTarget,
+      ),
+      financeRefreshMinutes: normalizeFinanceRefreshMinutes(
+        (rest as { financeRefreshMinutes?: unknown }).financeRefreshMinutes,
+      ),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
@@ -363,6 +466,9 @@ export function saveSettings(settings: Settings): void {
         settings.applePodcastEmbedLinks,
         settings.applePodcastEmbedUrl ? createSavedMediaLink(settings.applePodcastEmbedUrl) : undefined,
       ),
+      stockSymbols: normalizeStockSymbols(settings.stockSymbols),
+      currencyPairs: normalizeCurrencyPairs(settings.currencyPairs),
+      financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
     }),
   )
 }

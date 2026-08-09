@@ -43,6 +43,22 @@ function Probe({ label }: { label: string }) {
           placements.appleMusic.rowSpan,
         ].join(',')}
       </span>
+      <span data-testid={`stocks-placement-${label}`}>
+        {[
+          placements.stocks.column,
+          placements.stocks.row,
+          placements.stocks.columnSpan,
+          placements.stocks.rowSpan,
+        ].join(',')}
+      </span>
+      <span data-testid={`currencies-placement-${label}`}>
+        {[
+          placements.currencies.column,
+          placements.currencies.row,
+          placements.currencies.columnSpan,
+          placements.currencies.rowSpan,
+        ].join(',')}
+      </span>
 
       {/* toggle buttons */}
       <button onClick={() => toggleWidget('weather')}  aria-label={`toggle-${label}`}>toggle</button>
@@ -107,7 +123,7 @@ describe('useWidgetVisibility', () => {
 
     // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer(1,3); tasks hidden but placement ties at (1,3)
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,spotifyPodcast,applePodcast',
+      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,spotifyPodcast,applePodcast,stocks,currencies',
     )
   })
 

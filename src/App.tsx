@@ -15,6 +15,8 @@ import { SpotifyWidget } from './components/SpotifyWidget'
 import { AppleMusicWidget } from './components/AppleMusicWidget'
 import { SpotifyPodcastWidget } from './components/SpotifyPodcastWidget'
 import { ApplePodcastWidget } from './components/ApplePodcastWidget'
+import { StockWidget } from './components/StockWidget'
+import { CurrencyWidget } from './components/CurrencyWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
@@ -50,6 +52,10 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <SpotifyPodcastWidget isFullscreen={isFullscreen} />
     case 'applePodcast':
       return <ApplePodcastWidget isFullscreen={isFullscreen} />
+    case 'stocks':
+      return <StockWidget isFullscreen={isFullscreen} />
+    case 'currencies':
+      return <CurrencyWidget isFullscreen={isFullscreen} />
   }
 }
 
