@@ -113,6 +113,29 @@ describe('CalendarWidget', () => {
     expect(screen.getByText(`${new Date().getFullYear()}.`)).toBeInTheDocument()
   })
 
+  it('highlights the current day in the monthly overview', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS }),
+    )
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    const todayLabel = new Date().toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+    })
+    const todayCell = screen.getByLabelText(todayLabel)
+
+    expect(todayCell.className).toMatch(/monthCellToday/)
+    expect(todayCell.className).toMatch(/monthCellHasEvent/)
+    expect(todayCell).toHaveAttribute('aria-current', 'date')
+
+    vi.unstubAllGlobals()
+  })
+
   it('starts the calendar week on Monday by default', () => {
     renderWithSettings([])
 

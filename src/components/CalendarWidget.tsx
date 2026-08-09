@@ -661,6 +661,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                     month: 'long',
                     day: 'numeric',
                   })}
+                  aria-current={cell.isToday ? 'date' : undefined}
                   tabIndex={0}
                   role="button"
                   onClick={() => {
