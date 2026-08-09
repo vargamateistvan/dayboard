@@ -9,6 +9,7 @@ import { NotesWidget } from '../NotesWidget'
 import { NotificationBadge } from '../NotificationBadge'
 import { StockWidget } from '../StockWidget'
 import { CurrencyWidget } from '../CurrencyWidget'
+import { DeviceInfoWidget } from '../DeviceInfoWidget'
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
   saveSettings({ ...DEFAULT_SETTINGS, ...settingsPatch })
@@ -208,5 +209,23 @@ describe('CurrencyWidget', () => {
 
     expect(await screen.findByText(/1 USD = 0.92 EUR/)).toBeInTheDocument()
     expect(screen.getByText(/1 EUR = 1\.086957 USD/)).toBeInTheDocument()
+  })
+})
+
+describe('DeviceInfoWidget', () => {
+  it('renders key platform fields', () => {
+    render(<DeviceInfoWidget />)
+
+    expect(screen.getByText('Device Info')).toBeInTheDocument()
+    expect(screen.getByText('Operating system')).toBeInTheDocument()
+    expect(screen.getByText('Device type')).toBeInTheDocument()
+    expect(screen.getByText('Browser')).toBeInTheDocument()
+    expect(screen.getByText('Timezone')).toBeInTheDocument()
+    expect(screen.getByText('Network')).toBeInTheDocument()
+    expect(screen.getAllByText('Battery').length).toBeGreaterThan(0)
+    expect(screen.getByText('CPU usage')).toBeInTheDocument()
+    expect(screen.getAllByText('Memory').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Disk').length).toBeGreaterThan(0)
+    expect(screen.getByText('Net throughput')).toBeInTheDocument()
   })
 })

@@ -18,6 +18,7 @@ const widgetVisibility = {
   stocks: false,
   currencies: false,
   quote: false,
+  deviceInfo: false,
 } satisfies Record<Widget, boolean>
 
 const widgetPlacements = {
@@ -34,6 +35,7 @@ const widgetPlacements = {
   stocks: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
   quote: { column: 1, row: 7, columnSpan: 1, rowSpan: 1 },
+  deviceInfo: { column: 2, row: 7, columnSpan: 1, rowSpan: 1 },
 }
 
 vi.mock('./lib/useEventNotifications', () => ({
@@ -109,6 +111,10 @@ vi.mock('./components/CurrencyWidget', () => ({
 
 vi.mock('./components/QuoteWidget', () => ({
   QuoteWidget: () => <div>Quote widget</div>,
+}))
+
+vi.mock('./components/DeviceInfoWidget', () => ({
+  DeviceInfoWidget: () => <div>Device info widget</div>,
 }))
 
 vi.mock('./components/BuyMeCoffeeWidget', () => ({

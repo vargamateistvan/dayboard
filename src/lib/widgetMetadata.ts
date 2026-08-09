@@ -14,6 +14,7 @@ export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'stocks', label: 'Stocks' },
   { id: 'currencies', label: 'Currencies' },
   { id: 'quote', label: 'Quote of the Day' },
+  { id: 'deviceInfo', label: 'Device Info' },
 ]
 
 export function getWidgetLabel(widget: Widget): string {

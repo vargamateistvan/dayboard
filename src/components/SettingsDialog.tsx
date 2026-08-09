@@ -125,7 +125,7 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
   {
     id: "core",
     label: "Core",
-    widgets: ["clock", "timezoneClock", "weather", "calendar"],
+    widgets: ["clock", "timezoneClock", "weather", "calendar", "deviceInfo"],
   },
   {
     id: "productivity",

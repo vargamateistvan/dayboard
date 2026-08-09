@@ -14,6 +14,7 @@ export const WIDGET_IDS = [
   "stocks",
   "currencies",
   "quote",
+  "deviceInfo",
 ] as const;
 export const WIDGET_GRID_COLUMNS = 2;
 export const MIN_GRID_ROWS = 2;
@@ -63,6 +64,7 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
   stocks: false,
   currencies: false,
   quote: false,
+  deviceInfo: false,
 };
 
 const DEFAULT_PLACEMENTS: WidgetPlacements = {
@@ -79,6 +81,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
   quote: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+  deviceInfo: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
 };
 
 export const MIN_WIDGET_SIZE: Record<
@@ -98,6 +101,7 @@ export const MIN_WIDGET_SIZE: Record<
   stocks: { columnSpan: 1, rowSpan: 1 },
   currencies: { columnSpan: 1, rowSpan: 1 },
   quote: { columnSpan: 1, rowSpan: 1 },
+  deviceInfo: { columnSpan: 1, rowSpan: 2 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {

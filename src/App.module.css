@@ -215,7 +215,8 @@
 .widgetCellFullscreen[data-widget-id='weather'] .widgetContentFrame > *,
 .widgetCellFullscreen[data-widget-id='calendar'] .widgetContentFrame > *,
 .widgetCellFullscreen[data-widget-id='tasks'] .widgetContentFrame > *,
-.widgetCellFullscreen[data-widget-id='notes'] .widgetContentFrame > * {
+.widgetCellFullscreen[data-widget-id='notes'] .widgetContentFrame > *,
+.widgetCellFullscreen[data-widget-id='deviceInfo'] .widgetContentFrame > * {
   width: min(100%, 1200px);
 }
 
@@ -339,7 +340,8 @@
   .widgetCellFullscreen[data-widget-id='appleMusic'] .widgetContentFrame > *,
   .widgetCellFullscreen[data-widget-id='applePodcast'] .widgetContentFrame > *,
   .widgetCellFullscreen[data-widget-id='stocks'] .widgetContentFrame > *,
-  .widgetCellFullscreen[data-widget-id='currencies'] .widgetContentFrame > * {
+  .widgetCellFullscreen[data-widget-id='currencies'] .widgetContentFrame > *,
+  .widgetCellFullscreen[data-widget-id='deviceInfo'] .widgetContentFrame > * {
     overflow: auto;
   }
 

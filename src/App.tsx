@@ -18,6 +18,7 @@ import { ApplePodcastWidget } from './components/ApplePodcastWidget'
 import { StockWidget } from './components/StockWidget'
 import { CurrencyWidget } from './components/CurrencyWidget'
 import { QuoteWidget } from './components/QuoteWidget'
+import { DeviceInfoWidget } from './components/DeviceInfoWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { InfoDialog } from './components/InfoDialog'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -60,6 +61,8 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <CurrencyWidget isFullscreen={isFullscreen} />
     case 'quote':
       return <QuoteWidget isFullscreen={isFullscreen} />
+    case 'deviceInfo':
+      return <DeviceInfoWidget isFullscreen={isFullscreen} />
   }
 }
 
