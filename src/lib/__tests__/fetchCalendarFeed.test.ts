@@ -92,6 +92,10 @@ describe('fetchCalendarFeed', () => {
     await expect(fetchCalendarFeed('https://example.com/calendar.ics')).rejects.toThrow('proxy unavailable')
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('throws a specific error when the calendar link is missing', async () => {
+    await expect(fetchCalendarFeed('   ')).rejects.toThrow('Calendar link is missing. Add one in settings.')
+  })
 })
 
 describe('fetchCalendarFeeds', () => {
@@ -141,5 +145,19 @@ describe('fetchCalendarFeeds', () => {
         text: 'BEGIN:VCALENDAR\nSUMMARY:B',
       },
     ])
+  })
+
+  it('prioritizes the missing-link error when all feeds fail and one link is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockRejectedValueOnce(new Error('network down'))
+        .mockRejectedValueOnce(new Error('still down')),
+    )
+
+    await expect(fetchCalendarFeeds([
+      { url: 'https://example.com/one.ics', color: DEFAULT_CALENDAR_COLORS[0] },
+      { url: '   ', color: DEFAULT_CALENDAR_COLORS[1] },
+    ])).rejects.toThrow('Calendar link is missing. Add one in settings.')
   })
 })

@@ -448,6 +448,15 @@ END:VCALENDAR`
     vi.unstubAllGlobals()
   })
 
+  it('shows a specific error when a calendar link is missing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Calendar link is missing. Add one in settings.')))
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+    expect(screen.getByText('Calendar link is missing. Add one in settings.')).toBeInTheDocument()
+    expect(screen.queryByText(/Could not load calendar:/)).not.toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
   it('merges events from multiple calendar feeds', async () => {
     const laterIcs = `BEGIN:VCALENDAR
 VERSION:2.0

@@ -484,6 +484,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   )
   const monthLabel = formatMonthLabel(now)
   const { year, month } = formatMonthParts(now)
+  const isMissingCalendarLinkError = error?.toLowerCase().includes('calendar link is missing') ?? false
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} ref={widgetRef}>
@@ -519,10 +520,12 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
 
           {hasCalendarFeeds && !loading && error && (
             <div className={styles.error}>
-              <p>Could not load calendar: {error}</p>
-              <p className={styles.hint}>
-                Tip: Dayboard retries with a proxy when it can, but some calendar hosts still block browser access.
-              </p>
+              <p>{isMissingCalendarLinkError ? error : `Could not load calendar: ${error}`}</p>
+              {!isMissingCalendarLinkError && (
+                <p className={styles.hint}>
+                  Tip: Dayboard retries with a proxy when it can, but some calendar hosts still block browser access.
+                </p>
+              )}
             </div>
           )}
 

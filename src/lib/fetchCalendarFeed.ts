@@ -4,6 +4,7 @@ import type { CalendarFeed } from './settings'
 const LOCAL_PROXY_PATH = '/api/calendar'
 const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
 const JINA_MIRROR_PREFIX = 'https://r.jina.ai/http://'
+const MISSING_CALENDAR_LINK_ERROR = 'Calendar link is missing. Add one in settings.'
 
 function isLocalHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1'
@@ -63,6 +64,10 @@ function normalizeCalendarFeedText(text: string): string {
 
 export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string> {
   const requestUrls = getCalendarFeedRequestUrls(rawCalendarUrl)
+  if (requestUrls.length === 0) {
+    throw new Error(MISSING_CALENDAR_LINK_ERROR)
+  }
+
   let lastError: Error | null = null
 
   for (const requestUrl of requestUrls) {
@@ -106,5 +111,10 @@ export async function fetchCalendarFeeds(rawCalendarFeeds: CalendarFeed[]): Prom
   }
 
   const failedResults = results.flatMap((result) => result.status === 'rejected' ? [toError(result.reason)] : [])
+  const missingLinkError = failedResults.find((error) => error.message === MISSING_CALENDAR_LINK_ERROR)
+  if (missingLinkError) {
+    throw missingLinkError
+  }
+
   throw failedResults[0] ?? new Error('Could not load calendar.')
 }
