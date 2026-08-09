@@ -46,7 +46,7 @@ export function AppleMusicWidget({ isFullscreen = false }: AppleMusicWidgetProps
     setError(null)
   }
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     const trimmed = addUrl.trim()
     if (trimmed.length === 0) {
       setError(null)
@@ -59,17 +59,17 @@ export function AppleMusicWidget({ isFullscreen = false }: AppleMusicWidgetProps
     }
 
     setIsAdding(true)
-    const title = resolveMediaLinkTitle(trimmed)
-      const nextLinks = normalizeSavedMediaLinks([
-        createSavedMediaLink(trimmed, title),
-        ...savedLinks,
-      ])
-      updateSettings({
-        appleMusicEmbedUrl: trimmed,
-        appleMusicEmbedLinks: nextLinks,
-      })
-      setAddUrl('')
-      setError(null)
+    const title = await resolveMediaLinkTitle(trimmed)
+    const nextLinks = normalizeSavedMediaLinks([
+      createSavedMediaLink(trimmed, title),
+      ...savedLinks,
+    ])
+    updateSettings({
+      appleMusicEmbedUrl: trimmed,
+      appleMusicEmbedLinks: nextLinks,
+    })
+    setAddUrl('')
+    setError(null)
     setIsAdding(false)
   }
 

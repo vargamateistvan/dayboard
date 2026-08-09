@@ -29,19 +29,19 @@ function getSpotifyTypeLabel(url: URL): string {
   const type = segments[0] === 'embed' ? segments[1] : segments[0]
   switch (type) {
     case 'track':
-      return 'Spotify Track'
+      return 'Track'
     case 'album':
-      return 'Spotify Album'
+      return 'Album'
     case 'playlist':
-      return 'Spotify Playlist'
+      return 'Playlist'
     case 'artist':
-      return 'Spotify Artist'
+      return 'Artist'
     case 'show':
-      return 'Spotify Podcast'
+      return 'Podcast'
     case 'episode':
-      return 'Spotify Episode'
+      return 'Episode'
     default:
-      return 'Spotify Link'
+      return 'Spotify'
   }
 }
 
@@ -68,6 +68,24 @@ function getFallbackTitle(url: string): string {
   }
 
   return parsed.hostname.replace(/^www\./, '')
+}
+
+async function getSpotifyTitleFromOEmbed(url: URL): Promise<string | null> {
+  const oEmbedUrl = new URL('https://open.spotify.com/oembed')
+  oEmbedUrl.searchParams.set('url', url.toString())
+
+  const response = await fetch(oEmbedUrl.toString())
+  if (!response.ok) {
+    return null
+  }
+
+  const data = (await response.json()) as { title?: unknown }
+  if (typeof data.title !== 'string') {
+    return null
+  }
+
+  const title = data.title.trim()
+  return title.length > 0 ? title : null
 }
 
 function normalizeTitle(title: unknown, url: string): string {
@@ -120,7 +138,19 @@ export function formatSavedLinkLabel(entry: SavedMediaLink): string {
   return truncate(entry.title || getFallbackTitle(entry.url), 42)
 }
 
-export function resolveMediaLinkTitle(url: string): string {
+export async function resolveMediaLinkTitle(url: string): Promise<string> {
+  const parsed = parseHttpUrl(url)
+  if (parsed?.hostname === 'open.spotify.com') {
+    try {
+      const spotifyTitle = await getSpotifyTitleFromOEmbed(parsed)
+      if (spotifyTitle) {
+        return spotifyTitle
+      }
+    } catch {
+      // Ignore metadata lookup failures and use deterministic local fallback.
+    }
+  }
+
   return getFallbackTitle(url)
 }
 

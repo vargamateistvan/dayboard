@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 import { MusicEmbedWidget } from '../MusicEmbedWidget'
@@ -90,6 +90,11 @@ describe('SpotifyWidget', () => {
   })
 
   it('updates the saved Spotify link list when a new url is added', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ title: 'Fleetwood Mac - Dreams' }),
+    }))
+
     renderWithSettings(<SpotifyWidget />)
 
     fireEvent.change(screen.getByPlaceholderText(/Paste another Spotify track/i), {
@@ -97,13 +102,17 @@ describe('SpotifyWidget', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(
-      JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').spotifyEmbedUrl,
-    ).toBe('https://open.spotify.com/track/7ouMYWpwJ422jRcDASZB7P')
-    expect(screen.getByTitle('Spotify Player player')).toHaveAttribute(
-      'src',
-      expect.stringContaining('https://open.spotify.com/embed/track/7ouMYWpwJ422jRcDASZB7P'),
-    )
+    return waitFor(() => {
+      expect(
+        JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').spotifyEmbedUrl,
+      ).toBe('https://open.spotify.com/track/7ouMYWpwJ422jRcDASZB7P')
+      expect(screen.getByTitle('Spotify Player player')).toHaveAttribute(
+        'src',
+        expect.stringContaining('https://open.spotify.com/embed/track/7ouMYWpwJ422jRcDASZB7P'),
+      )
+    }).finally(() => {
+      vi.unstubAllGlobals()
+    })
   })
 })
 
@@ -116,7 +125,7 @@ describe('AppleMusicWidget', () => {
     localStorage.clear()
   })
 
-  it('updates the saved Apple Music link list when a new url is added', () => {
+  it('updates the saved Apple Music link list when a new url is added', async () => {
     renderWithSettings(<AppleMusicWidget />)
 
     fireEvent.change(screen.getByPlaceholderText(/Paste another Apple Music song/i), {
@@ -124,13 +133,15 @@ describe('AppleMusicWidget', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(
-      JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').appleMusicEmbedUrl,
-    ).toBe('https://music.apple.com/us/album/midnights/1625498918')
-    expect(screen.getByTitle('Apple Music Player player')).toHaveAttribute(
-      'src',
-      expect.stringContaining('https://embed.music.apple.com/us/album/midnights/1625498918'),
-    )
+    await waitFor(() => {
+      expect(
+        JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').appleMusicEmbedUrl,
+      ).toBe('https://music.apple.com/us/album/midnights/1625498918')
+      expect(screen.getByTitle('Apple Music Player player')).toHaveAttribute(
+        'src',
+        expect.stringContaining('https://embed.music.apple.com/us/album/midnights/1625498918'),
+      )
+    })
   })
 })
 
@@ -143,7 +154,7 @@ describe('ApplePodcastWidget', () => {
     localStorage.clear()
   })
 
-  it('updates the saved Apple Podcast link list when a new url is added', () => {
+  it('updates the saved Apple Podcast link list when a new url is added', async () => {
     renderWithSettings(<ApplePodcastWidget />)
 
     fireEvent.change(screen.getByPlaceholderText(/Paste another Apple Podcast show/i), {
@@ -151,12 +162,14 @@ describe('ApplePodcastWidget', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Add' }))
 
-    expect(
-      JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').applePodcastEmbedUrl,
-    ).toBe('https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110')
-    expect(screen.getByTitle('Apple Podcast player')).toHaveAttribute(
-      'src',
-      expect.stringContaining('https://embed.podcasts.apple.com/us/podcast/huberman-lab/id1545953110'),
-    )
+    await waitFor(() => {
+      expect(
+        JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').applePodcastEmbedUrl,
+      ).toBe('https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110')
+      expect(screen.getByTitle('Apple Podcast player')).toHaveAttribute(
+        'src',
+        expect.stringContaining('https://embed.podcasts.apple.com/us/podcast/huberman-lab/id1545953110'),
+      )
+    })
   })
 })

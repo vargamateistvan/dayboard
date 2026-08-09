@@ -61,7 +61,7 @@ describe('settings persistence', () => {
     expect(loaded.spotifyEmbedLinks).toEqual([
       {
         url: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
-        title: 'Spotify Track',
+        title: 'Track',
       },
     ])
     expect(loaded.appleMusicEmbedLinks).toEqual([

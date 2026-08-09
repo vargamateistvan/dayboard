@@ -46,7 +46,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     setError(null)
   }
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     const trimmed = addUrl.trim()
     if (trimmed.length === 0) {
      setError(null)
@@ -59,14 +59,14 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     }
 
     setIsAdding(true)
-    const title = resolveMediaLinkTitle(trimmed)
+     const title = await resolveMediaLinkTitle(trimmed)
      const nextLinks = normalizeSavedMediaLinks([
-       createSavedMediaLink(trimmed, title),
-       ...savedLinks,
+     createSavedMediaLink(trimmed, title),
+     ...savedLinks,
      ])
      updateSettings({
-       spotifyEmbedUrl: trimmed,
-       spotifyEmbedLinks: nextLinks,
+     spotifyEmbedUrl: trimmed,
+     spotifyEmbedLinks: nextLinks,
      })
      setAddUrl('')
      setError(null)

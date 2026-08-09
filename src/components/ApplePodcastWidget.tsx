@@ -49,7 +49,7 @@ export function ApplePodcastWidget({ isFullscreen = false }: ApplePodcastWidgetP
     setError(null)
   }
 
-  const handleAddLink = () => {
+  const handleAddLink = async () => {
     const trimmed = addUrl.trim()
     if (trimmed.length === 0) {
       setError(null)
@@ -62,7 +62,7 @@ export function ApplePodcastWidget({ isFullscreen = false }: ApplePodcastWidgetP
     }
 
     setIsAdding(true)
-    const title = resolveMediaLinkTitle(trimmed)
+    const title = await resolveMediaLinkTitle(trimmed)
     const nextLinks = normalizeSavedMediaLinks([
       createSavedMediaLink(trimmed, title),
       ...savedLinks,

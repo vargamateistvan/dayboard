@@ -663,7 +663,7 @@ export function SettingsDialog({ onClose }: Props) {
     });
   };
 
-  const addMediaLink = ({
+  const addMediaLink = async ({
     value,
     setValue,
     links,
@@ -694,7 +694,7 @@ export function SettingsDialog({ onClose }: Props) {
       return;
     }
 
-    const title = resolveMediaLinkTitle(normalized);
+    const title = await resolveMediaLinkTitle(normalized);
     setLinks((current) =>
       normalizeSavedMediaLinks([
         createSavedMediaLink(normalized, title),
@@ -1355,6 +1355,7 @@ export function SettingsDialog({ onClose }: Props) {
                   }
                   onAddUrlChange={setSpotifyAddUrl}
                   onAddLink={() =>
+                    void
                     addMediaLink({
                       value: spotifyAddUrl,
                       setValue: setSpotifyAddUrl,
@@ -1391,6 +1392,7 @@ export function SettingsDialog({ onClose }: Props) {
                   }
                   onAddUrlChange={setAppleMusicAddUrl}
                   onAddLink={() =>
+                    void
                     addMediaLink({
                       value: appleMusicAddUrl,
                       setValue: setAppleMusicAddUrl,
@@ -1427,6 +1429,7 @@ export function SettingsDialog({ onClose }: Props) {
                   }
                   onAddUrlChange={setApplePodcastAddUrl}
                   onAddLink={() =>
+                    void
                     addMediaLink({
                       value: applePodcastAddUrl,
                       setValue: setApplePodcastAddUrl,
