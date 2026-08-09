@@ -588,6 +588,15 @@ export function SettingsDialog({ onClose }: Props) {
   const [customColors, setCustomColors] = useState<CustomColors>(
     settings.customColors || DEFAULT_CUSTOM_COLORS,
   );
+  const isCalendarOnLayout = visibility.calendar;
+  const isWeatherOnLayout = visibility.weather;
+  const isFinanceOnLayout = visibility.stocks || visibility.currencies;
+  const isMusicOnLayout =
+    visibility.spotify ||
+    visibility.appleMusic ||
+    visibility.spotifyPodcast ||
+    visibility.applePodcast;
+  const isTimerOnLayout = visibility.timer;
 
   const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
     setCalendarFeeds((prev) =>
@@ -947,206 +956,215 @@ export function SettingsDialog({ onClose }: Props) {
             </div>
           </section>
 
-          {/* Calendar */}
-          <section className={styles.section}>
-            <div className={styles.sectionHeader}>
-              <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
-              <button
-                className={styles.addCalendarBtn}
-                onClick={addCalendarFeed}
-                type="button"
-              >
-                <Plus size={14} />
-                Add link
-              </button>
-            </div>
-            <p className={styles.hint}>
-              Paste one or more ICS or CSV calendar URLs. Google share links,
-              Outlook published calendar links, and webcal:// feeds are
-              supported too. Choose a color for each calendar and its events
-              will use that color in the calendar widget.
-            </p>
-            <div className={styles.calendarList}>
-              {calendarFeeds.map((calendarFeed, index) => (
-                <div
-                  className={styles.calendarRow}
-                  key={`${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
-                >
-                  <input
-                    className={[styles.input, styles.calendarUrlInput].join(
-                      " ",
+          {isCalendarOnLayout && (
+            <>
+              {/* Calendar */}
+              <section className={styles.section}>
+                <div className={styles.sectionHeader}>
+                  <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
+                  <button
+                    className={styles.addCalendarBtn}
+                    onClick={addCalendarFeed}
+                    type="button"
+                  >
+                    <Plus size={14} />
+                    Add link
+                  </button>
+                </div>
+                <p className={styles.hint}>
+                  Paste one or more ICS or CSV calendar URLs. Google share links,
+                  Outlook published calendar links, and webcal:// feeds are
+                  supported too. Choose a color for each calendar and its events
+                  will use that color in the calendar widget.
+                </p>
+                <div className={styles.calendarList}>
+                  {calendarFeeds.map((calendarFeed, index) => (
+                    <div
+                      className={styles.calendarRow}
+                      key={`${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
+                    >
+                      <input
+                        className={[styles.input, styles.calendarUrlInput].join(
+                          " ",
+                        )}
+                        type="url"
+                        placeholder={
+                          index === 0
+                            ? "https://calendar.example.com/feed.ics"
+                            : "https://outlook.office.com/calendar/.../calendar.ics"
+                        }
+                        value={calendarFeed.url}
+                        onChange={(e) =>
+                          updateCalendarFeed(index, { url: e.target.value })
+                        }
+                      />
+                      <label className={styles.calendarColorField}>
+                        <span className={styles.calendarColorLabel}>Color</span>
+                        <input
+                          aria-label={`Calendar color ${index + 1}`}
+                          className={styles.calendarColorInput}
+                          type="color"
+                          value={calendarFeed.color}
+                          onChange={(e) =>
+                            updateCalendarFeed(index, { color: e.target.value })
+                          }
+                        />
+                      </label>
+                      <button
+                        aria-label={`Remove calendar link ${index + 1}`}
+                        className={styles.removeCalendarBtn}
+                        onClick={() => removeCalendarFeed(index)}
+                        type="button"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>Calendar Display</h3>
+                <div className={styles.segmented}>
+                  {CALENDAR_WEEK_STARTS.map((option) => (
+                    <button
+                      key={option.id}
+                      className={[
+                        styles.segment,
+                        calendarWeekStartsOn === option.id ? styles.segmentActive : "",
+                      ].join(" ")}
+                      onClick={() => setCalendarWeekStartsOn(option.id)}
+                      aria-pressed={calendarWeekStartsOn === option.id}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className={styles.widgetGrid}>
+                  <button
+                    className={[
+                      styles.widgetToggle,
+                      !calendarHidePastEvents ? styles.widgetVisible : "",
+                    ].join(" ")}
+                    onClick={() => setCalendarHidePastEvents((value) => !value)}
+                    type="button"
+                    aria-pressed={!calendarHidePastEvents}
+                  >
+                    {!calendarHidePastEvents ? (
+                      <Eye size={14} />
+                    ) : (
+                      <EyeOff size={14} />
                     )}
-                    type="url"
-                    placeholder={
-                      index === 0
-                        ? "https://calendar.example.com/feed.ics"
-                        : "https://outlook.office.com/calendar/.../calendar.ics"
+                    <span>Show past events</span>
+                  </button>
+                  <button
+                    className={[
+                      styles.widgetToggle,
+                      calendarShowAllDayEvents ? styles.widgetVisible : "",
+                    ].join(" ")}
+                    onClick={() => setCalendarShowAllDayEvents((value) => !value)}
+                    type="button"
+                  >
+                    {calendarShowAllDayEvents ? (
+                      <Eye size={14} />
+                    ) : (
+                      <EyeOff size={14} />
+                    )}
+                    <span>Show all-day events</span>
+                  </button>
+                  <button
+                    className={[
+                      styles.widgetToggle,
+                      calendarShowMonthlyOverview ? styles.widgetVisible : "",
+                    ].join(" ")}
+                    onClick={() =>
+                      setCalendarShowMonthlyOverview((value) => !value)
                     }
-                    value={calendarFeed.url}
-                    onChange={(e) =>
-                      updateCalendarFeed(index, { url: e.target.value })
-                    }
-                  />
-                  <label className={styles.calendarColorField}>
-                    <span className={styles.calendarColorLabel}>Color</span>
+                    type="button"
+                  >
+                    {calendarShowMonthlyOverview ? (
+                      <Eye size={14} />
+                    ) : (
+                      <EyeOff size={14} />
+                    )}
+                    <span>Show monthly overview</span>
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
+
+          {isWeatherOnLayout && (
+            <>
+              {/* Weather */}
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>Weather Display</h3>
+                <div className={styles.segmented}>
+                  {WEATHER_UNITS.map((unit) => (
+                    <button
+                      key={unit.id}
+                      className={[
+                        styles.segment,
+                        weatherUnitSystem === unit.id ? styles.segmentActive : "",
+                      ].join(" ")}
+                      onClick={() => setWeatherUnitSystem(unit.id)}
+                      aria-pressed={weatherUnitSystem === unit.id}
+                      type="button"
+                    >
+                      {unit.label}
+                    </button>
+                  ))}
+                </div>
+                <div className={styles.widgetGrid}>
+                  <button
+                    className={[
+                      styles.widgetToggle,
+                      weatherShowExtraDetails ? styles.widgetVisible : "",
+                    ].join(" ")}
+                    onClick={() => setWeatherShowExtraDetails((value) => !value)}
+                    type="button"
+                  >
+                    {weatherShowExtraDetails ? (
+                      <Eye size={14} />
+                    ) : (
+                      <EyeOff size={14} />
+                    )}
+                    <span>Show extra weather details</span>
+                  </button>
+                </div>
+              </section>
+
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>Weather Refresh</h3>
+                <div className={styles.intervalRow}>
+                  <label className={styles.intervalLabel}>
+                    <span>Refresh every (min)</span>
                     <input
-                      aria-label={`Calendar color ${index + 1}`}
-                      className={styles.calendarColorInput}
-                      type="color"
-                      value={calendarFeed.color}
+                      className={styles.numberInput}
+                      type="number"
+                      min={1}
+                      max={180}
+                      value={weatherRefreshMin}
                       onChange={(e) =>
-                        updateCalendarFeed(index, { color: e.target.value })
+                        setWeatherRefreshMin(
+                          Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                        )
                       }
                     />
                   </label>
-                  <button
-                    aria-label={`Remove calendar link ${index + 1}`}
-                    className={styles.removeCalendarBtn}
-                    onClick={() => removeCalendarFeed(index)}
-                    type="button"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
-              ))}
-            </div>
-          </section>
+                <p className={styles.hint}>
+                  Weather updates automatically using this interval. You can still
+                  refresh it manually anytime.
+                </p>
+              </section>
+            </>
+          )}
 
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Calendar Display</h3>
-            <div className={styles.segmented}>
-              {CALENDAR_WEEK_STARTS.map((option) => (
-                <button
-                  key={option.id}
-                  className={[
-                    styles.segment,
-                    calendarWeekStartsOn === option.id ? styles.segmentActive : "",
-                  ].join(" ")}
-                  onClick={() => setCalendarWeekStartsOn(option.id)}
-                  aria-pressed={calendarWeekStartsOn === option.id}
-                  type="button"
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-            <div className={styles.widgetGrid}>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  !calendarHidePastEvents ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() => setCalendarHidePastEvents((value) => !value)}
-                type="button"
-                aria-pressed={!calendarHidePastEvents}
-              >
-                {!calendarHidePastEvents ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
-                )}
-                <span>Show past events</span>
-              </button>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  calendarShowAllDayEvents ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() => setCalendarShowAllDayEvents((value) => !value)}
-                type="button"
-              >
-                {calendarShowAllDayEvents ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
-                )}
-                <span>Show all-day events</span>
-              </button>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  calendarShowMonthlyOverview ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() =>
-                  setCalendarShowMonthlyOverview((value) => !value)
-                }
-                type="button"
-              >
-                {calendarShowMonthlyOverview ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
-                )}
-                <span>Show monthly overview</span>
-              </button>
-            </div>
-          </section>
-
-          {/* Weather */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Weather Display</h3>
-            <div className={styles.segmented}>
-              {WEATHER_UNITS.map((unit) => (
-                <button
-                  key={unit.id}
-                  className={[
-                    styles.segment,
-                    weatherUnitSystem === unit.id ? styles.segmentActive : "",
-                  ].join(" ")}
-                  onClick={() => setWeatherUnitSystem(unit.id)}
-                  aria-pressed={weatherUnitSystem === unit.id}
-                  type="button"
-                >
-                  {unit.label}
-                </button>
-              ))}
-            </div>
-            <div className={styles.widgetGrid}>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  weatherShowExtraDetails ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() => setWeatherShowExtraDetails((value) => !value)}
-                type="button"
-              >
-                {weatherShowExtraDetails ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
-                )}
-                <span>Show extra weather details</span>
-              </button>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Weather Refresh</h3>
-            <div className={styles.intervalRow}>
-              <label className={styles.intervalLabel}>
-                <span>Refresh every (min)</span>
-                <input
-                  className={styles.numberInput}
-                  type="number"
-                  min={1}
-                  max={180}
-                  value={weatherRefreshMin}
-                  onChange={(e) =>
-                    setWeatherRefreshMin(
-                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                    )
-                  }
-                />
-              </label>
-            </div>
-            <p className={styles.hint}>
-              Weather updates automatically using this interval. You can still
-              refresh it manually anytime.
-            </p>
-          </section>
-
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Finance Widgets</h3>
+          {isFinanceOnLayout && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Finance Widgets</h3>
 
             {/* Auto-refresh interval */}
             <div className={styles.intervalRow}>
@@ -1279,10 +1297,12 @@ export function SettingsDialog({ onClose }: Props) {
             <p className={styles.hint}>
               Data refreshes automatically at the selected interval. You can still refresh manually.
             </p>
-          </section>
+            </section>
+          )}
 
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Music Embeds</h3>
+          {isMusicOnLayout && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Music Embeds</h3>
             <MediaLinkEditor
               title="Spotify"
               brand="spotify"
@@ -1419,14 +1439,15 @@ export function SettingsDialog({ onClose }: Props) {
               }
               error={applePodcastLinkError}
             />
-            <p className={styles.hint}>
-              Paste a public share link. Dayboard converts it to an embeddable player automatically.
-            </p>
-          </section>
+              <p className={styles.hint}>
+                Paste a public share link. Dayboard converts it to an embeddable player automatically.
+              </p>
+            </section>
+          )}
 
-          {/* Pomodoro */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
+          {isTimerOnLayout && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
             <div className={styles.intervalRow}>
               <label className={styles.intervalLabel}>
                 <span>Work (min)</span>
@@ -1458,8 +1479,9 @@ export function SettingsDialog({ onClose }: Props) {
                   }
                 />
               </label>
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
 
           {/* Support */}
           <section className={styles.section}>
