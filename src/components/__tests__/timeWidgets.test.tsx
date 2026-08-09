@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ClockWidget } from '../ClockWidget'
+import { TimezoneClockWidget } from '../TimezoneClockWidget'
+import { QuoteWidget } from '../QuoteWidget'
 import { PomodoroStats } from '../PomodoroStats'
+import { SettingsProvider } from '../../lib/useSettings'
+import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 
 describe('ClockWidget', () => {
   beforeEach(() => {
@@ -38,6 +42,45 @@ describe('ClockWidget', () => {
         }),
       ),
     ).toBeInTheDocument()
+  })
+})
+
+describe('TimezoneClockWidget', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-08T12:34:56Z'))
+    localStorage.clear()
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      worldClockCity: 'Tokyo',
+      worldClockTimeZone: 'Asia/Tokyo',
+    })
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  it('renders local and selected city clocks', () => {
+    render(
+      <SettingsProvider>
+        <TimezoneClockWidget />
+      </SettingsProvider>,
+    )
+
+    expect(screen.getByText(/My location/)).toBeInTheDocument()
+    expect(screen.getByText(/Tokyo \(Asia\/Tokyo\)/)).toBeInTheDocument()
+  })
+})
+
+describe('QuoteWidget', () => {
+  it('renders quote title and supports changing quote', () => {
+    render(<QuoteWidget />)
+
+    expect(screen.getByText('Quote of the Day')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Show another quote' })).toBeInTheDocument()
   })
 })
 

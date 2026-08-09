@@ -44,6 +44,8 @@ export interface Settings {
   financeRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
+  worldClockCity: string
+  worldClockTimeZone: string
   customColors?: CustomColors
 }
 
@@ -140,6 +142,8 @@ export const DEFAULT_SETTINGS: Settings = {
   financeRefreshMinutes: 10,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
+  worldClockCity: 'New York',
+  worldClockTimeZone: 'America/New_York',
   customColors: DEFAULT_CUSTOM_COLORS,
 }
 
@@ -239,6 +243,35 @@ function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   }
 
   return value
+}
+
+function isValidIanaTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: value })
+    return true
+  } catch {
+    return false
+  }
+}
+
+function normalizeWorldClockCity(value: unknown): string {
+  if (typeof value !== 'string') {
+    return DEFAULT_SETTINGS.worldClockCity
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : DEFAULT_SETTINGS.worldClockCity
+}
+
+function normalizeWorldClockTimeZone(value: unknown): string {
+  if (typeof value !== 'string') {
+    return DEFAULT_SETTINGS.worldClockTimeZone
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 && isValidIanaTimeZone(trimmed)
+    ? trimmed
+    : DEFAULT_SETTINGS.worldClockTimeZone
 }
 
 function normalizeEmbedUrl(value: unknown): string {
@@ -395,6 +428,8 @@ export function loadSettings(): Settings {
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
+      worldClockCity: normalizeWorldClockCity((rest as { worldClockCity?: unknown }).worldClockCity),
+      worldClockTimeZone: normalizeWorldClockTimeZone((rest as { worldClockTimeZone?: unknown }).worldClockTimeZone),
       spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
       spotifyEmbedLinks: normalizeSavedMediaLinks(
         (rest as { spotifyEmbedLinks?: unknown }).spotifyEmbedLinks,
@@ -454,6 +489,8 @@ export function saveSettings(settings: Settings): void {
       stockSymbols: normalizeStockSymbols(settings.stockSymbols),
       currencyPairs: normalizeCurrencyPairs(settings.currencyPairs),
       financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
+      worldClockCity: normalizeWorldClockCity(settings.worldClockCity),
+      worldClockTimeZone: normalizeWorldClockTimeZone(settings.worldClockTimeZone),
     }),
   )
 }

@@ -1,0 +1,67 @@
+.widget {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.clockCard {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 0.9rem;
+  background: var(--color-bg);
+}
+
+.clockHeader {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: 0.35rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.time {
+  font-size: clamp(1.35rem, min(4vw, 6dvh), 4rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.date {
+  margin-top: 0.2rem;
+  font-size: clamp(0.72rem, 1.6vw, 1rem);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fullscreen {
+  gap: 1rem;
+}
+
+.fullscreen .clockCard {
+  padding: 1.25rem;
+}
+
+.fullscreen .time {
+  font-size: clamp(2.4rem, 10vw, 9rem);
+}
+
+.fullscreen .date {
+  font-size: clamp(0.95rem, 2vw, 1.5rem);
+}
+
+@media (max-width: 820px) {
+  .widget {
+    grid-template-columns: 1fr;
+  }
+}

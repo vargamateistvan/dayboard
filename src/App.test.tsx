@@ -6,6 +6,7 @@ import type { Widget } from './lib/useWidgetVisibility'
 
 const widgetVisibility = {
   clock: true,
+  timezoneClock: false,
   weather: true,
   calendar: false,
   timer: false,
@@ -16,10 +17,12 @@ const widgetVisibility = {
   applePodcast: false,
   stocks: false,
   currencies: false,
+  quote: false,
 } satisfies Record<Widget, boolean>
 
 const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
+  timezoneClock: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
   weather: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
   calendar: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   timer: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
@@ -30,6 +33,7 @@ const widgetPlacements = {
   applePodcast: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   stocks: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+  quote: { column: 1, row: 7, columnSpan: 1, rowSpan: 1 },
 }
 
 vi.mock('./lib/useEventNotifications', () => ({
@@ -61,6 +65,10 @@ vi.mock('./components/ClockWidget', () => ({
 
 vi.mock('./components/WeatherWidget', () => ({
   WeatherWidget: () => <div>Weather widget</div>,
+}))
+
+vi.mock('./components/TimezoneClockWidget', () => ({
+  TimezoneClockWidget: () => <div>Timezone clock widget</div>,
 }))
 
 vi.mock('./components/CalendarWidget', () => ({
@@ -97,6 +105,10 @@ vi.mock('./components/StockWidget', () => ({
 
 vi.mock('./components/CurrencyWidget', () => ({
   CurrencyWidget: () => <div>Currencies widget</div>,
+}))
+
+vi.mock('./components/QuoteWidget', () => ({
+  QuoteWidget: () => <div>Quote widget</div>,
 }))
 
 vi.mock('./components/BuyMeCoffeeWidget', () => ({

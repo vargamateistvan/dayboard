@@ -2,6 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export const WIDGET_IDS = [
   "clock",
+  "timezoneClock",
   "weather",
   "calendar",
   "timer",
@@ -12,6 +13,7 @@ export const WIDGET_IDS = [
   "applePodcast",
   "stocks",
   "currencies",
+  "quote",
 ] as const;
 export const WIDGET_GRID_COLUMNS = 2;
 export const MIN_GRID_ROWS = 2;
@@ -49,6 +51,7 @@ const GRID_VERSION = `${WIDGET_GRID_COLUMNS}x${DEFAULT_GRID_ROWS}`;
 
 const DEFAULT_VISIBILITY: WidgetVisibility = {
   clock: true,
+  timezoneClock: false,
   weather: true,
   calendar: true,
   timer: true,
@@ -59,10 +62,12 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
   applePodcast: false,
   stocks: false,
   currencies: false,
+  quote: false,
 };
 
 const DEFAULT_PLACEMENTS: WidgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+  timezoneClock: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
   weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
   timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
@@ -73,6 +78,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
   stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+  quote: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
 };
 
 export const MIN_WIDGET_SIZE: Record<
@@ -80,6 +86,7 @@ export const MIN_WIDGET_SIZE: Record<
   Pick<WidgetPlacement, "columnSpan" | "rowSpan">
 > = {
   clock: { columnSpan: 1, rowSpan: 1 },
+  timezoneClock: { columnSpan: 1, rowSpan: 1 },
   weather: { columnSpan: 1, rowSpan: 1 },
   calendar: { columnSpan: 1, rowSpan: 1 },
   timer: { columnSpan: 1, rowSpan: 1 },
@@ -90,6 +97,7 @@ export const MIN_WIDGET_SIZE: Record<
   applePodcast: { columnSpan: 1, rowSpan: 2 },
   stocks: { columnSpan: 1, rowSpan: 1 },
   currencies: { columnSpan: 1, rowSpan: 1 },
+  quote: { columnSpan: 1, rowSpan: 1 },
 };
 
 const DEFAULT_LAYOUT: WidgetLayoutState = {

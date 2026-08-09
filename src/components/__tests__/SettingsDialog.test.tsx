@@ -129,6 +129,29 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('persists timezone clock city and timezone settings', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: { timezoneClock: true },
+      }),
+    )
+    renderSettingsDialog()
+
+    fireEvent.change(screen.getByPlaceholderText('New York'), {
+      target: { value: 'Budapest' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('America/New_York'), {
+      target: { value: 'Europe/Budapest' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      worldClockCity: 'Budapest',
+      worldClockTimeZone: 'Europe/Budapest',
+    })
+  })
+
   it('shows widget-specific settings only when the widget is on the layout', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,

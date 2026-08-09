@@ -2,6 +2,7 @@ import type { Widget } from './useWidgetVisibility'
 
 export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'clock', label: 'Clock' },
+  { id: 'timezoneClock', label: 'Timezone Clock' },
   { id: 'weather', label: 'Weather' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'timer', label: 'Timer' },
@@ -12,6 +13,7 @@ export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'applePodcast', label: 'Apple Podcast' },
   { id: 'stocks', label: 'Stocks' },
   { id: 'currencies', label: 'Currencies' },
+  { id: 'quote', label: 'Quote of the Day' },
 ]
 
 export function getWidgetLabel(widget: Widget): string {

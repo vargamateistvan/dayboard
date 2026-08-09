@@ -6,6 +6,7 @@ import { useFocusMode } from './lib/useFocusMode'
 import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
 import { getWidgetLabel } from './lib/widgetMetadata'
 import { ClockWidget } from './components/ClockWidget'
+import { TimezoneClockWidget } from './components/TimezoneClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
@@ -16,6 +17,7 @@ import { AppleMusicWidget } from './components/AppleMusicWidget'
 import { ApplePodcastWidget } from './components/ApplePodcastWidget'
 import { StockWidget } from './components/StockWidget'
 import { CurrencyWidget } from './components/CurrencyWidget'
+import { QuoteWidget } from './components/QuoteWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
@@ -33,6 +35,8 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
   switch (widget) {
     case 'clock':
       return <ClockWidget isFullscreen={isFullscreen} />
+    case 'timezoneClock':
+      return <TimezoneClockWidget isFullscreen={isFullscreen} />
     case 'weather':
       return <WeatherWidget isFullscreen={isFullscreen} />
     case 'calendar':
@@ -53,11 +57,13 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <StockWidget isFullscreen={isFullscreen} />
     case 'currencies':
       return <CurrencyWidget isFullscreen={isFullscreen} />
+    case 'quote':
+      return <QuoteWidget isFullscreen={isFullscreen} />
   }
 }
 
 function getWidgetTypeClass(widget: Widget) {
-  if (widget === 'clock') {
+  if (widget === 'clock' || widget === 'timezoneClock') {
     return styles.widgetClock
   }
 

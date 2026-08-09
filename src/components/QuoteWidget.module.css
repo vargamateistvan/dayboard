@@ -1,0 +1,77 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 0;
+  padding: 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  overflow: hidden;
+}
+
+.quoteBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.label {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+
+.quote {
+  margin: 0;
+  font-size: clamp(0.95rem, 1.5vw, 1.4rem);
+  line-height: 1.35;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.author {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.button {
+  align-self: flex-start;
+  flex-shrink: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: 0.35rem 0.7rem;
+  font-size: var(--font-size-xs);
+}
+
+.button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.fullscreen {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  gap: 1rem;
+}
+
+.fullscreen .quote {
+  font-size: clamp(1.2rem, 2.4vw, 2rem);
+}
+
+.fullscreen .author {
+  font-size: clamp(1rem, 2vw, 1.4rem);
+}

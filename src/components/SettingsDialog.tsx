@@ -90,6 +90,15 @@ const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
   { id: "sunday", label: "Sunday" },
 ];
 
+function isValidTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat(undefined, { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 interface Props {
   readonly onClose: () => void;
 }
@@ -116,12 +125,12 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
   {
     id: "core",
     label: "Core",
-    widgets: ["clock", "weather", "calendar"],
+    widgets: ["clock", "timezoneClock", "weather", "calendar"],
   },
   {
     id: "productivity",
     label: "Productivity",
-    widgets: ["timer", "tasks", "notes"],
+    widgets: ["timer", "tasks", "notes", "quote"],
   },
   {
     id: "media",
@@ -578,6 +587,13 @@ export function SettingsDialog({ onClose }: Props) {
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
   );
+  const [worldClockCity, setWorldClockCity] = useState(settings.worldClockCity);
+  const [worldClockTimeZone, setWorldClockTimeZone] = useState(
+    settings.worldClockTimeZone,
+  );
+  const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
+    string | null
+  >(null);
   const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState(settings.spotifyEmbedUrl);
   const [spotifyEmbedLinks, setSpotifyEmbedLinks] = useState(
     normalizeSavedMediaLinks(settings.spotifyEmbedLinks, settings.spotifyEmbedUrl),
@@ -623,6 +639,7 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
+  const isTimezoneClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
   const isMusicOnLayout =
     visibility.spotify ||
@@ -719,11 +736,21 @@ export function SettingsDialog({ onClose }: Props) {
   };
 
   const save = () => {
+    const trimmedTimeZone = worldClockTimeZone.trim();
+    if (!isValidTimeZone(trimmedTimeZone)) {
+      setWorldClockTimeZoneError(
+        "Use a valid IANA timezone (for example: Europe/Budapest).",
+      );
+      return;
+    }
+
     updateSettings({
       calendarFeeds,
       weatherRefreshMinutes: weatherRefreshMin,
       weatherUnitSystem,
       weatherShowExtraDetails,
+      worldClockCity: worldClockCity.trim() || settings.worldClockCity,
+      worldClockTimeZone: trimmedTimeZone,
       spotifyEmbedUrl,
       spotifyEmbedLinks: normalizeSavedMediaLinks(
         spotifyEmbedLinks,
@@ -1190,6 +1217,49 @@ export function SettingsDialog({ onClose }: Props) {
                 </p>
               </section>
             </>
+          )}
+
+          {isTimezoneClockOnLayout && (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>Timezone Clock</h3>
+              <div className={styles.calendarList}>
+                <label className={styles.intervalLabel}>
+                  <span>City name</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={worldClockCity}
+                    placeholder="New York"
+                    onChange={(e) => setWorldClockCity(e.target.value)}
+                  />
+                </label>
+                <label className={styles.intervalLabel}>
+                  <span>Timezone (IANA)</span>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={worldClockTimeZone}
+                    placeholder="America/New_York"
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setWorldClockTimeZone(nextValue);
+                      const trimmedValue = nextValue.trim();
+                      setWorldClockTimeZoneError(
+                        trimmedValue.length === 0 || isValidTimeZone(trimmedValue)
+                          ? null
+                          : "Use a valid IANA timezone (for example: Europe/Budapest).",
+                      );
+                    }}
+                  />
+                </label>
+                {worldClockTimeZoneError && (
+                  <p className={styles.mediaLinkError}>{worldClockTimeZoneError}</p>
+                )}
+              </div>
+              <p className={styles.hint}>
+                This widget always shows your local time next to your selected city.
+              </p>
+            </section>
           )}
 
           {isFinanceOnLayout && (

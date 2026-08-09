@@ -119,6 +119,8 @@ describe('settings persistence', () => {
       stockSymbols: ['AAPL', 'TSLA'],
       currencyPairs: [['USD', 'EUR'], ['GBP', 'JPY']] as [string, string][],
       financeRefreshMinutes: 5,
+      worldClockCity: 'Tokyo',
+      worldClockTimeZone: 'Asia/Tokyo',
       customColors: DEFAULT_SETTINGS.customColors,
     }
     saveSettings(custom)
@@ -146,6 +148,8 @@ describe('settings persistence', () => {
         weatherUnitSystem: 'kelvin',
         weatherShowExtraDetails: 'nope',
         showBuyMeACoffeeWidget: 'sometimes',
+        worldClockCity: 123,
+        worldClockTimeZone: 'Mars/Phobos',
       }),
     )
     const loaded = loadSettings()
@@ -156,6 +160,8 @@ describe('settings persistence', () => {
     expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
+    expect(loaded.worldClockCity).toBe(DEFAULT_SETTINGS.worldClockCity)
+    expect(loaded.worldClockTimeZone).toBe(DEFAULT_SETTINGS.worldClockTimeZone)
   })
 })
 

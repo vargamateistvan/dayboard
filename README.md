@@ -5,9 +5,11 @@ A customizable dashboard application built with React and TypeScript, featuring 
 ## Features
 
 - **⏰ Clock Widget** - Display current time with customizable formats
+- **🌍 Timezone Clock Widget** - Compare local time with another city
 - **🌤️ Weather Widget** - Real-time weather information
 - **📅 Calendar Widget** - Interactive calendar with event support (iCal.js integration)
 - **📝 Task Widget** - Manage and track your tasks
+- **💬 Quote of the Day Widget** - Daily inspiration with optional rotation
 - **⏱️ Timer Panel** - Set and manage timers
 - **🎨 Multiple Themes** - Choose from various visual themes:
   - Default
