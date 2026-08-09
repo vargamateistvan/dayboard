@@ -58,9 +58,7 @@ function Stopwatch() {
   return (
     <div className={styles.timerBody}>
       <div className={styles.timerChrome}>
-        <div className={styles.headerLeft}>
-          <div className={styles.modeChip}>Stopwatch</div>
-        </div>
+        <div className={styles.headerLeft} aria-hidden="true" />
         <div className={styles.headerRight}>
           <div className={styles.stateChip} data-state={state}>
             {state === "idle"
@@ -142,9 +140,7 @@ function Countdown() {
   return (
     <div className={styles.timerBody}>
       <div className={styles.timerChrome}>
-        <div className={styles.headerLeft}>
-          <div className={styles.modeChip}>Countdown</div>
-        </div>
+        <div className={styles.headerLeft} aria-hidden="true" />
         <div className={styles.headerRight}>
           {state === "idle" ? (
             <div className={styles.inputRow}>
@@ -298,9 +294,7 @@ function Pomodoro() {
   return (
     <div className={styles.timerBody}>
       <div className={styles.timerChrome}>
-        <div className={styles.headerLeft}>
-          <div className={styles.modeChip}>Pomodoro</div>
-        </div>
+        <div className={styles.headerLeft} aria-hidden="true" />
         <div className={styles.headerRight}>
           <div className={styles.phaseBadge} data-phase={phase}>
             {phase === "work" ? (
