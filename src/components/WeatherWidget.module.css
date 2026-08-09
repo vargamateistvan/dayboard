@@ -245,6 +245,121 @@
   font-size: clamp(1rem, 1.9vw, 1.45rem);
 }
 
+.fullscreen .detailValue {
+  font-size: clamp(1rem, 1.9vw, 1.45rem);
+}
+
+.forecastGrid {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 40%, transparent);
+}
+
+.forecastTitle {
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+  width: 100%;
+}
+
+.forecastDay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.3rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  text-align: center;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 15%, transparent);
+  position: relative;
+  width: calc(14.28% - 0.5rem);
+  flex-basis: calc(14.28% - 0.5rem);
+}
+
+.forecastDateLabel {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  opacity: 0.8;
+}
+
+.forecastIcon {
+  color: var(--color-text-muted);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+}
+
+.forecastTemps {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.forecastHigh {
+  color: var(--color-text);
+}
+
+.forecastLow {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  font-size: 0.7rem;
+}
+
+.forecastInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.3rem 0.25rem;
+  border-radius: 0.3rem;
+  background: color-mix(in srgb, var(--color-surface) 20%, transparent);
+  font-size: 0.6rem;
+  color: var(--color-text-muted);
+  width: 100%;
+}
+
+.infoRow {
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+.infoRow:first-child {
+  color: var(--color-accent);
+  font-weight: 600;
+  margin-bottom: 0.05rem;
+}
+
+@media (max-width: 1400px) {
+  .forecastDay {
+    width: calc(25% - 0.5rem);
+    flex-basis: calc(25% - 0.5rem);
+  }
+}
+
+@media (max-width: 900px) {
+  .forecastDay {
+    width: calc(33.33% - 0.5rem);
+    flex-basis: calc(33.33% - 0.5rem);
+  }
+
+  .forecastIcon {
+    transform: scale(0.9);
+  }
+}
+
 @media (max-width: 700px) {
   .widget {
     height: auto;
@@ -260,5 +375,38 @@
 
   .detailsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .forecastDay {
+    width: calc(50% - 0.5rem);
+    flex-basis: calc(50% - 0.5rem);
+  }
+
+  .forecastGrid {
+    padding-top: 1rem;
+  }
+
+  .forecastTitle {
+    font-size: 0.75rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .forecastDay {
+    padding: 0.3rem 0.2rem;
+    gap: 0.25rem;
+  }
+
+  .forecastDateLabel {
+    font-size: 0.6rem;
+  }
+
+  .forecastTemps {
+    font-size: 0.7rem;
+  }
+
+  .forecastInfo {
+    padding: 0.25rem 0.2rem;
+    font-size: 0.55rem;
+    gap: 0.1rem;
   }
 }

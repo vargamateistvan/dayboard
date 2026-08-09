@@ -19,6 +19,16 @@ import { useSettings } from "../lib/useSettings";
 import styles from "./WeatherWidget.module.css";
 import type { WeatherUnitSystem } from "../lib/settings";
 
+interface ForecastDay {
+  date: string;
+  high: number;
+  low: number;
+  rainChance: number;
+  rainAmount: number;
+  windSpeed: number;
+  weatherCode: number;
+}
+
 interface WeatherData {
   temperature: number;
   apparentTemperature: number | null;
@@ -36,6 +46,7 @@ interface WeatherData {
   todayRainChance: number | null;
   sunrise: string | null;
   sunset: string | null;
+  forecast: ForecastDay[];
 }
 
 type WeatherIconName =
@@ -184,9 +195,15 @@ function formatLastRefresh(lastRefreshedAt: number, now: number): string {
   return `Updated ${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
 }
 
+function formatForecastDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+}
+
 async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSystem): Promise<WeatherData> {
   const isImperial = unitSystem === "imperial";
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&forecast_days=1`;
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,weather_code&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&precipitation_unit=mm&forecast_days=7`;
   const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
 
   const [weatherRes, geoRes] = await Promise.all([
@@ -202,6 +219,26 @@ async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSys
     geo.address?.village ??
     geo.address?.county ??
     "Unknown location";
+
+  const forecast: ForecastDay[] = (weather.daily.time || []).slice(1, 8).map((date: string, index: number) => ({
+    date,
+    high: typeof weather.daily?.temperature_2m_max?.[index + 1] === "number"
+      ? Math.round(weather.daily.temperature_2m_max[index + 1])
+      : 0,
+    low: typeof weather.daily?.temperature_2m_min?.[index + 1] === "number"
+      ? Math.round(weather.daily.temperature_2m_min[index + 1])
+      : 0,
+    rainChance: typeof weather.daily?.precipitation_probability_max?.[index + 1] === "number"
+      ? Math.round(weather.daily.precipitation_probability_max[index + 1])
+      : 0,
+    rainAmount: typeof weather.daily?.precipitation_sum?.[index + 1] === "number"
+      ? Math.round(weather.daily.precipitation_sum[index + 1] * 10) / 10
+      : 0,
+    windSpeed: typeof weather.daily?.wind_speed_10m_max?.[index + 1] === "number"
+      ? Math.round(weather.daily.wind_speed_10m_max[index + 1])
+      : 0,
+    weatherCode: weather.daily?.weather_code?.[index + 1] ?? 0,
+  }));
 
   return {
     temperature: Math.round(weather.current.temperature_2m),
@@ -256,6 +293,7 @@ async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSys
       typeof weather.daily?.sunset?.[0] === "string"
         ? weather.daily.sunset[0]
         : null,
+    forecast,
   };
 }
 
@@ -430,6 +468,33 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
               </span>
               <span className={styles.detailValue}>{data.uvIndex ?? "—"}</span>
             </div>
+            </div>
+          )}
+          {isFullscreen && data.forecast && data.forecast.length > 0 && (
+            <div className={styles.forecastGrid}>
+              <div className={styles.forecastTitle}>7-Day Forecast</div>
+              {data.forecast.map((day) => {
+                const dayInfo = getWeatherInfo(day.weatherCode);
+                const windUnit = settings.weatherUnitSystem === "imperial" ? "mph" : "km/h";
+                return (
+                  <div key={day.date} className={styles.forecastDay}>
+                    <div className={styles.forecastDateLabel}>{formatForecastDate(day.date)}</div>
+                    <div className={styles.forecastIcon}>
+                      <WeatherIcon name={dayInfo.icon} size={28} />
+                    </div>
+                    <div className={styles.forecastTemps}>
+                      <span className={styles.forecastHigh}>{day.high}°</span>
+                      <span className={styles.forecastLow}>{day.low}°</span>
+                    </div>
+                    <div className={styles.forecastInfo}>
+                      <div className={styles.infoRow}>{dayInfo.label}</div>
+                      <div className={styles.infoRow}>Rain: {day.rainChance}%</div>
+                      {day.rainAmount > 0 && <div className={styles.infoRow}>Precip: {day.rainAmount}mm</div>}
+                      <div className={styles.infoRow}>Wind: {day.windSpeed}{windUnit.substring(0, 2)}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
