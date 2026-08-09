@@ -1,39 +1,35 @@
 # Dayboard
 
-A customizable dashboard application built with React and TypeScript, featuring widgets for clock, weather, calendar, tasks, and timers with multiple themes and focus modes.
+Dayboard is a customizable dashboard built with React, TypeScript, and Vite. It brings together widgets for time, weather, calendar, tasks, notes, media, markets, and focus-friendly productivity.
 
 ## Features
 
-- **⏰ Clock Widget** - Display current time with customizable formats
-- **🌍 Timezone Clock Widget** - Compare local time with another city
-- **🌤️ Weather Widget** - Real-time weather information
-- **📅 Calendar Widget** - Interactive calendar with event support (iCal.js integration)
-- **📝 Task Widget** - Manage and track your tasks
-- **💬 Quote of the Day Widget** - Daily inspiration with optional rotation
-- **⏱️ Timer Panel** - Set and manage timers
-- **🎨 Multiple Themes** - Choose from various visual themes:
-  - Default
-  - Retro
-  - Futuristic
-  - Nature
-  - Ocean
-  - Sunset
-- **🎯 Focus Mode** - Minimize distractions with a clean focus interface
-- **⚙️ Customizable Settings** - Personalize the dashboard to your preferences
-- **🔔 Event Notifications** - Get notified about upcoming events
-- **📱 Responsive Design** - Works on desktop and mobile devices
+- Clock and timezone clock widgets
+- Weather widget
+- Calendar widget with iCal feed support and event notifications
+- Timer panel
+- Task widget
+- Sticky notes widget
+- Spotify, Apple Music, and Apple Podcast widgets
+- Stocks and currency widgets
+- Quote of the day widget
+- Focus mode
+- Fullscreen widget view
+- Multiple themes
+- Customizable widget visibility and layout
+- Notification badge for upcoming events
+- Buy me a coffee widget
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - Yarn or npm
 
-### Installation
+### Install
 
 ```bash
-# Install dependencies
 yarn install
 # or
 npm install
@@ -42,74 +38,94 @@ npm install
 ### Development
 
 ```bash
-# Start the development server
 yarn dev
 # or
 npm run dev
 ```
 
-The application will be available at `http://localhost:5175/dayboard/`
+The app runs at `http://localhost:5173/dayboard/`.
 
-### Building
+### HTTPS Development
 
 ```bash
-# Build for production
+yarn dev:https
+# or
+npm run dev:https
+```
+
+### HTTPS Preview
+
+```bash
+yarn preview:https
+# or
+npm run preview:https
+```
+
+### Build
+
+```bash
 yarn build
 # or
 npm run build
 ```
 
-The build output will be in the `dist` directory.
-
-### Testing
+### Preview
 
 ```bash
-# Run tests once
+yarn preview
+# or
+npm run preview
+```
+
+### Tests
+
+```bash
 yarn test
 # or
 npm test
+```
 
-# Run tests in watch mode
+```bash
 yarn test:watch
 # or
 npm run test:watch
 ```
 
+### Lint
+
+```bash
+yarn lint
+# or
+npm run lint
+```
+
+## Calendar Proxy
+
+The Vite dev server exposes a calendar proxy at `/api/calendar` so remote iCal feeds can be fetched safely during development and preview.
+
 ## Project Structure
 
-```
+```text
 src/
-├── components/       # React components (Clock, Weather, Calendar, etc.)
-├── lib/             # Utilities and hooks (useSettings, useTheme, etc.)
-├── themes/          # CSS theme files
-├── test/            # Test files
-├── App.tsx          # Main app component
-├── main.tsx         # Entry point
-└── vite-env.d.ts    # Vite type definitions
+├── components/   React widgets and UI pieces
+├── lib/          Shared hooks, utilities, and settings
+├── themes/       Global and theme-specific styles
+├── test/         Test setup
+├── App.tsx       Main dashboard
+└── main.tsx      Entry point
 ```
 
 ## Tech Stack
 
-- **React** 18.3.1 - UI framework
-- **TypeScript** ~5.6.2 - Type safety
-- **Vite** 6.3.5 - Build tool and dev server
-- **ical.js** 2.1.0 - Calendar/iCal support
-- **Lucide React** 0.511.0 - Icon library
-- **Vitest** 3.2.4 - Testing framework
-- **@testing-library/react** - React testing utilities
-
-## Scripts
-
-- `yarn dev` - Start development server
-- `yarn build` - Build for production
-- `yarn preview` - Preview production build
-- `yarn test` - Run tests once
-- `yarn test:watch` - Run tests in watch mode
+- React 18
+- TypeScript
+- Vite
+- Vitest
+- Testing Library
+- ical.js
+- Lucide React
+- Recharts
 
 ## License
 
 MIT
-
-## Contributing
-
-Feel free to fork this project and submit pull requests for any improvements.
