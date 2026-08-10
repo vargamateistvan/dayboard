@@ -130,9 +130,24 @@ vi.mock('./components/BuyMeCoffeeWidget', () => ({
   BuyMeCoffeeWidget: () => null,
 }))
 
-vi.mock('./components/SettingsDialog', () => ({
-  SettingsDialog: () => <div>Settings dialog</div>,
-}))
+vi.mock('./components/SettingsDialog', async () => {
+  const { useSettings } = await import('./lib/useSettings')
+
+  return {
+    SettingsDialog: () => {
+      const { updateSettings } = useSettings()
+
+      return (
+        <button
+          type="button"
+          onClick={() => updateSettings({ colorScheme: 'system' })}
+        >
+          Mock diverge settings
+        </button>
+      )
+    },
+  }
+})
 
 vi.mock('./components/NotificationBadge', () => ({
   NotificationBadge: () => null,
@@ -235,5 +250,36 @@ describe('App fullscreen widgets', () => {
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
       colorScheme: 'dark',
     })
+  })
+
+  it('keeps showing the selected preset while editing even when settings diverge', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        Focus: {
+          name: 'Focus',
+          settings: { colorScheme: 'dark' },
+          createdAt: 2,
+          updatedAt: 2,
+        },
+      }),
+    )
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Work' }))
+    expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Work')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mock diverge settings' }))
+
+    expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Work')
   })
 })

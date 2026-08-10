@@ -205,12 +205,22 @@ function Dashboard() {
         })
       )
     })?.name ?? ''
+  const selectedPresetExists = Boolean(
+    selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
+  )
+  const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
 
   useEffect(() => {
     if (!selectedPresetName && currentPresetName) {
       setSelectedPresetName(currentPresetName)
     }
   }, [currentPresetName, selectedPresetName])
+
+  useEffect(() => {
+    if (selectedPresetName && !selectedPresetExists) {
+      setSelectedPresetName('')
+    }
+  }, [selectedPresetExists, selectedPresetName])
 
   const handlePresetChange = (presetName: string) => {
     const preset = presets.find((candidate) => candidate.name === presetName)
@@ -243,7 +253,7 @@ function Dashboard() {
             onClick={() => setPresetMenuOpen((current) => !current)}
           >
             <span className={styles.presetSelectorLabel}>Preset</span>
-            <span className={styles.presetSelectorValue}>{currentPresetName || 'Custom'}</span>
+            <span className={styles.presetSelectorValue}>{visiblePresetName || 'Custom'}</span>
             <ChevronDown
               size={16}
               className={[styles.presetSelectorChevron, presetMenuOpen ? styles.presetSelectorChevronOpen : ''].join(' ')}
@@ -252,7 +262,7 @@ function Dashboard() {
           {presetMenuOpen ? (
             <div className={styles.presetMenu} role="listbox" aria-label="Preset options">
               {presets.map((preset) => {
-                const isSelected = preset.name === currentPresetName
+                const isSelected = preset.name === visiblePresetName
 
                 return (
                   <button
