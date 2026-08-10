@@ -7,9 +7,46 @@ interface Task {
   text: string
   completed: boolean
   createdAt: number
+  dueDate: string
 }
 
 const STORAGE_KEY = 'dayboard_tasks'
+const DATE_INPUT_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+function formatTaskDate(value: string): string {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(year, month - 1, day))
+}
+
+function normalizeTask(raw: unknown): Task | null {
+  if (!raw || typeof raw !== 'object') {
+    return null
+  }
+
+  const maybeTask = raw as Partial<Task>
+  const id = typeof maybeTask.id === 'string' ? maybeTask.id : ''
+  const text = typeof maybeTask.text === 'string' ? maybeTask.text.trim() : ''
+
+  if (!id || !text) {
+    return null
+  }
+
+  const dueDate = typeof maybeTask.dueDate === 'string' && DATE_INPUT_PATTERN.test(maybeTask.dueDate)
+    ? maybeTask.dueDate
+    : ''
+
+  return {
+    id,
+    text,
+    completed: Boolean(maybeTask.completed),
+    createdAt: typeof maybeTask.createdAt === 'number' ? maybeTask.createdAt : Date.now(),
+    dueDate,
+  }
+}
 
 interface TaskWidgetProps {
   readonly isFullscreen?: boolean
@@ -22,7 +59,13 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved) as unknown
+        if (!Array.isArray(parsed)) {
+          return []
+        }
+        return parsed
+          .map(normalizeTask)
+          .filter((task): task is Task => task !== null)
       } catch {
         console.error('Failed to load tasks from localStorage')
         return []
@@ -31,6 +74,7 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
     return []
   })
   const [input, setInput] = useState('')
+  const [inputDate, setInputDate] = useState('')
   const [mounted, setMounted] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
@@ -56,9 +100,11 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
       text: input.trim(),
       completed: false,
       createdAt: Date.now(),
+      dueDate: inputDate,
     }
     setTasks([newTask, ...tasks])
     setInput('')
+    setInputDate('')
   }
 
   const toggleTask = (id: string) => {
@@ -94,6 +140,12 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
 
   const completedCount = tasks.filter(t => t.completed).length
   const totalCount = tasks.length
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1
+    }
+    return b.createdAt - a.createdAt
+  })
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
@@ -115,6 +167,13 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
           className={styles.input}
           maxLength={100}
         />
+        <input
+          type="date"
+          value={inputDate}
+          onChange={(e) => setInputDate(e.target.value)}
+          className={styles.dateInput}
+          aria-label="Task date"
+        />
         <button type="submit" className={styles.addBtn} aria-label="Add task">
           <Plus size={18} />
         </button>
@@ -124,7 +183,7 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
         {tasks.length === 0 ? (
           <p className={styles.empty}>No tasks yet</p>
         ) : (
-          tasks.map(task => (
+          sortedTasks.map(task => (
             <div key={task.id} className={styles.taskItem}>
               <button
                 type="button"
@@ -159,7 +218,14 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
                   onClick={() => startEditingTask(task)}
                   aria-label={`Edit "${task.text}"`}
                 >
-                  <span className={styles.taskText}>{task.text}</span>
+                  <span className={styles.taskContent}>
+                    <span className={styles.taskText}>{task.text}</span>
+                    {task.dueDate ? (
+                      <time className={styles.taskDate} dateTime={task.dueDate}>
+                        {formatTaskDate(task.dueDate)}
+                      </time>
+                    ) : null}
+                  </span>
                 </button>
               )}
               <button

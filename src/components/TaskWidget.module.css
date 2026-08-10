@@ -52,6 +52,25 @@
   transition: border-color 0.2s;
 }
 
+.dateInput {
+  flex-shrink: 0;
+  min-width: 8.5rem;
+  padding: 0.35rem 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
 .input:focus {
   outline: none;
   border-color: var(--color-accent);
@@ -136,12 +155,26 @@
 }
 
 .taskText {
-  flex: 1;
-  min-width: 0;
   font-size: 0.8rem;
   color: var(--color-text);
   overflow-wrap: anywhere;
   transition: all 0.2s;
+}
+
+.taskContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.taskDate {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  opacity: 0.9;
 }
 
 .taskTextButton {
@@ -160,6 +193,10 @@
   color: var(--color-text-muted);
   text-decoration: line-through;
   opacity: 0.6;
+}
+
+.taskTextButton.completed .taskDate {
+  opacity: 0.55;
 }
 
 .taskEditInput {
@@ -219,6 +256,7 @@
 }
 
 .fullscreen .input,
+.fullscreen .dateInput,
 .fullscreen .taskEditInput {
   font-size: clamp(1.2rem, 2vw, 1.6rem);
 }
@@ -245,6 +283,10 @@
   font-size: clamp(1.2rem, 2vw, 1.6rem);
 }
 
+.fullscreen .taskDate {
+  font-size: clamp(0.92rem, 1.2vw, 1.1rem);
+}
+
 .fullscreen .deleteBtn {
   width: 2.25rem;
   height: 2.25rem;
@@ -266,6 +308,7 @@
   }
 
   .fullscreen .input,
+  .fullscreen .dateInput,
   .fullscreen .taskEditInput,
   .fullscreen .taskText {
     font-size: 0.95rem;
@@ -308,6 +351,7 @@
   }
 
   .fullscreen .input,
+  .fullscreen .dateInput,
   .fullscreen .taskEditInput,
   .fullscreen .taskText {
     font-size: 0.86rem;
@@ -329,6 +373,7 @@
   }
 
   .fullscreen .input,
+  .fullscreen .dateInput,
   .fullscreen .taskEditInput,
   .fullscreen .taskText {
     font-size: 0.8rem;
