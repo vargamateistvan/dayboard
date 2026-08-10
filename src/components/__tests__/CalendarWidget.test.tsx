@@ -196,6 +196,20 @@ describe('CalendarWidget', () => {
     expect(screen.getByText(initialMonth)).toBeInTheDocument()
   })
 
+  it('reuses fetched feed data when navigating between periods', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithSettings([{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }])
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    vi.unstubAllGlobals()
+  })
+
   it('navigates week view with previous and next controls', () => {
     renderWithSettings([], { calendarExtraInfoPreview: 'weekly' })
 

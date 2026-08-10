@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { fetchCalendarFeeds } from '../lib/fetchCalendarFeed'
+import { fetchCalendarFeeds, type FetchedCalendarFeed } from '../lib/fetchCalendarFeed'
 import {
   parseCalendarFeed,
   type CalendarEvent,
@@ -481,6 +481,7 @@ function MonthTooltipContent({
 export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const { settings } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [fetchedFeeds, setFetchedFeeds] = useState<FetchedCalendarFeed[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
@@ -575,6 +576,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
 
   useEffect(() => {
     if (settings.calendarFeeds.length === 0) {
+      setFetchedFeeds([])
       setEvents([])
       setError(null)
       setLoading(false)
@@ -588,15 +590,9 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     setError(null)
 
     fetchCalendarFeeds(settings.calendarFeeds)
-      .then((feeds) => {
+      .then((nextFetchedFeeds) => {
         if (cancelled) return
-        const nextEvents = feeds
-          .flatMap(({ feed, text }) => parseCalendarFeed(text, monthGridRange).map((event) => ({
-            ...event,
-            calendarColor: feed.color || DEFAULT_CALENDAR_COLOR,
-          })))
-          .sort((a, b) => a.start.getTime() - b.start.getTime())
-        setEvents(nextEvents)
+        setFetchedFeeds(nextFetchedFeeds)
         setLoading(false)
       })
       .catch((err: unknown) => {
@@ -608,7 +604,22 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     return () => {
       cancelled = true
     }
-  }, [monthGridRange, settings.calendarFeeds])
+  }, [settings.calendarFeeds])
+
+  useEffect(() => {
+    if (fetchedFeeds.length === 0) {
+      setEvents([])
+      return
+    }
+
+    const nextEvents = fetchedFeeds
+      .flatMap(({ feed, text }) => parseCalendarFeed(text, monthGridRange).map((event) => ({
+        ...event,
+        calendarColor: feed.color || DEFAULT_CALENDAR_COLOR,
+      })))
+      .sort((a, b) => a.start.getTime() - b.start.getTime())
+    setEvents(nextEvents)
+  }, [fetchedFeeds, monthGridRange])
 
   const todaysEvents = events.filter((event) => isEventWithinRange(event, selectedRange))
   const visibleEvents = todaysEvents.filter((event) => {
