@@ -565,3 +565,208 @@ export function applyTheme(settings: Settings): void {
   document.documentElement.setAttribute('data-theme', settings.theme)
   document.documentElement.setAttribute('data-color-scheme', resolved)
 }
+
+/**
+ * Validates all settings fields for correctness
+ * @returns Object with validation result and detailed errors
+ */
+export function validateSettings(settings: Settings): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+
+  if (!settings.theme || !['default', 'retro', 'futuristic', 'nature', 'ocean', 'sunset', 'custom'].includes(settings.theme)) {
+    errors.push('Invalid theme')
+  }
+
+  if (!settings.colorScheme || !['light', 'dark', 'system'].includes(settings.colorScheme)) {
+    errors.push('Invalid colorScheme')
+  }
+
+  if (!settings.fontPreset) {
+    errors.push('Invalid fontPreset')
+  }
+
+  if (typeof settings.showBuyMeACoffeeWidget !== 'boolean') {
+    errors.push('showBuyMeACoffeeWidget must be boolean')
+  }
+
+  if (!Array.isArray(settings.calendarFeeds)) {
+    errors.push('calendarFeeds must be an array')
+  }
+
+  if (settings.weatherRefreshMinutes < 1 || settings.weatherRefreshMinutes > 1440) {
+    errors.push('weatherRefreshMinutes must be between 1 and 1440')
+  }
+
+  if (!['metric', 'imperial'].includes(settings.weatherUnitSystem)) {
+    errors.push('Invalid weatherUnitSystem')
+  }
+
+  if (settings.pomodoroWorkMinutes < 1 || settings.pomodoroWorkMinutes > 120) {
+    errors.push('pomodoroWorkMinutes must be between 1 and 120')
+  }
+
+  if (settings.pomodoroBreakMinutes < 1 || settings.pomodoroBreakMinutes > 120) {
+    errors.push('pomodoroBreakMinutes must be between 1 and 120')
+  }
+
+  if (!Array.isArray(settings.stockSymbols) || settings.stockSymbols.length === 0) {
+    errors.push('stockSymbols must be a non-empty array')
+  }
+
+  if (!Array.isArray(settings.currencyPairs) || settings.currencyPairs.length === 0) {
+    errors.push('currencyPairs must be a non-empty array')
+  }
+
+  if (settings.financeRefreshMinutes < 1 || settings.financeRefreshMinutes > 1440) {
+    errors.push('financeRefreshMinutes must be between 1 and 1440')
+  }
+
+  if (typeof settings.worldClockCity !== 'string' || settings.worldClockCity.trim().length === 0) {
+    errors.push('worldClockCity must be a non-empty string')
+  }
+
+  if (!isValidIanaTimeZone(settings.worldClockTimeZone)) {
+    errors.push('Invalid worldClockTimeZone')
+  }
+
+  if (settings.customColors) {
+    if (typeof settings.customColors.primary !== 'string' || settings.customColors.primary.trim().length === 0) {
+      errors.push('customColors.primary must be a non-empty string')
+    }
+    if (typeof settings.customColors.fontColor !== 'string' || settings.customColors.fontColor.trim().length === 0) {
+      errors.push('customColors.fontColor must be a non-empty string')
+    }
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+/**
+ * Resets all settings to defaults
+ */
+export function resetSettings(): void {
+  saveSettings({ ...DEFAULT_SETTINGS })
+  window.dispatchEvent(new CustomEvent('settingsReset'))
+}
+
+/**
+ * Resets a specific settings field to its default value
+ */
+export function resetField<K extends keyof Settings>(key: K): void {
+  const current = loadSettings()
+  current[key] = DEFAULT_SETTINGS[key]
+  saveSettings(current)
+  window.dispatchEvent(new CustomEvent('settingsChanged', { detail: { field: key } }))
+}
+
+/**
+ * Exports current settings as JSON string
+ * @param pretty Whether to format JSON with indentation
+ */
+export function exportSettings(pretty = true): string {
+  const settings = loadSettings()
+  return JSON.stringify(settings, null, pretty ? 2 : 0)
+}
+
+/**
+ * Imports settings from JSON string
+ * @returns Validated settings or null if invalid
+ */
+export function importSettings(json: string): Settings | null {
+  try {
+    const parsed = JSON.parse(json)
+    // Re-normalize to ensure consistency
+    const normalized = {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      fontPreset: normalizeFontPreset(parsed.fontPreset),
+      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(parsed.showBuyMeACoffeeWidget),
+      calendarFeeds: normalizeCalendarFeeds(parsed.calendarFeeds),
+      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(parsed.weatherRefreshMinutes),
+      weatherUnitSystem: normalizeWeatherUnitSystem(parsed.weatherUnitSystem),
+      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(parsed.weatherShowExtraDetails),
+      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(parsed.pomodoroWorkMinutes),
+      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(parsed.pomodoroBreakMinutes),
+      customColors: normalizeCustomColors(parsed.customColors),
+    }
+
+    const validation = validateSettings(normalized)
+    if (!validation.valid) {
+      console.warn('Imported settings have validation errors:', validation.errors)
+      return null
+    }
+
+    return normalized
+  } catch (error) {
+    console.error('Failed to import settings:', error)
+    return null
+  }
+}
+
+/**
+ * Gets all settings fields that differ from defaults
+ */
+export function getSettingsDiff(): Partial<Settings> {
+  const current = loadSettings()
+  const diff: Partial<Settings> = {}
+
+  for (const key in current) {
+    const k = key as keyof Settings
+    const currentValue = JSON.stringify(current[k])
+    const defaultValue = JSON.stringify(DEFAULT_SETTINGS[k])
+
+    if (currentValue !== defaultValue) {
+      Object.assign(diff, { [k]: current[k] })
+    }
+  }
+
+  return diff
+}
+
+/**
+ * Enables cross-tab synchronization of settings
+ * Settings changed in one tab will be reflected in all other tabs
+ */
+export function enableCrossTabSync(): () => void {
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY && event.newValue) {
+      // Settings changed in another tab
+      window.dispatchEvent(
+        new CustomEvent('settingsSyncedFromTab', {
+          detail: { settings: JSON.parse(event.newValue) },
+        })
+      )
+    }
+  }
+
+  window.addEventListener('storage', handleStorageChange)
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('storage', handleStorageChange)
+  }
+}
+
+/**
+ * Type guard to check if a value is valid Settings object
+ */
+export function isValidSettings(value: unknown): value is Settings {
+  if (!value || typeof value !== 'object') return false
+
+  const s = value as Record<string, unknown>
+  return (
+    typeof s.theme === 'string' &&
+    typeof s.colorScheme === 'string' &&
+    typeof s.fontPreset === 'string' &&
+    typeof s.showBuyMeACoffeeWidget === 'boolean' &&
+    Array.isArray(s.calendarFeeds) &&
+    typeof s.weatherRefreshMinutes === 'number' &&
+    typeof s.weatherUnitSystem === 'string' &&
+    typeof s.pomodoroWorkMinutes === 'number' &&
+    typeof s.pomodoroBreakMinutes === 'number' &&
+    Array.isArray(s.stockSymbols) &&
+    Array.isArray(s.currencyPairs) &&
+    typeof s.worldClockCity === 'string' &&
+    typeof s.worldClockTimeZone === 'string'
+  )
+}

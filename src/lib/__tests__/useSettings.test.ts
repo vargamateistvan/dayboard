@@ -5,6 +5,12 @@ import {
   resolveColorScheme,
   DEFAULT_SETTINGS,
   DEFAULT_CALENDAR_COLORS,
+  validateSettings,
+  resetSettings,
+  exportSettings,
+  importSettings,
+  getSettingsDiff,
+  isValidSettings,
 } from '../settings'
 
 describe('settings persistence', () => {
@@ -200,3 +206,105 @@ describe('resolveColorScheme', () => {
     vi.unstubAllGlobals()
   })
 })
+
+describe('settings validation', () => {
+  it('validates correct settings', () => {
+    const result = validateSettings(DEFAULT_SETTINGS)
+    expect(result.valid).toBe(true)
+    expect(result.errors).toHaveLength(0)
+  })
+
+  it('catches invalid theme', () => {
+    const invalid = { ...DEFAULT_SETTINGS, theme: 'invalid' as unknown as typeof DEFAULT_SETTINGS.theme }
+    const result = validateSettings(invalid)
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e: string) => e.includes('theme'))).toBe(true)
+  })
+
+  it('catches invalid pomodoro work minutes', () => {
+    const invalid = { ...DEFAULT_SETTINGS, pomodoroWorkMinutes: 200 }
+    const result = validateSettings(invalid)
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e: string) => e.includes('pomodoroWorkMinutes'))).toBe(true)
+  })
+})
+
+describe('settings export/import', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('exports settings as JSON', () => {
+    const custom = { ...DEFAULT_SETTINGS, theme: 'retro' as const }
+    saveSettings(custom)
+
+    const exported = exportSettings(false)
+    const parsed = JSON.parse(exported)
+    expect(parsed.theme).toBe('retro')
+  })
+
+  it('imports valid settings', () => {
+    const custom = { ...DEFAULT_SETTINGS, theme: 'ocean' as const }
+    const json = JSON.stringify(custom)
+
+    const imported = importSettings(json)
+    expect(imported).not.toBeNull()
+    expect(imported?.theme).toBe('ocean')
+  })
+
+  it('rejects invalid settings during import', () => {
+    const invalid = JSON.stringify({ ...DEFAULT_SETTINGS, pomodoroWorkMinutes: 500 })
+    const imported = importSettings(invalid)
+    expect(imported).toBeNull()
+  })
+
+  it('formats exported JSON with pretty printing', () => {
+    const exported = exportSettings(true)
+    expect(exported).toContain('\n')
+    expect(exported).toContain('  ')
+  })
+})
+
+describe('settings reset', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('resets all settings to defaults', () => {
+    const custom = { ...DEFAULT_SETTINGS, theme: 'nature' as const }
+    saveSettings(custom)
+    resetSettings()
+    expect(loadSettings().theme).toBe(DEFAULT_SETTINGS.theme)
+  })
+})
+
+describe('settings diff', () => {
+  beforeEach(() => localStorage.clear())
+  afterEach(() => localStorage.clear())
+
+  it('detects changes from defaults', () => {
+    const custom = { ...DEFAULT_SETTINGS, theme: 'sunset' as const, pomodoroWorkMinutes: 30 }
+    saveSettings(custom)
+
+    const diff = getSettingsDiff()
+    expect(diff.theme).toBe('sunset')
+    expect(diff.pomodoroWorkMinutes).toBe(30)
+  })
+
+  it('returns empty diff when no changes', () => {
+    saveSettings(DEFAULT_SETTINGS)
+    const diff = getSettingsDiff()
+    expect(Object.keys(diff)).toHaveLength(0)
+  })
+})
+
+describe('type guards', () => {
+  it('validates correct settings object', () => {
+    expect(isValidSettings(DEFAULT_SETTINGS)).toBe(true)
+  })
+
+  it('rejects invalid settings object', () => {
+    expect(isValidSettings({ theme: 'test' })).toBe(false)
+    expect(isValidSettings(null)).toBe(false)
+    expect(isValidSettings('string')).toBe(false)
+  })
+})
+
