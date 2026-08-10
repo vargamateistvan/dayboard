@@ -304,6 +304,35 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('renames an existing preset from the presets tab', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      }),
+    )
+
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Deep Work')
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+    expect(promptSpy).toHaveBeenCalled()
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      'Deep Work': {
+        name: 'Deep Work',
+      },
+    })
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}').Work).toBeUndefined()
+    promptSpy.mockRestore()
+  })
+
   it('keeps preset shortcuts out of the layout and appearance tabs', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))

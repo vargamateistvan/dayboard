@@ -37,6 +37,7 @@ import {
   deletePreset,
   isPresetScheduledNow,
   listPresets,
+  renamePreset,
   savePreset,
   type Settings,
   type SettingsPreset,
@@ -692,6 +693,7 @@ interface PresetCardProps {
   readonly onRefresh: () => void;
   readonly onApply: (preset: SettingsPreset) => void;
   readonly onEdit: (preset: SettingsPreset) => void;
+  readonly onRename: (oldName: string, newName: string) => void;
 }
 
 function PresetCard({
@@ -702,6 +704,7 @@ function PresetCard({
   onRefresh,
   onApply,
   onEdit,
+  onRename,
 }: PresetCardProps) {
   const [scheduleEnabled, setScheduleEnabled] = useState(preset.schedule?.enabled ?? false);
   const [startTime, setStartTime] = useState(
@@ -710,6 +713,7 @@ function PresetCard({
   const [endTime, setEndTime] = useState(
     preset.schedule?.endTime ?? DEFAULT_PRESET_SCHEDULE.endTime,
   );
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   useEffect(() => {
     setScheduleEnabled(preset.schedule?.enabled ?? false);
@@ -756,6 +760,27 @@ function PresetCard({
     onRefresh();
   };
 
+  const handleRename = () => {
+    const nextName = window.prompt('Rename preset', preset.name);
+    if (nextName === null) {
+      return;
+    }
+
+    const trimmedName = nextName.trim();
+    if (!trimmedName || trimmedName === preset.name) {
+      return;
+    }
+
+    try {
+      renamePreset(preset.name, trimmedName);
+      setRenameError(null);
+      onRename(preset.name, trimmedName);
+      onRefresh();
+    } catch (error) {
+      setRenameError(error instanceof Error ? error.message : 'Unable to rename preset.')
+    }
+  };
+
   return (
     <article className={styles.presetCard}>
       <div className={styles.presetCardHeader}>
@@ -783,6 +808,13 @@ function PresetCard({
             type="button"
           >
             Edit
+          </button>
+          <button
+            className={styles.btnGhost}
+            onClick={handleRename}
+            type="button"
+          >
+            Rename
           </button>
           <button
             className={styles.btnGhost}
@@ -858,6 +890,7 @@ function PresetCard({
           Save schedule
         </button>
       </div>
+      {renameError && <p className={styles.mediaLinkError}>{renameError}</p>}
     </article>
   );
 }
@@ -1220,6 +1253,12 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     syncDraftState(preset.settings);
     setEditingPresetName(preset.name);
     setActiveTab("appearance");
+  };
+
+  const handleRenamePreset = (oldName: string, newName: string) => {
+    if (editingPresetName === oldName) {
+      setEditingPresetName(newName);
+    }
   };
 
   const save = () => {
@@ -2449,6 +2488,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           onRefresh={refreshPresets}
                           onApply={handleApplyPreset}
                           onEdit={handleEditPreset}
+                          onRename={handleRenamePreset}
                         />
                       ))}
                     </div>
