@@ -6,6 +6,7 @@ Dayboard is a customizable dashboard built with React, TypeScript, and Vite. It 
 
 - Clock and timezone clock widgets
 - Weather widget
+- Flights radar widget
 - Calendar widget with iCal feed support and event notifications
 - Timer panel
 - Task widget
@@ -99,9 +100,14 @@ yarn lint
 npm run lint
 ```
 
-## Calendar Proxy
+## Dev Proxies
 
-The Vite dev server exposes a calendar proxy at `/api/calendar` so remote iCal feeds can be fetched safely during development and preview.
+The Vite dev server exposes:
+
+- `/api/calendar` for remote iCal feeds
+- `/api/flights` for OpenSky flight state queries
+
+These proxies make remote requests work reliably during development and preview.
 
 ## Project Structure
 

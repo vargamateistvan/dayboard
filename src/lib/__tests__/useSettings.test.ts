@@ -121,6 +121,14 @@ describe('settings persistence', () => {
       weatherRefreshMinutes: 15,
       weatherUnitSystem: 'imperial' as const,
       weatherShowExtraDetails: false,
+      flightsRadiusKm: 40,
+      flightsRadarRadiusKm: 25,
+      flightsRefreshSeconds: 90,
+      flightsShowLabels: false,
+      flightsShowOnlyAirborne: false,
+      flightsUseDeviceLocation: false,
+      flightsManualLatitude: '47.4979',
+      flightsManualLongitude: '19.0402',
       spotifyEmbedUrl: 'https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT',
       spotifyEmbedLinks: [
         {
@@ -185,6 +193,14 @@ describe('settings persistence', () => {
         calendarWeekStartsOn: 'friday',
         weatherUnitSystem: 'kelvin',
         weatherShowExtraDetails: 'nope',
+        flightsRadiusKm: 1,
+        flightsRadarRadiusKm: 999,
+        flightsRefreshSeconds: 1,
+        flightsShowLabels: 'yes',
+        flightsShowOnlyAirborne: 'sometimes',
+        flightsUseDeviceLocation: 'no',
+        flightsManualLatitude: 47.5,
+        flightsManualLongitude: 19.0,
         showBuyMeACoffeeWidget: 'sometimes',
         worldClockCity: 123,
         worldClockTimeZone: 'Mars/Phobos',
@@ -193,6 +209,14 @@ describe('settings persistence', () => {
     const loaded = loadSettings()
     expect(loaded.weatherUnitSystem).toBe(DEFAULT_SETTINGS.weatherUnitSystem)
     expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
+    expect(loaded.flightsRadiusKm).toBe(5)
+    expect(loaded.flightsRadarRadiusKm).toBe(250)
+    expect(loaded.flightsRefreshSeconds).toBe(2)
+    expect(loaded.flightsShowLabels).toBe(DEFAULT_SETTINGS.flightsShowLabels)
+    expect(loaded.flightsShowOnlyAirborne).toBe(DEFAULT_SETTINGS.flightsShowOnlyAirborne)
+    expect(loaded.flightsUseDeviceLocation).toBe(DEFAULT_SETTINGS.flightsUseDeviceLocation)
+    expect(loaded.flightsManualLatitude).toBe(DEFAULT_SETTINGS.flightsManualLatitude)
+    expect(loaded.flightsManualLongitude).toBe(DEFAULT_SETTINGS.flightsManualLongitude)
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
     expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
     expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
@@ -200,6 +224,18 @@ describe('settings persistence', () => {
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
     expect(loaded.worldClockCity).toBe(DEFAULT_SETTINGS.worldClockCity)
     expect(loaded.worldClockTimeZone).toBe(DEFAULT_SETTINGS.worldClockTimeZone)
+  })
+
+  it('migrates the legacy 25 km flights radius to the new 50 km default', () => {
+    localStorage.setItem('dayboard:settings', JSON.stringify({ flightsRadiusKm: 25 }))
+
+    expect(loadSettings().flightsRadiusKm).toBe(DEFAULT_SETTINGS.flightsRadiusKm)
+  })
+
+  it('uses the radar range default when no flights radar radius is saved', () => {
+    localStorage.setItem('dayboard:settings', JSON.stringify({ flightsRadiusKm: 50 }))
+
+    expect(loadSettings().flightsRadarRadiusKm).toBe(DEFAULT_SETTINGS.flightsRadarRadiusKm)
   })
 })
 

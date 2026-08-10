@@ -11,6 +11,7 @@ const widgetVisibility = {
   clock: true,
   timezoneClock: false,
   weather: true,
+  flights: false,
   calendar: false,
   timer: false,
   tasks: false,
@@ -28,6 +29,7 @@ const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
   timezoneClock: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
   weather: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
+  flights: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   calendar: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   timer: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
   tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
@@ -70,6 +72,10 @@ vi.mock('./components/ClockWidget', () => ({
 
 vi.mock('./components/WeatherWidget', () => ({
   WeatherWidget: () => <div>Weather widget</div>,
+}))
+
+vi.mock('./components/FlightWidget', () => ({
+  FlightWidget: () => <div>Flights widget</div>,
 }))
 
 vi.mock('./components/TimezoneClockWidget', () => ({

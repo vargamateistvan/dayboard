@@ -9,6 +9,7 @@ import { getWidgetLabel } from './lib/widgetMetadata'
 import { ClockWidget } from './components/ClockWidget'
 import { TimezoneClockWidget } from './components/TimezoneClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
+import { FlightWidget } from './components/FlightWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
 import { TaskWidget } from './components/TaskWidget'
@@ -42,6 +43,8 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <TimezoneClockWidget isFullscreen={isFullscreen} />
     case 'weather':
       return <WeatherWidget isFullscreen={isFullscreen} />
+    case 'flights':
+      return <FlightWidget isFullscreen={isFullscreen} />
     case 'calendar':
       return <CalendarWidget isFullscreen={isFullscreen} />
     case 'timer':
@@ -86,6 +89,7 @@ function Dashboard() {
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
   const [presetMenuOpen, setPresetMenuOpen] = useState(false)
+  const [selectedPresetName, setSelectedPresetName] = useState('')
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
@@ -202,6 +206,12 @@ function Dashboard() {
       )
     })?.name ?? ''
 
+  useEffect(() => {
+    if (!selectedPresetName && currentPresetName) {
+      setSelectedPresetName(currentPresetName)
+    }
+  }, [currentPresetName, selectedPresetName])
+
   const handlePresetChange = (presetName: string) => {
     const preset = presets.find((candidate) => candidate.name === presetName)
     if (!preset) {
@@ -210,6 +220,7 @@ function Dashboard() {
 
     applyPreset(preset.name)
     updateSettings(preset.settings)
+    setSelectedPresetName(preset.name)
     setPresetMenuOpen(false)
   }
 
@@ -332,7 +343,12 @@ function Dashboard() {
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
       <BuyMeCoffeeWidget />
       {infoOpen && <InfoDialog onClose={() => setInfoOpen(false)} />}
-      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsDialog
+          onClose={() => setSettingsOpen(false)}
+          selectedPresetName={selectedPresetName}
+        />
+      )}
     </div>
   )
 }

@@ -38,6 +38,14 @@ export interface Settings {
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
+  flightsRadiusKm: number
+  flightsRadarRadiusKm: number
+  flightsRefreshSeconds: number
+  flightsShowLabels: boolean
+  flightsShowOnlyAirborne: boolean
+  flightsUseDeviceLocation: boolean
+  flightsManualLatitude: string
+  flightsManualLongitude: string
   spotifyEmbedUrl: string
   spotifyEmbedLinks: SavedMediaLink[]
   appleMusicEmbedUrl: string
@@ -136,6 +144,14 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
+  flightsRadiusKm: 50,
+  flightsRadarRadiusKm: 25,
+  flightsRefreshSeconds: 2,
+  flightsShowLabels: true,
+  flightsShowOnlyAirborne: true,
+  flightsUseDeviceLocation: true,
+  flightsManualLatitude: '',
+  flightsManualLongitude: '',
   spotifyEmbedUrl: '',
   spotifyEmbedLinks: [],
   appleMusicEmbedUrl: '',
@@ -151,6 +167,8 @@ export const DEFAULT_SETTINGS: Settings = {
   worldClockTimeZone: 'America/New_York',
   customColors: DEFAULT_CUSTOM_COLORS,
 }
+
+const LEGACY_DEFAULT_FLIGHTS_RADIUS_KM = 25
 
 const STORAGE_KEY = 'dayboard:settings'
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
@@ -257,6 +275,51 @@ function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
 
 function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   return normalizeBoolean(value, DEFAULT_SETTINGS.weatherShowExtraDetails)
+}
+
+function normalizeFlightsRadiusKm(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.flightsRadiusKm
+  }
+
+  // Migrate the original default radius to the new 50 km default.
+  if (Math.round(value) === LEGACY_DEFAULT_FLIGHTS_RADIUS_KM) {
+    return DEFAULT_SETTINGS.flightsRadiusKm
+  }
+
+  return Math.min(250, Math.max(5, Math.round(value)))
+}
+
+function normalizeFlightsRadarRadiusKm(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.flightsRadarRadiusKm
+  }
+
+  return Math.min(250, Math.max(5, Math.round(value)))
+}
+
+function normalizeFlightsRefreshSeconds(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.flightsRefreshSeconds
+  }
+
+  return Math.min(3_600, Math.max(2, Math.round(value)))
+}
+
+function normalizeFlightsShowLabels(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.flightsShowLabels)
+}
+
+function normalizeFlightsShowOnlyAirborne(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.flightsShowOnlyAirborne)
+}
+
+function normalizeFlightsUseDeviceLocation(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.flightsUseDeviceLocation)
+}
+
+function normalizeFlightsCoordinate(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 function isValidIanaTimeZone(value: string): boolean {
@@ -457,6 +520,14 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
     weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
     weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
+    flightsRadiusKm: normalizeFlightsRadiusKm((rest as { flightsRadiusKm?: unknown }).flightsRadiusKm),
+    flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm((rest as { flightsRadarRadiusKm?: unknown }).flightsRadarRadiusKm),
+    flightsRefreshSeconds: normalizeFlightsRefreshSeconds((rest as { flightsRefreshSeconds?: unknown }).flightsRefreshSeconds),
+    flightsShowLabels: normalizeFlightsShowLabels((rest as { flightsShowLabels?: unknown }).flightsShowLabels),
+    flightsShowOnlyAirborne: normalizeFlightsShowOnlyAirborne((rest as { flightsShowOnlyAirborne?: unknown }).flightsShowOnlyAirborne),
+    flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation((rest as { flightsUseDeviceLocation?: unknown }).flightsUseDeviceLocation),
+    flightsManualLatitude: normalizeFlightsCoordinate((rest as { flightsManualLatitude?: unknown }).flightsManualLatitude),
+    flightsManualLongitude: normalizeFlightsCoordinate((rest as { flightsManualLongitude?: unknown }).flightsManualLongitude),
     worldClockCity: normalizeWorldClockCity((rest as { worldClockCity?: unknown }).worldClockCity),
     worldClockTimeZone: normalizeWorldClockTimeZone((rest as { worldClockTimeZone?: unknown }).worldClockTimeZone),
     spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
@@ -529,6 +600,14 @@ export function saveSettings(settings: Settings): void {
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(settings.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(settings.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(settings.weatherShowExtraDetails),
+      flightsRadiusKm: normalizeFlightsRadiusKm(settings.flightsRadiusKm),
+      flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm(settings.flightsRadarRadiusKm),
+      flightsRefreshSeconds: normalizeFlightsRefreshSeconds(settings.flightsRefreshSeconds),
+      flightsShowLabels: normalizeFlightsShowLabels(settings.flightsShowLabels),
+      flightsShowOnlyAirborne: normalizeFlightsShowOnlyAirborne(settings.flightsShowOnlyAirborne),
+      flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation(settings.flightsUseDeviceLocation),
+      flightsManualLatitude: normalizeFlightsCoordinate(settings.flightsManualLatitude),
+      flightsManualLongitude: normalizeFlightsCoordinate(settings.flightsManualLongitude),
       spotifyEmbedUrl: normalizeEmbedUrl(settings.spotifyEmbedUrl),
       spotifyEmbedLinks: normalizeSavedMediaLinks(
         settings.spotifyEmbedLinks,
@@ -625,6 +704,38 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (!['metric', 'imperial'].includes(settings.weatherUnitSystem)) {
     errors.push('Invalid weatherUnitSystem')
+  }
+
+  if (settings.flightsRadiusKm < 5 || settings.flightsRadiusKm > 250) {
+    errors.push('flightsRadiusKm must be between 5 and 250')
+  }
+
+  if (settings.flightsRadarRadiusKm < 5 || settings.flightsRadarRadiusKm > 250) {
+    errors.push('flightsRadarRadiusKm must be between 5 and 250')
+  }
+
+  if (settings.flightsRefreshSeconds < 2 || settings.flightsRefreshSeconds > 3600) {
+    errors.push('flightsRefreshSeconds must be between 2 and 3600')
+  }
+
+  if (typeof settings.flightsShowLabels !== 'boolean') {
+    errors.push('flightsShowLabels must be boolean')
+  }
+
+  if (typeof settings.flightsShowOnlyAirborne !== 'boolean') {
+    errors.push('flightsShowOnlyAirborne must be boolean')
+  }
+
+  if (typeof settings.flightsUseDeviceLocation !== 'boolean') {
+    errors.push('flightsUseDeviceLocation must be boolean')
+  }
+
+  if (typeof settings.flightsManualLatitude !== 'string') {
+    errors.push('flightsManualLatitude must be a string')
+  }
+
+  if (typeof settings.flightsManualLongitude !== 'string') {
+    errors.push('flightsManualLongitude must be a string')
   }
 
   if (settings.pomodoroWorkMinutes < 1 || settings.pomodoroWorkMinutes > 120) {

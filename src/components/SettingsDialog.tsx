@@ -890,6 +890,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     settings.weatherShowExtraDetails,
   );
   const [flightsRadiusKm, setFlightsRadiusKm] = useState(settings.flightsRadiusKm);
+  const [flightsRadarRadiusKm, setFlightsRadarRadiusKm] = useState(
+    settings.flightsRadarRadiusKm,
+  );
   const [flightsRefreshSeconds, setFlightsRefreshSeconds] = useState(
     settings.flightsRefreshSeconds,
   );
@@ -998,6 +1001,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setWeatherUnitSystem(nextSettings.weatherUnitSystem);
     setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
     setFlightsRadiusKm(nextSettings.flightsRadiusKm);
+    setFlightsRadarRadiusKm(nextSettings.flightsRadarRadiusKm);
     setFlightsRefreshSeconds(nextSettings.flightsRefreshSeconds);
     setFlightsShowLabels(nextSettings.flightsShowLabels);
     setFlightsShowOnlyAirborne(nextSettings.flightsShowOnlyAirborne);
@@ -1048,6 +1052,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     weatherUnitSystem,
     weatherShowExtraDetails,
     flightsRadiusKm,
+    flightsRadarRadiusKm,
     flightsRefreshSeconds,
     flightsShowLabels,
     flightsShowOnlyAirborne,
@@ -1882,6 +1887,23 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   <>
                     <section className={styles.section}>
                       <h3 className={styles.sectionTitle}>Flights Radar</h3>
+                      <div className={styles.intervalRow}>
+                        <label className={styles.intervalLabel}>
+                          <span>Radar range (km)</span>
+                          <input
+                            className={styles.numberInput}
+                            type="number"
+                            min={5}
+                            max={250}
+                            value={flightsRadarRadiusKm}
+                            onChange={(e) =>
+                              setFlightsRadarRadiusKm(
+                                Math.min(250, Math.max(5, Number.parseInt(e.target.value, 10) || 5)),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
                       <div className={styles.widgetGrid}>
                         <button
                           className={[
@@ -1959,12 +1981,12 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           <input
                             className={styles.numberInput}
                             type="number"
-                            min={15}
+                            min={2}
                             max={3600}
                             value={flightsRefreshSeconds}
                             onChange={(e) =>
                               setFlightsRefreshSeconds(
-                                Math.min(3600, Math.max(15, Number.parseInt(e.target.value, 10) || 15)),
+                                Math.min(3600, Math.max(2, Number.parseInt(e.target.value, 10) || 2)),
                               )
                             }
                           />

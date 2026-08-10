@@ -4,6 +4,7 @@ export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'clock', label: 'Clock' },
   { id: 'timezoneClock', label: 'Timezone Clock' },
   { id: 'weather', label: 'Weather' },
+  { id: 'flights', label: 'Flights Radar' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'timer', label: 'Timer' },
   { id: 'tasks', label: 'Tasks' },
