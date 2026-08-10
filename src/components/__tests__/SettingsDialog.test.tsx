@@ -304,147 +304,20 @@ describe('SettingsDialog', () => {
     })
   })
 
-  it('can save a preset from the appearance tab', () => {
-    renderSettingsDialog()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
-    fireEvent.change(screen.getByRole('textbox', { name: 'New preset name' }), {
-      target: { value: 'Dark Focus' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Save as new preset' }))
-
-    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
-      'Dark Focus': {
-        name: 'Dark Focus',
-        settings: {
-          colorScheme: 'dark',
-        },
-      },
-    })
-  })
-
-  it('can update a preset from the layout tab including the layout state', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? 'null') ?? {
-            colorScheme: 'system',
-          },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      }),
-    )
-
+  it('keeps preset shortcuts out of the layout and appearance tabs', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Existing preset' }), {
-      target: { value: 'Work' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Add row' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save changes to Work' }))
+    expect(screen.queryByText('New preset name')).not.toBeInTheDocument()
+    expect(screen.queryByText('Existing preset')).not.toBeInTheDocument()
 
-    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
-      Work: {
-        layout: {
-          rowCount: 4,
-        },
-      },
-    })
+    fireEvent.click(screen.getByRole('tab', { name: /Appearance/i }))
+
+    expect(screen.queryByText('New preset name')).not.toBeInTheDocument()
+    expect(screen.queryByText('Existing preset')).not.toBeInTheDocument()
   })
 
-  it('loads the selected preset into the appearance editor from preset shortcuts', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: {
-            colorScheme: 'dark',
-          },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      }),
-    )
-
-    renderSettingsDialog()
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Existing preset' }), {
-      target: { value: 'Work' },
-    })
-
-    expect(screen.getByRole('button', { name: 'Dark' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText('Loaded preset "Work" into the editor.')).toBeInTheDocument()
-  })
-
-  it('loads the selected preset layout into the layout editor from preset shortcuts', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? 'null') ?? {
-            colorScheme: 'system',
-          },
-          layout: {
-            rowCount: 4,
-            visibility: {
-              clock: true,
-              timezoneClock: false,
-              weather: true,
-              calendar: true,
-              timer: true,
-              tasks: false,
-              notes: false,
-              spotify: false,
-              appleMusic: false,
-              applePodcast: false,
-              stocks: false,
-              currencies: false,
-              quote: false,
-              deviceInfo: false,
-            },
-            placements: {
-              clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
-              timezoneClock: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
-              weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
-              calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
-              timer: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
-              tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-              notes: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-              spotify: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
-              appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
-              applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
-              stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
-              currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
-              quote: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
-              deviceInfo: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
-            },
-          },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-      }),
-    )
-
-    renderSettingsDialog()
-    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
-
-    fireEvent.change(screen.getByRole('combobox', { name: 'Existing preset' }), {
-      target: { value: 'Work' },
-    })
-
-    expect(JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}')).toMatchObject({
-      rowCount: 4,
-    })
-    expect(screen.getByText('Loaded preset "Work" into the editor.')).toBeInTheDocument()
-  })
-
-  it('opens a preset in editor mode so appearance changes can be saved back', () => {
+  it('loads a preset from the presets tab and saves changes from the preset card', () => {
     localStorage.setItem(
       PRESET_STORAGE_KEY,
       JSON.stringify({
@@ -495,11 +368,11 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
 
     expect(screen.getByRole('tab', { name: /Appearance/i })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByText('Editing preset')).toBeInTheDocument()
-    expect(screen.getByRole('combobox', { name: 'Existing preset' })).toHaveValue('Work')
+    expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
-    fireEvent.click(screen.getByRole('button', { name: /Save changes to Work/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save current' }))
 
     expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
       Work: {

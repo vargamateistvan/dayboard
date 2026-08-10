@@ -861,101 +861,6 @@ function PresetCard({
   );
 }
 
-interface PresetShortcutPanelProps {
-  readonly presets: SettingsPreset[];
-  readonly presetName: string;
-  readonly selectedPresetName: string;
-  readonly presetError: string | null;
-  readonly presetFeedback: string | null;
-  readonly onPresetNameChange: (value: string) => void;
-  readonly onSelectedPresetNameChange: (value: string) => void;
-  readonly onCreatePreset: () => void;
-  readonly onUpdatePreset: () => void;
-  readonly onClearEditingPreset: () => void;
-}
-
-function PresetShortcutPanel({
-  presets,
-  presetName,
-  selectedPresetName,
-  presetError,
-  presetFeedback,
-  onPresetNameChange,
-  onSelectedPresetNameChange,
-  onCreatePreset,
-  onUpdatePreset,
-  onClearEditingPreset,
-}: PresetShortcutPanelProps) {
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <div>
-          <h3 className={styles.sectionTitle}>Preset Shortcuts</h3>
-          <p className={styles.hint}>
-            Save the current changes into a new preset or update an existing one without leaving this tab.
-          </p>
-        </div>
-      </div>
-      <div className={styles.presetShortcutCard}>
-        {selectedPresetName && (
-          <div className={styles.presetEditorBanner}>
-            <div>
-              <p className={styles.presetEditorLabel}>Editing preset</p>
-              <p className={styles.presetEditorName}>{selectedPresetName}</p>
-            </div>
-            <button className={styles.btnGhost} onClick={onClearEditingPreset} type="button">
-              Stop editing
-            </button>
-          </div>
-        )}
-        <label className={styles.intervalLabel}>
-          <span>New preset name</span>
-          <input
-            className={styles.input}
-            type="text"
-            placeholder="Work Focus"
-            value={presetName}
-            onChange={(e) => onPresetNameChange(e.target.value)}
-          />
-        </label>
-        <div className={styles.presetShortcutActions}>
-          <button className={styles.btnPrimary} onClick={onCreatePreset} type="button">
-            Save as new preset
-          </button>
-        </div>
-        <label className={styles.intervalLabel}>
-          <span>Existing preset</span>
-          <select
-            className={styles.input}
-            value={selectedPresetName}
-            onChange={(e) => onSelectedPresetNameChange(e.target.value)}
-          >
-            <option value="">Choose a preset</option>
-            {presets.map((preset) => (
-              <option key={preset.name} value={preset.name}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className={styles.presetShortcutActions}>
-          <button
-            className={styles.btnGhost}
-            onClick={onUpdatePreset}
-            type="button"
-            disabled={!selectedPresetName}
-          >
-            {selectedPresetName ? `Save changes to ${selectedPresetName}` : 'Update selected preset'}
-          </button>
-        </div>
-        {presetError && <p className={styles.mediaLinkError}>{presetError}</p>}
-        {presetFeedback && <p className={styles.presetFeedback}>{presetFeedback}</p>}
-      </div>
-    </section>
-  );
-}
-
-
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
@@ -1035,7 +940,6 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets());
   const [presetName, setPresetName] = useState("");
-  const [selectedPresetName, setSelectedPresetName] = useState("");
   const [newPresetAutoApply, setNewPresetAutoApply] = useState(false);
   const [newPresetStartTime, setNewPresetStartTime] = useState(
     DEFAULT_PRESET_SCHEDULE.startTime,
@@ -1043,8 +947,6 @@ export function SettingsDialog({ onClose }: Props) {
   const [newPresetEndTime, setNewPresetEndTime] = useState(
     DEFAULT_PRESET_SCHEDULE.endTime,
   );
-  const [presetFeedback, setPresetFeedback] = useState<string | null>(null);
-  const [presetError, setPresetError] = useState<string | null>(null);
   const background = parseBackground(customColors.background);
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
@@ -1063,14 +965,6 @@ export function SettingsDialog({ onClose }: Props) {
   const refreshPresets = () => {
     setPresets(listPresets());
   };
-
-  useEffect(() => {
-    if (selectedPresetName && presets.some((preset) => preset.name === selectedPresetName)) {
-      return;
-    }
-
-    setSelectedPresetName(presets[0]?.name ?? "");
-  }, [presets, selectedPresetName]);
 
   const syncDraftState = (nextSettings: Settings) => {
     setCalendarFeeds(
@@ -1248,8 +1142,6 @@ export function SettingsDialog({ onClose }: Props) {
   const handleCreatePreset = () => {
     const trimmedName = presetName.trim();
     if (!trimmedName) {
-      setPresetError("Preset name cannot be empty.");
-      setPresetFeedback(null);
       return;
     }
 
@@ -1267,76 +1159,18 @@ export function SettingsDialog({ onClose }: Props) {
     );
     refreshPresets();
     setPresetName("");
-    setSelectedPresetName(trimmedName);
-    setPresetError(null);
-    setPresetFeedback(`Preset "${trimmedName}" saved.`);
-  };
-
-  const handleUpdateSelectedPreset = () => {
-    if (!selectedPresetName) {
-      setPresetError("Choose a preset to update.");
-      setPresetFeedback(null);
-      return;
-    }
-
-    const preset = presets.find((entry) => entry.name === selectedPresetName);
-    savePreset(
-      selectedPresetName,
-      buildDraftSettings(),
-      preset?.schedule,
-      buildDraftLayout(),
-    );
-    refreshPresets();
-    setPresetError(null);
-    setPresetFeedback(`Preset "${selectedPresetName}" updated.`);
   };
 
   const handleApplyPreset = (preset: SettingsPreset) => {
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
-    setPresetError(null);
-    setPresetFeedback("Preset applied.");
   };
 
   const handleEditPreset = (preset: SettingsPreset) => {
     applyPreset(preset.name);
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
-    setSelectedPresetName(preset.name);
-    setPresetName(preset.name);
     setActiveTab("appearance");
-    setPresetError(null);
-    setPresetFeedback(`Editing preset "${preset.name}". Update it from Appearance or Layout when you're done.`);
-  };
-
-  const handleSelectPresetForEditing = (presetName: string) => {
-    setSelectedPresetName(presetName);
-
-    if (!presetName) {
-      setPresetError(null);
-      setPresetFeedback(null);
-      return;
-    }
-
-    const preset = presets.find((entry) => entry.name === presetName);
-    if (!preset) {
-      setPresetError(`Preset "${presetName}" could not be loaded.`);
-      setPresetFeedback(null);
-      return;
-    }
-
-    applyPreset(preset.name);
-    updateSettings(preset.settings);
-    syncDraftState(preset.settings);
-    setPresetError(null);
-    setPresetFeedback(`Loaded preset "${preset.name}" into the editor.`);
-  };
-
-  const handleClearEditingPreset = () => {
-    setSelectedPresetName("");
-    setPresetName("");
-    setPresetError(null);
-    setPresetFeedback("Preset editing cleared.");
   };
 
   const save = () => {
@@ -1419,18 +1253,6 @@ export function SettingsDialog({ onClose }: Props) {
                     Drag widgets from the palette onto the grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
                   </p>
                 </section>
-                <PresetShortcutPanel
-                  presets={presets}
-                  presetName={presetName}
-                  selectedPresetName={selectedPresetName}
-                  presetError={presetError}
-                  presetFeedback={presetFeedback}
-                  onPresetNameChange={setPresetName}
-                  onSelectedPresetNameChange={handleSelectPresetForEditing}
-                  onCreatePreset={handleCreatePreset}
-                  onUpdatePreset={handleUpdateSelectedPreset}
-                  onClearEditingPreset={handleClearEditingPreset}
-                />
               </>
             )}
 
@@ -1775,18 +1597,6 @@ export function SettingsDialog({ onClose }: Props) {
                     rest of your layout.
                   </p>
                 </section>
-                <PresetShortcutPanel
-                  presets={presets}
-                  presetName={presetName}
-                  selectedPresetName={selectedPresetName}
-                  presetError={presetError}
-                  presetFeedback={presetFeedback}
-                  onPresetNameChange={setPresetName}
-                  onSelectedPresetNameChange={handleSelectPresetForEditing}
-                  onCreatePreset={handleCreatePreset}
-                  onUpdatePreset={handleUpdateSelectedPreset}
-                  onClearEditingPreset={handleClearEditingPreset}
-                />
               </>
             )}
 
@@ -2402,8 +2212,6 @@ export function SettingsDialog({ onClose }: Props) {
                         Save preset
                       </button>
                     </div>
-                    {presetError && <p className={styles.mediaLinkError}>{presetError}</p>}
-                    {presetFeedback && <p className={styles.presetFeedback}>{presetFeedback}</p>}
                   </div>
                 </section>
 

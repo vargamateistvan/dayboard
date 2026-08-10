@@ -556,45 +556,6 @@
   background: var(--color-surface-alt);
 }
 
-.presetShortcutCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-surface-alt) 70%, var(--color-surface));
-}
-
-.presetEditorBanner {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
-}
-
-.presetEditorLabel,
-.presetEditorName {
-  margin: 0;
-}
-
-.presetEditorLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.presetEditorName {
-  font-size: var(--font-size-base);
-  font-weight: 700;
-  color: var(--color-text);
-}
-
 .presetCreateSchedule,
 .presetSchedule {
   display: flex;
@@ -605,19 +566,6 @@
 .presetCreateActions {
   display: flex;
   justify-content: flex-start;
-}
-
-.presetShortcutActions {
-  display: flex;
-  justify-content: flex-start;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.presetFeedback {
-  margin: 0;
-  color: color-mix(in srgb, var(--color-accent) 80%, white);
-  font-size: var(--font-size-sm);
 }
 
 .presetList {
