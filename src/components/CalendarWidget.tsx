@@ -924,7 +924,6 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                               className={[
                                 styles.weekDayColumn,
                                 isSelected ? styles.weekDayColumnSelected : '',
-                                day.isToday ? styles.weekDayColumnToday : '',
                               ].join(' ')}
                               aria-label={`Schedule for ${day.date.toLocaleDateString(undefined, {
                                 weekday: 'long',
