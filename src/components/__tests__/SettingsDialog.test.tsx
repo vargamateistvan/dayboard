@@ -7,10 +7,10 @@ const LAYOUT_STORAGE_KEY = 'dayboard_widget_layout'
 const SETTINGS_STORAGE_KEY = 'dayboard:settings'
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
 
-function renderSettingsDialog() {
+function renderSettingsDialog(selectedPresetName?: string) {
   return render(
     <SettingsProvider>
-      <SettingsDialog onClose={() => {}} />
+      <SettingsDialog onClose={() => {}} selectedPresetName={selectedPresetName} />
     </SettingsProvider>,
   )
 }
@@ -315,6 +315,33 @@ describe('SettingsDialog', () => {
 
     expect(screen.queryByText('New preset name')).not.toBeInTheDocument()
     expect(screen.queryByText('Existing preset')).not.toBeInTheDocument()
+  })
+
+  it('saves layout edits back to the selected preset when saving settings', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      }),
+    )
+
+    renderSettingsDialog('Work')
+    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      Work: {
+        layout: {
+          rowCount: 4,
+        },
+      },
+    })
   })
 
   it('loads a preset from the presets tab and saves changes from the preset card', () => {

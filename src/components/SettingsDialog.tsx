@@ -176,6 +176,7 @@ function parseBackground(value: string): ParsedBackground {
 
 interface Props {
   readonly onClose: () => void;
+  readonly selectedPresetName?: string;
 }
 
 type SettingsTabId = "appearance" | "layout" | "widgets" | "presets";
@@ -248,7 +249,7 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
   {
     id: "core",
     label: "Core",
-    widgets: ["clock", "timezoneClock", "weather", "calendar", "deviceInfo"],
+    widgets: ["clock", "timezoneClock", "weather", "flights", "calendar", "deviceInfo"],
   },
   {
     id: "productivity",
@@ -861,7 +862,7 @@ function PresetCard({
   );
 }
 
-export function SettingsDialog({ onClose }: Props) {
+export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
   const {
@@ -887,6 +888,25 @@ export function SettingsDialog({ onClose }: Props) {
   );
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
+  );
+  const [flightsRadiusKm, setFlightsRadiusKm] = useState(settings.flightsRadiusKm);
+  const [flightsRefreshSeconds, setFlightsRefreshSeconds] = useState(
+    settings.flightsRefreshSeconds,
+  );
+  const [flightsShowLabels, setFlightsShowLabels] = useState(
+    settings.flightsShowLabels,
+  );
+  const [flightsShowOnlyAirborne, setFlightsShowOnlyAirborne] = useState(
+    settings.flightsShowOnlyAirborne,
+  );
+  const [flightsUseDeviceLocation, setFlightsUseDeviceLocation] = useState(
+    settings.flightsUseDeviceLocation,
+  );
+  const [flightsManualLatitude, setFlightsManualLatitude] = useState(
+    settings.flightsManualLatitude,
+  );
+  const [flightsManualLongitude, setFlightsManualLongitude] = useState(
+    settings.flightsManualLongitude,
   );
   const [worldClockCity, setWorldClockCity] = useState(settings.worldClockCity);
   const [worldClockTimeZone, setWorldClockTimeZone] = useState(
@@ -947,9 +967,11 @@ export function SettingsDialog({ onClose }: Props) {
   const [newPresetEndTime, setNewPresetEndTime] = useState(
     DEFAULT_PRESET_SCHEDULE.endTime,
   );
+  const [editingPresetName, setEditingPresetName] = useState<string>(selectedPresetName ?? "");
   const background = parseBackground(customColors.background);
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
+  const isFlightsOnLayout = visibility.flights;
   const isTimezoneClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
   const isMusicOnLayout =
@@ -975,6 +997,13 @@ export function SettingsDialog({ onClose }: Props) {
     setWeatherRefreshMin(nextSettings.weatherRefreshMinutes);
     setWeatherUnitSystem(nextSettings.weatherUnitSystem);
     setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
+    setFlightsRadiusKm(nextSettings.flightsRadiusKm);
+    setFlightsRefreshSeconds(nextSettings.flightsRefreshSeconds);
+    setFlightsShowLabels(nextSettings.flightsShowLabels);
+    setFlightsShowOnlyAirborne(nextSettings.flightsShowOnlyAirborne);
+    setFlightsUseDeviceLocation(nextSettings.flightsUseDeviceLocation);
+    setFlightsManualLatitude(nextSettings.flightsManualLatitude);
+    setFlightsManualLongitude(nextSettings.flightsManualLongitude);
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
@@ -1018,6 +1047,13 @@ export function SettingsDialog({ onClose }: Props) {
     weatherRefreshMinutes: weatherRefreshMin,
     weatherUnitSystem,
     weatherShowExtraDetails,
+    flightsRadiusKm,
+    flightsRefreshSeconds,
+    flightsShowLabels,
+    flightsShowOnlyAirborne,
+    flightsUseDeviceLocation,
+    flightsManualLatitude: flightsManualLatitude.trim(),
+    flightsManualLongitude: flightsManualLongitude.trim(),
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl,
@@ -1053,6 +1089,12 @@ export function SettingsDialog({ onClose }: Props) {
     visibility: structuredClone(visibility),
     placements: structuredClone(placements),
   });
+
+  useEffect(() => {
+    if (selectedPresetName) {
+      setEditingPresetName(selectedPresetName);
+    }
+  }, [selectedPresetName]);
 
   const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
     setCalendarFeeds((prev) =>
@@ -1164,12 +1206,14 @@ export function SettingsDialog({ onClose }: Props) {
   const handleApplyPreset = (preset: SettingsPreset) => {
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
+    setEditingPresetName(preset.name);
   };
 
   const handleEditPreset = (preset: SettingsPreset) => {
     applyPreset(preset.name);
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
+    setEditingPresetName(preset.name);
     setActiveTab("appearance");
   };
 
@@ -1185,6 +1229,21 @@ export function SettingsDialog({ onClose }: Props) {
     const nextSettings = buildDraftSettings();
     nextSettings.worldClockTimeZone = trimmedTimeZone;
     updateSettings(nextSettings);
+
+    const presetNameToUpdate = editingPresetName.trim()
+      || selectedPresetName?.trim()
+      || '';
+    if (presetNameToUpdate) {
+      const preset = presets.find((entry) => entry.name === presetNameToUpdate);
+      savePreset(
+        presetNameToUpdate,
+        nextSettings,
+        preset?.schedule,
+        buildDraftLayout(),
+      );
+      refreshPresets();
+    }
+
     onClose();
   };
 
@@ -1604,6 +1663,7 @@ export function SettingsDialog({ onClose }: Props) {
               <>
                 {!isCalendarOnLayout &&
                   !isWeatherOnLayout &&
+                  !isFlightsOnLayout &&
                   !isTimezoneClockOnLayout &&
                   !isFinanceOnLayout &&
                   !isMusicOnLayout &&
@@ -1813,6 +1873,135 @@ export function SettingsDialog({ onClose }: Props) {
                       <p className={styles.hint}>
                         Weather updates automatically using this interval. You can still
                         refresh it manually anytime.
+                      </p>
+                    </section>
+                  </>
+                )}
+
+                {isFlightsOnLayout && (
+                  <>
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Flights Radar</h3>
+                      <div className={styles.widgetGrid}>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            flightsUseDeviceLocation ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setFlightsUseDeviceLocation((value) => !value)}
+                          type="button"
+                        >
+                          {flightsUseDeviceLocation ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Use device location</span>
+                        </button>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            flightsShowOnlyAirborne ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setFlightsShowOnlyAirborne((value) => !value)}
+                          type="button"
+                        >
+                          {flightsShowOnlyAirborne ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show only airborne flights</span>
+                        </button>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            flightsShowLabels ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setFlightsShowLabels((value) => !value)}
+                          type="button"
+                        >
+                          {flightsShowLabels ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show labels on radar</span>
+                        </button>
+                      </div>
+                      <p className={styles.hint}>
+                        The flights widget tracks nearby aircraft around your current position.
+                        Save manual coordinates to use it indoors or as a fallback when
+                        geolocation is unavailable.
+                      </p>
+                    </section>
+
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Flight Scan</h3>
+                      <div className={styles.intervalRow}>
+                        <label className={styles.intervalLabel}>
+                          <span>Radius (km)</span>
+                          <input
+                            className={styles.numberInput}
+                            type="number"
+                            min={5}
+                            max={250}
+                            value={flightsRadiusKm}
+                            onChange={(e) =>
+                              setFlightsRadiusKm(
+                                Math.min(250, Math.max(5, Number.parseInt(e.target.value, 10) || 5)),
+                              )
+                            }
+                          />
+                        </label>
+                        <label className={styles.intervalLabel}>
+                          <span>Refresh every (sec)</span>
+                          <input
+                            className={styles.numberInput}
+                            type="number"
+                            min={15}
+                            max={3600}
+                            value={flightsRefreshSeconds}
+                            onChange={(e) =>
+                              setFlightsRefreshSeconds(
+                                Math.min(3600, Math.max(15, Number.parseInt(e.target.value, 10) || 15)),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    </section>
+
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Manual Coordinates</h3>
+                      <div className={styles.calendarList}>
+                        <label className={styles.intervalLabel}>
+                          <span>Latitude</span>
+                          <input
+                            className={styles.input}
+                            type="text"
+                            inputMode="decimal"
+                            value={flightsManualLatitude}
+                            placeholder="47.4979"
+                            onChange={(e) => setFlightsManualLatitude(e.target.value)}
+                          />
+                        </label>
+                        <label className={styles.intervalLabel}>
+                          <span>Longitude</span>
+                          <input
+                            className={styles.input}
+                            type="text"
+                            inputMode="decimal"
+                            value={flightsManualLongitude}
+                            placeholder="19.0402"
+                            onChange={(e) => setFlightsManualLongitude(e.target.value)}
+                          />
+                        </label>
+                      </div>
+                      <p className={styles.hint}>
+                        Latitude must be between -90 and 90, longitude between -180 and 180.
+                        These coordinates are used whenever device location is turned off and as a
+                        fallback when browser location access is blocked.
                       </p>
                     </section>
                   </>
