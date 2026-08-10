@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Info, Maximize2, Minimize2, Settings } from 'lucide-react'
-import { SettingsProvider } from './lib/useSettings'
+import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
+import { SettingsProvider, useSettings } from './lib/useSettings'
 import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
 import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
@@ -83,8 +84,10 @@ function Dashboard() {
   const [infoOpen, setInfoOpen] = useState(false)
   const [appFullscreen, setAppFullscreen] = useState(false)
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
+  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
+  const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
@@ -130,6 +133,15 @@ function Dashboard() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
+  useEffect(() => {
+    const refreshPresets = () => {
+      setPresets(listPresets())
+    }
+
+    window.addEventListener('settingsPresetsChanged', refreshPresets)
+    return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
+  }, [])
+
   const toggleAppFullscreen = async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen()
@@ -137,6 +149,37 @@ function Dashboard() {
     }
 
     await document.documentElement.requestFullscreen()
+  }
+
+  const currentPresetName =
+    presets.find((preset) => {
+      const settingsMatch = JSON.stringify(preset.settings) === JSON.stringify(settings)
+      if (!settingsMatch) {
+        return false
+      }
+
+      if (!preset.layout) {
+        return true
+      }
+
+      return (
+        JSON.stringify(preset.layout) ===
+        JSON.stringify({
+          rowCount,
+          visibility,
+          placements,
+        })
+      )
+    })?.name ?? ''
+
+  const handlePresetChange = (presetName: string) => {
+    const preset = presets.find((candidate) => candidate.name === presetName)
+    if (!preset) {
+      return
+    }
+
+    applyPreset(preset.name)
+    updateSettings(preset.settings)
   }
 
   return (
@@ -147,6 +190,26 @@ function Dashboard() {
         fullscreenWidget ? styles.fullscreenMode : '',
       ].join(' ')}
     >
+      {presets.length > 1 ? (
+        <label className={styles.presetSelectorWrap}>
+          <span className={styles.presetSelectorLabel}>Preset</span>
+          <select
+            className={styles.presetSelector}
+            aria-label="Select preset"
+            value={currentPresetName}
+            onChange={(event) => handlePresetChange(event.target.value)}
+          >
+            <option value="" disabled>
+              Custom
+            </option>
+            {presets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className={styles.toolbarButtons}>
         <button
           className={styles.toolbarButton}

@@ -1,8 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import styles from './App.module.css'
 import type { Widget } from './lib/useWidgetVisibility'
+
+const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
+const SETTINGS_STORAGE_KEY = 'dayboard:settings'
 
 const widgetVisibility = {
   clock: true,
@@ -129,6 +132,10 @@ vi.mock('./components/NotificationBadge', () => ({
   NotificationBadge: () => null,
 }))
 
+beforeEach(() => {
+  localStorage.clear()
+})
+
 describe('App fullscreen widgets', () => {
   it('toggles fullscreen mode for a widget', () => {
     render(<App />)
@@ -164,5 +171,62 @@ describe('App fullscreen widgets', () => {
     expect(
       screen.getByRole('link', { name: 'github.com/vargamateistvan/dayboard/issues' }),
     ).toHaveAttribute('href', 'https://github.com/vargamateistvan/dayboard/issues')
+  })
+
+  it('shows a top-right preset selector when more than one preset exists', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        Focus: {
+          name: 'Focus',
+          settings: { colorScheme: 'dark' },
+          createdAt: 2,
+          updatedAt: 2,
+        },
+      }),
+    )
+
+    render(<App />)
+
+    expect(screen.getByRole('combobox', { name: 'Select preset' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Work' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Focus' })).toBeInTheDocument()
+  })
+
+  it('applies a selected preset from the top-right selector', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        Focus: {
+          name: 'Focus',
+          settings: { colorScheme: 'dark' },
+          createdAt: 2,
+          updatedAt: 2,
+        },
+      }),
+    )
+
+    render(<App />)
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select preset' }), {
+      target: { value: 'Focus' },
+    })
+
+    expect(screen.getByRole('combobox', { name: 'Select preset' })).toHaveValue('Focus')
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      colorScheme: 'dark',
+    })
   })
 })

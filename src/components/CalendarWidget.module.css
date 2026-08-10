@@ -83,14 +83,14 @@
 
 .monthlyOverview {
   min-height: 0;
-  height: 100%;
+  height: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
   z-index: 10;
   flex-shrink: 0;
-  align-self: stretch;
+  align-self: flex-start;
 }
 
 .monthlyOverviewCentered {
@@ -392,7 +392,8 @@
   gap: 0;
   border-left: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
   border-top: 1px solid color-mix(in srgb, var(--color-border) 52%, transparent);
-  flex: 1;
+  flex: 0 0 auto;
+  align-content: start;
 }
 
 .monthCell {
@@ -606,6 +607,11 @@
   min-width: 0;
 }
 
+.fullscreen .monthlyOverview {
+  height: 100%;
+  align-self: stretch;
+}
+
 .fullscreen .empty,
 .fullscreen .loading,
 .fullscreen .error {
@@ -650,6 +656,7 @@
 }
 
 .fullscreen .monthGrid {
+  flex: 1;
   align-content: stretch;
 }
 
