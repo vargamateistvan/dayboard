@@ -922,6 +922,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       ? settings.calendarFeeds
       : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
   );
+  const [globalCalendarFeeds, setGlobalCalendarFeeds] = useState<CalendarFeed[]>(
+    settings.globalCalendarFeeds.length > 0
+      ? settings.globalCalendarFeeds
+      : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
+  );
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(
     settings.weatherRefreshMinutes,
   );
@@ -1041,6 +1046,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
         ? nextSettings.calendarFeeds
         : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
     );
+    setGlobalCalendarFeeds(
+      nextSettings.globalCalendarFeeds.length > 0
+        ? nextSettings.globalCalendarFeeds
+        : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
+    );
     setWeatherRefreshMin(nextSettings.weatherRefreshMinutes);
     setWeatherUnitSystem(nextSettings.weatherUnitSystem);
     setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
@@ -1093,6 +1103,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const buildDraftSettings = (): Settings => ({
     ...settings,
     calendarFeeds,
+    globalCalendarFeeds,
     weatherRefreshMinutes: weatherRefreshMin,
     weatherUnitSystem,
     weatherShowExtraDetails,
@@ -1168,6 +1179,36 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
   const removeCalendarFeed = (index: number) => {
     setCalendarFeeds((prev) => {
+      const next = prev.filter(
+        (_calendarFeed, currentIndex) => currentIndex !== index,
+      );
+      return next.length > 0
+        ? next
+        : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }];
+    });
+  };
+
+  const updateGlobalCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
+    setGlobalCalendarFeeds((prev) =>
+      prev.map((calendarFeed, currentIndex) =>
+        currentIndex === index ? { ...calendarFeed, ...patch } : calendarFeed,
+      ),
+    );
+  };
+
+  const addGlobalCalendarFeed = () => {
+    setGlobalCalendarFeeds((prev) => [
+      ...prev,
+      {
+        url: "",
+        color:
+          DEFAULT_CALENDAR_COLORS[prev.length % DEFAULT_CALENDAR_COLORS.length],
+      },
+    ]);
+  };
+
+  const removeGlobalCalendarFeed = (index: number) => {
+    setGlobalCalendarFeeds((prev) => {
       const next = prev.filter(
         (_calendarFeed, currentIndex) => currentIndex !== index,
       );
@@ -1737,7 +1778,67 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   <>
                     <section className={styles.section}>
                       <div className={styles.sectionHeader}>
-                        <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
+                        <h3 className={styles.sectionTitle}>Global Calendar Feeds</h3>
+                        <button
+                          className={styles.addCalendarBtn}
+                          onClick={addGlobalCalendarFeed}
+                          type="button"
+                        >
+                          <Plus size={14} />
+                          Add link
+                        </button>
+                      </div>
+                      <p className={styles.hint}>
+                        Global calendar feeds are shared across all presets. Add common calendars here
+                        that you want to use in every preset.
+                      </p>
+                      <div className={styles.calendarList}>
+                        {globalCalendarFeeds.map((calendarFeed, index) => (
+                          <div
+                            className={styles.calendarRow}
+                            key={`global-${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
+                          >
+                            <input
+                              className={[styles.input, styles.calendarUrlInput].join(" ")}
+                              type="url"
+                              placeholder={
+                                index === 0
+                                  ? "https://calendar.example.com/feed.ics"
+                                  : "https://outlook.office.com/calendar/.../calendar.ics"
+                              }
+                              value={calendarFeed.url}
+                              onChange={(e) =>
+                                updateGlobalCalendarFeed(index, { url: e.target.value })
+                              }
+                            />
+                            <label className={styles.calendarColorField}>
+                              <span className={styles.calendarColorLabel}>Color</span>
+                              <input
+                                aria-label={`Global calendar color ${index + 1}`}
+                                className={styles.calendarColorInput}
+                                type="color"
+                                value={calendarFeed.color}
+                                onChange={(e) =>
+                                  updateGlobalCalendarFeed(index, { color: e.target.value })
+                                }
+                              />
+                            </label>
+                            <button
+                              aria-label={`Remove global calendar link ${index + 1}`}
+                              className={styles.removeCalendarBtn}
+                              onClick={() => removeGlobalCalendarFeed(index)}
+                              type="button"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <h3 className={styles.sectionTitle}>Preset-Specific Calendar Feeds</h3>
                         <button
                           className={styles.addCalendarBtn}
                           onClick={addCalendarFeed}
@@ -1751,7 +1852,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                         Paste one or more ICS or CSV calendar URLs. Google share links,
                         Outlook published calendar links, and webcal:// feeds are
                         supported too. Choose a color for each calendar and its events
-                        will use that color in the calendar widget.
+                        will use that color in the calendar widget. These feeds will be combined with
+                        your global calendar feeds.
                       </p>
                       <div className={styles.calendarList}>
                         {calendarFeeds.map((calendarFeed, index) => (

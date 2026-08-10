@@ -32,6 +32,7 @@ export interface Settings {
   fontPreset: FontPreset
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
+  globalCalendarFeeds: CalendarFeed[]
   calendarHidePastEvents: boolean
   calendarShowMonthlyOverview: boolean
   calendarExtraInfoPreview: CalendarExtraInfoPreview
@@ -139,6 +140,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fontPreset: 'space-grotesk',
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
+  globalCalendarFeeds: [],
   calendarHidePastEvents: false,
   calendarShowMonthlyOverview: true,
   calendarExtraInfoPreview: 'monthly',
@@ -514,6 +516,7 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     fontPreset: normalizeFontPreset(rest.fontPreset),
     showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
     calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
+    globalCalendarFeeds: normalizeCalendarFeeds((rest as { globalCalendarFeeds?: unknown }).globalCalendarFeeds),
     calendarHidePastEvents: normalizeCalendarHidePastEvents(
       (rest as { calendarHidePastEvents?: unknown }).calendarHidePastEvents,
     ),
@@ -605,6 +608,7 @@ export function saveSettings(settings: Settings): void {
       fontPreset: normalizeFontPreset(settings.fontPreset),
       showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
+      globalCalendarFeeds: normalizeCalendarFeeds(settings.globalCalendarFeeds),
       calendarHidePastEvents: normalizeCalendarHidePastEvents(settings.calendarHidePastEvents),
       calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(settings.calendarShowMonthlyOverview),
       calendarExtraInfoPreview: normalizeCalendarExtraInfoPreview(settings.calendarExtraInfoPreview),
@@ -1352,3 +1356,18 @@ export function loadEncryptedSettings(password: string): Settings | null {
     return null
   }
 }
+
+/**
+ * Merges global calendar feeds with preset-specific calendar feeds
+ * Global feeds are applied to all presets, and preset-specific feeds are added on top
+ * @param globalFeeds - Calendar feeds shared across all presets
+ * @param presetFeeds - Calendar feeds specific to a preset
+ * @returns Combined array of calendar feeds (global feeds first, then preset-specific)
+ */
+export function mergeCalendarFeeds(
+  globalFeeds: CalendarFeed[] = [],
+  presetFeeds: CalendarFeed[] = [],
+): CalendarFeed[] {
+  return [...globalFeeds, ...presetFeeds].filter(feed => feed.url.trim().length > 0)
+}
+

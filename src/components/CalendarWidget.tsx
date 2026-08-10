@@ -8,7 +8,7 @@ import {
   type CalendarPerson,
   type CalendarRange,
 } from '../lib/parseCalendarFeed'
-import { DEFAULT_CALENDAR_COLOR, type CalendarWeekStartsOn } from '../lib/settings'
+import { DEFAULT_CALENDAR_COLOR, type CalendarWeekStartsOn, mergeCalendarFeeds } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import styles from './CalendarWidget.module.css'
 
@@ -496,7 +496,11 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const monthTooltipRef = useRef<HTMLDivElement | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
-  const hasCalendarFeeds = settings.calendarFeeds.length > 0
+  const mergedCalendarFeeds = useMemo(
+    () => mergeCalendarFeeds(settings.globalCalendarFeeds, settings.calendarFeeds),
+    [settings.globalCalendarFeeds, settings.calendarFeeds],
+  )
+  const hasCalendarFeeds = mergedCalendarFeeds.length > 0
   const now = useMemo(() => new Date(), [])
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
   const monthGridRange = useMemo(
@@ -575,7 +579,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   }, [activeMonthTooltip])
 
   useEffect(() => {
-    if (settings.calendarFeeds.length === 0) {
+    if (mergedCalendarFeeds.length === 0) {
       setFetchedFeeds([])
       setEvents([])
       setError(null)
@@ -589,7 +593,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     setLoading(true)
     setError(null)
 
-    fetchCalendarFeeds(settings.calendarFeeds)
+    fetchCalendarFeeds(mergedCalendarFeeds)
       .then((nextFetchedFeeds) => {
         if (cancelled) return
         setFetchedFeeds(nextFetchedFeeds)
@@ -604,7 +608,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     return () => {
       cancelled = true
     }
-  }, [settings.calendarFeeds])
+  }, [mergedCalendarFeeds])
 
   useEffect(() => {
     if (fetchedFeeds.length === 0) {
