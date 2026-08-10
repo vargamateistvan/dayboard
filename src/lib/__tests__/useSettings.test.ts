@@ -11,6 +11,19 @@ import {
   importSettings,
   getSettingsDiff,
   isValidSettings,
+  saveProfile,
+  loadProfile,
+  applyProfile,
+  deleteProfile,
+  listProfiles,
+  renameProfile,
+  exportProfile,
+  importProfile,
+  encryptSettings,
+  decryptSettings,
+  isEncrypted,
+  saveEncryptedSettings,
+  loadEncryptedSettings,
 } from '../settings'
 
 describe('settings persistence', () => {
@@ -295,6 +308,143 @@ describe('settings diff', () => {
     expect(Object.keys(diff)).toHaveLength(0)
   })
 })
+
+describe('settings profiles', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('saves and loads a profile', () => {
+    const settings = { ...DEFAULT_SETTINGS, theme: 'ocean' as const }
+    saveProfile('ocean-theme', settings)
+
+    const loaded = loadProfile('ocean-theme')
+    expect(loaded).not.toBeNull()
+    expect(loaded?.theme).toBe('ocean')
+  })
+
+  it('lists all saved profiles', () => {
+    saveProfile('profile1', DEFAULT_SETTINGS)
+    saveProfile('profile2', { ...DEFAULT_SETTINGS, theme: 'nature' as const })
+
+    const profiles = listProfiles()
+    expect(profiles).toHaveLength(2)
+    expect(profiles.map(p => p.name)).toContain('profile1')
+    expect(profiles.map(p => p.name)).toContain('profile2')
+  })
+
+  it('applies a profile', () => {
+    const settings = { ...DEFAULT_SETTINGS, theme: 'nature' as const }
+    saveProfile('nature-theme', settings)
+    applyProfile('nature-theme')
+
+    const loaded = loadSettings()
+    expect(loaded.theme).toBe('nature')
+  })
+
+  it('deletes a profile', () => {
+    saveProfile('temp-profile', DEFAULT_SETTINGS)
+    expect(listProfiles()).toHaveLength(1)
+
+    deleteProfile('temp-profile')
+    expect(listProfiles()).toHaveLength(0)
+    expect(loadProfile('temp-profile')).toBeNull()
+  })
+
+  it('renames a profile', () => {
+    saveProfile('old-name', DEFAULT_SETTINGS)
+    renameProfile('old-name', 'new-name')
+
+    expect(loadProfile('old-name')).toBeNull()
+    expect(loadProfile('new-name')).not.toBeNull()
+  })
+
+  it('exports a profile as JSON', () => {
+    const settings = { ...DEFAULT_SETTINGS, theme: 'retro' as const }
+    saveProfile('retro-theme', settings)
+
+    const exported = exportProfile('retro-theme', false)
+    const parsed = JSON.parse(exported)
+    expect(parsed.settings.theme).toBe('retro')
+  })
+
+  it('imports a profile from JSON', () => {
+    const settings = { ...DEFAULT_SETTINGS, theme: 'sunset' as const }
+    const json = JSON.stringify({ settings })
+
+    const success = importProfile('imported-theme', json)
+    expect(success).toBe(true)
+    expect(loadProfile('imported-theme')?.theme).toBe('sunset')
+  })
+
+  it('rejects invalid profile during import', () => {
+    const invalid = JSON.stringify({ settings: { invalid: true } })
+    const success = importProfile('bad-profile', invalid)
+    expect(success).toBe(false)
+  })
+})
+
+describe('settings encryption', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+  afterEach(() => {
+    localStorage.clear()
+  })
+
+  it('encrypts settings', () => {
+    const encrypted = encryptSettings(DEFAULT_SETTINGS, 'password123')
+    expect(encrypted.encrypted).toBeTruthy()
+    expect(encrypted.iv).toBeTruthy()
+    expect(encrypted.version).toBe(1)
+    expect(isEncrypted(encrypted)).toBe(true)
+  })
+
+  it('decrypts settings with correct password', () => {
+    const encrypted = encryptSettings(DEFAULT_SETTINGS, 'password123')
+    const decrypted = decryptSettings(encrypted, 'password123')
+
+    expect(decrypted).not.toBeNull()
+    expect(decrypted?.theme).toBe(DEFAULT_SETTINGS.theme)
+  })
+
+  it('fails to decrypt with wrong password', () => {
+    const encrypted = encryptSettings(DEFAULT_SETTINGS, 'password123')
+    const decrypted = decryptSettings(encrypted, 'wrongpassword')
+
+    expect(decrypted).toBeNull()
+  })
+
+  it('rejects short passwords', () => {
+    expect(() => encryptSettings(DEFAULT_SETTINGS, 'short')).toThrow()
+  })
+
+  it('saves and loads encrypted settings', () => {
+    saveEncryptedSettings(DEFAULT_SETTINGS, 'password123')
+    const loaded = loadEncryptedSettings('password123')
+
+    expect(loaded).not.toBeNull()
+    expect(loaded?.theme).toBe(DEFAULT_SETTINGS.theme)
+  })
+
+  it('fails to load with wrong password', () => {
+    saveEncryptedSettings(DEFAULT_SETTINGS, 'password123')
+    const loaded = loadEncryptedSettings('wrongpassword')
+
+    expect(loaded).toBeNull()
+  })
+
+  it('detects encrypted data correctly', () => {
+    const encrypted = encryptSettings(DEFAULT_SETTINGS, 'password123')
+    expect(isEncrypted(encrypted)).toBe(true)
+    expect(isEncrypted(DEFAULT_SETTINGS)).toBe(false)
+    expect(isEncrypted({ encrypted: 'x' })).toBe(false)
+  })
+})
+
 
 describe('type guards', () => {
   it('validates correct settings object', () => {

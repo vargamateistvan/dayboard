@@ -770,3 +770,260 @@ export function isValidSettings(value: unknown): value is Settings {
     typeof s.worldClockTimeZone === 'string'
   )
 }
+
+/**
+ * Settings Profile interface for named configurations
+ */
+export interface SettingsProfile {
+  name: string
+  settings: Settings
+  createdAt: number
+  updatedAt: number
+}
+
+/**
+ * Saves current settings as a named profile for easy recall
+ * @param name - Unique profile name
+ * @param settings - Settings to save (defaults to current loaded settings)
+ * @throws Error if profile name is empty
+ */
+export function saveProfile(name: string, settings: Settings = loadSettings()): void {
+  if (!name.trim()) throw new Error('Profile name cannot be empty')
+
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+
+  const now = Date.now()
+  profiles[name] = {
+    name,
+    settings,
+    createdAt: profiles[name]?.createdAt || now,
+    updatedAt: now,
+  }
+
+  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+}
+
+/**
+ * Loads a previously saved settings profile by name
+ * @param name - Profile name to load
+ * @returns Settings from the profile, or null if not found
+ */
+export function loadProfile(name: string): Settings | null {
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+  return profiles[name]?.settings || null
+}
+
+/**
+ * Applies a saved profile (loads and saves it as current settings)
+ * @param name - Profile name to apply
+ * @throws Error if profile not found
+ */
+export function applyProfile(name: string): void {
+  const settings = loadProfile(name)
+  if (!settings) throw new Error(`Profile '${name}' not found`)
+  saveSettings(settings)
+}
+
+/**
+ * Deletes a saved settings profile
+ * @param name - Profile name to delete
+ */
+export function deleteProfile(name: string): void {
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+  delete profiles[name]
+  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+}
+
+/**
+ * Lists all saved settings profiles with metadata
+ * @returns Array of profile metadata (without full settings)
+ */
+export function listProfiles(): Array<{ name: string; createdAt: number; updatedAt: number }> {
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+  return Object.values(profiles).map(p => ({
+    name: p.name,
+    createdAt: p.createdAt,
+    updatedAt: p.updatedAt,
+  }))
+}
+
+/**
+ * Renames a saved settings profile
+ * @param oldName - Current profile name
+ * @param newName - New profile name
+ * @throws Error if old profile doesn't exist or new name is empty
+ */
+export function renameProfile(oldName: string, newName: string): void {
+  if (!newName.trim()) throw new Error('Profile name cannot be empty')
+
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+  if (!profiles[oldName]) throw new Error(`Profile '${oldName}' not found`)
+
+  profiles[newName] = { ...profiles[oldName], name: newName }
+  delete profiles[oldName]
+  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+}
+
+/**
+ * Exports a saved profile as JSON
+ * @param name - Profile name to export
+ * @param pretty - Whether to pretty-print JSON (default: true)
+ * @returns JSON string of the profile
+ * @throws Error if profile not found
+ */
+export function exportProfile(name: string, pretty = true): string {
+  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
+  if (!profiles[name]) throw new Error(`Profile '${name}' not found`)
+
+  return pretty ? JSON.stringify(profiles[name], null, 2) : JSON.stringify(profiles[name])
+}
+
+/**
+ * Imports a JSON profile and saves it with a new name
+ * @param name - Name for the imported profile
+ * @param json - JSON string of profile data
+ * @returns true if import succeeded, false if JSON is invalid
+ */
+export function importProfile(name: string, json: string): boolean {
+  try {
+    const data = JSON.parse(json) as SettingsProfile | { settings: Settings }
+    const settings = 'settings' in data ? data.settings : data
+
+    if (!isValidSettings(settings)) return false
+
+    saveProfile(name, settings)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Simple XOR-based encryption (NOT cryptographically secure)
+ * Use only for obfuscation. For production, use proper encryption libraries.
+ */
+function xorEncrypt(data: string, password: string): string {
+  let encrypted = ''
+  for (let i = 0; i < data.length; i++) {
+    encrypted += String.fromCharCode(data.charCodeAt(i) ^ password.charCodeAt(i % password.length))
+  }
+  return btoa(encrypted) // Base64 encode
+}
+
+/**
+ * XOR-based decryption (matches xorEncrypt)
+ */
+function xorDecrypt(encrypted: string, password: string): string {
+  try {
+    const data = atob(encrypted) // Base64 decode
+    let decrypted = ''
+    for (let i = 0; i < data.length; i++) {
+      decrypted += String.fromCharCode(data.charCodeAt(i) ^ password.charCodeAt(i % password.length))
+    }
+    return decrypted
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Encrypted settings data structure
+ */
+export interface EncryptedSettings {
+  encrypted: string
+  iv: string // initialization vector for salt
+  version: number
+}
+
+/**
+ * Checks if data appears to be encrypted settings
+ * @param data - Data to check
+ * @returns true if data looks like encrypted settings
+ */
+export function isEncrypted(data: unknown): data is EncryptedSettings {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'encrypted' in data &&
+    'iv' in data &&
+    'version' in data &&
+    typeof (data as { encrypted?: unknown }).encrypted === 'string' &&
+    typeof (data as { iv?: unknown }).iv === 'string' &&
+    typeof (data as { version?: unknown }).version === 'number'
+  )
+}
+
+/**
+ * Encrypts settings with a password
+ * WARNING: This is basic encryption. For production use, consider crypto libraries.
+ * @param settings - Settings to encrypt
+ * @param password - Encryption password (min 6 chars)
+ * @returns Encrypted data object
+ * @throws Error if password is too short
+ */
+export function encryptSettings(settings: Settings, password: string): EncryptedSettings {
+  if (password.length < 6) throw new Error('Password must be at least 6 characters')
+
+  const json = JSON.stringify(settings)
+  const iv = Math.random().toString(36).substring(2, 10) // Simple IV (not cryptographically secure)
+  const salted = json + iv
+  const encrypted = xorEncrypt(salted, password)
+
+  return {
+    encrypted,
+    iv,
+    version: 1,
+  }
+}
+
+/**
+ * Decrypts settings with a password
+ * @param encrypted - Encrypted data object
+ * @param password - Encryption password
+ * @returns Decrypted settings, or null if decryption fails or data is invalid
+ */
+export function decryptSettings(encrypted: EncryptedSettings, password: string): Settings | null {
+  try {
+    if (encrypted.version !== 1) return null
+
+    const decrypted = xorDecrypt(encrypted.encrypted, password)
+    if (!decrypted) return null
+
+    // Remove IV from decrypted data
+    const json = decrypted.substring(0, decrypted.length - encrypted.iv.length)
+    const settings = JSON.parse(json) as unknown
+
+    return isValidSettings(settings) ? settings : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Saves encrypted settings to localStorage
+ * @param settings - Settings to encrypt and save
+ * @param password - Encryption password
+ * @throws Error if password is invalid
+ */
+export function saveEncryptedSettings(settings: Settings, password: string): void {
+  const encrypted = encryptSettings(settings, password)
+  localStorage.setItem('settings_encrypted', JSON.stringify(encrypted))
+}
+
+/**
+ * Loads encrypted settings from localStorage
+ * @param password - Decryption password
+ * @returns Decrypted settings, or null if no encrypted data exists or password is wrong
+ */
+export function loadEncryptedSettings(password: string): Settings | null {
+  const stored = localStorage.getItem('settings_encrypted')
+  if (!stored) return null
+
+  try {
+    const encrypted = JSON.parse(stored)
+    if (!isEncrypted(encrypted)) return null
+    return decryptSettings(encrypted, password)
+  } catch {
+    return null
+  }
+}

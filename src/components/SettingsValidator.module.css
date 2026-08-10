@@ -1,0 +1,67 @@
+.settings-validator {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.settings-validator--valid {
+  background-color: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: rgb(34, 197, 94);
+}
+
+.settings-validator--invalid {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: rgb(239, 68, 68);
+}
+
+.settings-validator__icon {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.settings-validator__message {
+  font-weight: 500;
+}
+
+.settings-validator__title {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.settings-validator__errors {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.settings-validator__error {
+  padding: 0.5rem;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  line-height: 1.4;
+}
+
+.settings-validator__compact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.settings-validator__compact-item {
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+.settings-validator__compact-more {
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  opacity: 0.8;
+}

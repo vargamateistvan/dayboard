@@ -1,0 +1,129 @@
+.settings-export {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: var(--color-background, #fff);
+  border-radius: 0.5rem;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.settings-export__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-export__header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.settings-export__close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.25rem;
+  transition: background-color 0.2s;
+}
+
+.settings-export__close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.settings-export__options {
+  display: flex;
+  gap: 1rem;
+}
+
+.settings-export__option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.settings-export__option input {
+  cursor: pointer;
+}
+
+.settings-export__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.settings-export__preview h4 {
+  margin: 0;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.settings-export__code {
+  margin: 0;
+  padding: 0.75rem;
+  background: var(--color-input-bg, #f9fafb);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  overflow: auto;
+  flex: 1;
+  max-height: 300px;
+  line-height: 1.4;
+}
+
+.settings-export__info {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  padding: 0.5rem 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.settings-export__actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.settings-export__action {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.settings-export__action:hover {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.settings-export__action--primary {
+  background-color: var(--color-accent, #3b82f6);
+  color: white;
+}
+
+.settings-export__action--primary:hover {
+  opacity: 0.9;
+}
+
+.settings-export__action--secondary {
+  background-color: transparent;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+}
