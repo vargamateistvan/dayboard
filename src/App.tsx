@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { Check, ChevronDown, Info, Maximize2, Minimize2, Settings } from 'lucide-react'
 import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
 import { SettingsProvider, useSettings } from './lib/useSettings'
@@ -34,6 +34,24 @@ import './themes/ocean.css'
 import './themes/sunset.css'
 import './themes/custom.css'
 import styles from './App.module.css'
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return false
+  if (typeof a !== 'object' || typeof b !== 'object') return false
+
+  const keysA = Object.keys(a)
+  const keysB = Object.keys(b)
+
+  if (keysA.length !== keysB.length) return false
+
+  for (const key of keysA) {
+    if (!keysB.includes(key)) return false
+    if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false
+  }
+
+  return true
+}
 
 function renderWidget(widget: Widget, isFullscreen: boolean) {
   switch (widget) {
@@ -192,26 +210,26 @@ function Dashboard() {
     }
   }
 
-  const currentPresetName =
-    presets.find((preset) => {
-      const settingsMatch = JSON.stringify(preset.settings) === JSON.stringify(settings)
-      if (!settingsMatch) {
-        return false
-      }
+  const currentPresetName = useMemo(
+    () =>
+      presets.find((preset) => {
+        const settingsMatch = deepEqual(preset.settings, settings)
+        if (!settingsMatch) {
+          return false
+        }
 
-      if (!preset.layout) {
-        return true
-      }
+        if (!preset.layout) {
+          return true
+        }
 
-      return (
-        JSON.stringify(preset.layout) ===
-        JSON.stringify({
+        return deepEqual(preset.layout, {
           rowCount,
           visibility,
           placements,
         })
-      )
-    })?.name ?? ''
+      })?.name ?? '',
+    [presets, settings, rowCount, visibility, placements]
+  )
   const selectedPresetExists = Boolean(
     selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
   )
@@ -359,6 +377,7 @@ function Dashboard() {
       </main>
 
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
+      {/* BuyMeCoffeeWidget is intentionally rendered outside the widget grid as a fixed UI element, not managed by the widget visibility system */}
       <BuyMeCoffeeWidget />
       {infoOpen && <InfoDialog onClose={() => setInfoOpen(false)} />}
       {settingsOpen && (
