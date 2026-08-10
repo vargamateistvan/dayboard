@@ -169,8 +169,14 @@ function isHexColor(color: unknown): color is string {
   return typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color.trim())
 }
 
+function normalizeNonEmptyString(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') return fallback
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : fallback
+}
+
 function normalizeCalendarColor(color: unknown, fallback: string): string {
-  return isHexColor(color) ? color.trim() : fallback
+  return isHexColor(color) ? (color as string).trim() : fallback
 }
 
 function defaultCalendarColor(index: number): string {
@@ -225,11 +231,7 @@ function normalizeFontPreset(fontPreset: unknown): FontPreset {
 }
 
 function normalizeWeatherRefreshMinutes(value: unknown): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return DEFAULT_SETTINGS.weatherRefreshMinutes
-  }
-
-  return Math.max(1, Math.round(value))
+  return normalizePositiveInteger(value, DEFAULT_SETTINGS.weatherRefreshMinutes)
 }
 
 function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
@@ -237,11 +239,7 @@ function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
 }
 
 function normalizeWeatherShowExtraDetails(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    return DEFAULT_SETTINGS.weatherShowExtraDetails
-  }
-
-  return value
+  return normalizeBoolean(value, DEFAULT_SETTINGS.weatherShowExtraDetails)
 }
 
 function isValidIanaTimeZone(value: string): boolean {
@@ -254,20 +252,11 @@ function isValidIanaTimeZone(value: string): boolean {
 }
 
 function normalizeWorldClockCity(value: unknown): string {
-  if (typeof value !== 'string') {
-    return DEFAULT_SETTINGS.worldClockCity
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : DEFAULT_SETTINGS.worldClockCity
+  return normalizeNonEmptyString(value, DEFAULT_SETTINGS.worldClockCity)
 }
 
 function normalizeWorldClockTimeZone(value: unknown): string {
-  if (typeof value !== 'string') {
-    return DEFAULT_SETTINGS.worldClockTimeZone
-  }
-
-  const trimmed = value.trim()
+  const trimmed = typeof value === 'string' ? value.trim() : ''
   return trimmed.length > 0 && isValidIanaTimeZone(trimmed)
     ? trimmed
     : DEFAULT_SETTINGS.worldClockTimeZone
@@ -359,36 +348,31 @@ function normalizeFinanceRefreshMinutes(value: unknown): number {
   return Math.max(1, Math.round(value))
 }
 
-function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    return DEFAULT_SETTINGS.showBuyMeACoffeeWidget
-  }
+function normalizeBoolean(value: unknown, fallback: boolean): boolean {
+  return typeof value === 'boolean' ? value : fallback
+}
 
-  return value
+function normalizePositiveInteger(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return fallback
+  }
+  return Math.max(1, Math.round(value))
+}
+
+function normalizeBuyMeACoffeeWidget(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
 }
 
 function normalizeCalendarHidePastEvents(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    return DEFAULT_SETTINGS.calendarHidePastEvents
-  }
-
-  return value
+  return normalizeBoolean(value, DEFAULT_SETTINGS.calendarHidePastEvents)
 }
 
 function normalizeCalendarShowAllDayEvents(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    return DEFAULT_SETTINGS.calendarShowAllDayEvents
-  }
-
-  return value
+  return normalizeBoolean(value, DEFAULT_SETTINGS.calendarShowAllDayEvents)
 }
 
 function normalizeCalendarShowMonthlyOverview(value: unknown): boolean {
-  if (typeof value !== 'boolean') {
-    return DEFAULT_SETTINGS.calendarShowMonthlyOverview
-  }
-
-  return value
+  return normalizeBoolean(value, DEFAULT_SETTINGS.calendarShowMonthlyOverview)
 }
 
 function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
@@ -396,28 +380,15 @@ function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
 }
 
 function normalizeCustomBackground(value: unknown): string {
-  if (typeof value !== 'string') {
-    return DEFAULT_CUSTOM_COLORS.background
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : DEFAULT_CUSTOM_COLORS.background
+  return normalizeNonEmptyString(value, DEFAULT_CUSTOM_COLORS.background)
 }
 
 function normalizePomodoroWorkMinutes(value: unknown): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return DEFAULT_SETTINGS.pomodoroWorkMinutes
-  }
-
-  return Math.max(1, Math.round(value))
+  return normalizePositiveInteger(value, DEFAULT_SETTINGS.pomodoroWorkMinutes)
 }
 
 function normalizePomodoroBreakMinutes(value: unknown): number {
-  if (typeof value !== 'number' || Number.isNaN(value)) {
-    return DEFAULT_SETTINGS.pomodoroBreakMinutes
-  }
-
-  return Math.max(1, Math.round(value))
+  return normalizePositiveInteger(value, DEFAULT_SETTINGS.pomodoroBreakMinutes)
 }
 
 function normalizeCustomColors(value: unknown): CustomColors {
@@ -426,19 +397,12 @@ function normalizeCustomColors(value: unknown): CustomColors {
   }
 
   const obj = value as Record<string, unknown>
-  
-  const normalizeColor = (color: unknown, fallback: string): string => {
-    if (typeof color !== 'string') return fallback
-    const trimmed = color.trim()
-    return trimmed.length > 0 ? trimmed : fallback
-  }
-
   return {
-    primary: normalizeColor(obj.primary, DEFAULT_CUSTOM_COLORS.primary),
-    primaryHover: normalizeColor(obj.primaryHover, DEFAULT_CUSTOM_COLORS.primaryHover),
+    primary: normalizeNonEmptyString(obj.primary, DEFAULT_CUSTOM_COLORS.primary),
+    primaryHover: normalizeNonEmptyString(obj.primaryHover, DEFAULT_CUSTOM_COLORS.primaryHover),
     background: normalizeCustomBackground(obj.background),
-    fontColor: normalizeColor(obj.fontColor, DEFAULT_CUSTOM_COLORS.fontColor),
-    secondaryFontColor: normalizeColor(obj.secondaryFontColor, DEFAULT_CUSTOM_COLORS.secondaryFontColor),
+    fontColor: normalizeNonEmptyString(obj.fontColor, DEFAULT_CUSTOM_COLORS.fontColor),
+    secondaryFontColor: normalizeNonEmptyString(obj.secondaryFontColor, DEFAULT_CUSTOM_COLORS.secondaryFontColor),
   }
 }
 
@@ -527,16 +491,29 @@ export function saveSettings(settings: Settings): void {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
-      ...settings,
+      theme: settings.theme,
+      colorScheme: settings.colorScheme,
+      fontPreset: normalizeFontPreset(settings.fontPreset),
+      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
+      calendarHidePastEvents: normalizeCalendarHidePastEvents(settings.calendarHidePastEvents),
+      calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(settings.calendarShowMonthlyOverview),
+      calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(settings.calendarShowAllDayEvents),
+      calendarWeekStartsOn: normalizeCalendarWeekStartsOn(settings.calendarWeekStartsOn),
+      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(settings.weatherRefreshMinutes),
+      weatherUnitSystem: normalizeWeatherUnitSystem(settings.weatherUnitSystem),
+      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(settings.weatherShowExtraDetails),
+      spotifyEmbedUrl: normalizeEmbedUrl(settings.spotifyEmbedUrl),
       spotifyEmbedLinks: normalizeSavedMediaLinks(
         settings.spotifyEmbedLinks,
         settings.spotifyEmbedUrl ? createSavedMediaLink(settings.spotifyEmbedUrl) : undefined,
       ),
+      appleMusicEmbedUrl: normalizeEmbedUrl(settings.appleMusicEmbedUrl),
       appleMusicEmbedLinks: normalizeSavedMediaLinks(
         settings.appleMusicEmbedLinks,
         settings.appleMusicEmbedUrl ? createSavedMediaLink(settings.appleMusicEmbedUrl) : undefined,
       ),
+      applePodcastEmbedUrl: normalizeEmbedUrl(settings.applePodcastEmbedUrl),
       applePodcastEmbedLinks: normalizeSavedMediaLinks(
         settings.applePodcastEmbedLinks,
         settings.applePodcastEmbedUrl ? createSavedMediaLink(settings.applePodcastEmbedUrl) : undefined,
