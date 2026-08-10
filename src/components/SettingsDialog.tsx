@@ -1330,22 +1330,23 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     tabId: SettingsTabId,
   ) => {
     const index = SETTINGS_TABS.findIndex((tab) => tab.id === tabId);
-    let nextIndex = index;
 
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-      nextIndex = (index + 1) % SETTINGS_TABS.length;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-      nextIndex = (index - 1 + SETTINGS_TABS.length) % SETTINGS_TABS.length;
-    } else if (event.key === "Home") {
-      nextIndex = 0;
-    } else if (event.key === "End") {
-      nextIndex = SETTINGS_TABS.length - 1;
-    } else {
+      event.preventDefault();
+      setActiveTab(SETTINGS_TABS[(index + 1) % SETTINGS_TABS.length].id);
       return;
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveTab(SETTINGS_TABS[(index - 1 + SETTINGS_TABS.length) % SETTINGS_TABS.length].id);
+      return;
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setActiveTab(SETTINGS_TABS[0].id);
+      return;
+    } else if (event.key === "End") {
+      event.preventDefault();
+      setActiveTab(SETTINGS_TABS[SETTINGS_TABS.length - 1].id);
     }
-
-    event.preventDefault();
-    setActiveTab(SETTINGS_TABS[nextIndex].id);
   };
 
   const save = () => {
