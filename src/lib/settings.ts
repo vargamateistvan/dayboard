@@ -17,7 +17,6 @@ export interface CustomColors {
   background: string
   fontColor: string
   secondaryFontColor: string
-  secondary?: string
 }
 
 export interface Settings {
@@ -427,12 +426,19 @@ function normalizeCustomColors(value: unknown): CustomColors {
   }
 
   const obj = value as Record<string, unknown>
+  
+  const normalizeColor = (color: unknown, fallback: string): string => {
+    if (typeof color !== 'string') return fallback
+    const trimmed = color.trim()
+    return trimmed.length > 0 ? trimmed : fallback
+  }
+
   return {
-    primary: isHexColor(obj.primary) ? (obj.primary as string) : DEFAULT_CUSTOM_COLORS.primary,
-    primaryHover: isHexColor(obj.primaryHover) ? (obj.primaryHover as string) : DEFAULT_CUSTOM_COLORS.primaryHover,
+    primary: normalizeColor(obj.primary, DEFAULT_CUSTOM_COLORS.primary),
+    primaryHover: normalizeColor(obj.primaryHover, DEFAULT_CUSTOM_COLORS.primaryHover),
     background: normalizeCustomBackground(obj.background),
-    fontColor: typeof obj.fontColor === 'string' && obj.fontColor.trim().length > 0 ? obj.fontColor.trim() : DEFAULT_CUSTOM_COLORS.fontColor,
-    secondaryFontColor: typeof obj.secondaryFontColor === 'string' && obj.secondaryFontColor.trim().length > 0 ? obj.secondaryFontColor.trim() : DEFAULT_CUSTOM_COLORS.secondaryFontColor,
+    fontColor: normalizeColor(obj.fontColor, DEFAULT_CUSTOM_COLORS.fontColor),
+    secondaryFontColor: normalizeColor(obj.secondaryFontColor, DEFAULT_CUSTOM_COLORS.secondaryFontColor),
   }
 }
 
