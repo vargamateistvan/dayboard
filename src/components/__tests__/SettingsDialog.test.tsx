@@ -245,12 +245,25 @@ describe('SettingsDialog', () => {
     fireEvent.change(primaryColorInput as HTMLInputElement, {
       target: { value: '#112233' },
     })
+    fireEvent.click(screen.getByRole('button', { name: 'Gradient' }))
+    const gradientColorInputs = customColorsSection?.querySelectorAll('input[type="color"]')
+    expect(gradientColorInputs?.length).toBeGreaterThanOrEqual(4)
+    fireEvent.change(gradientColorInputs?.[2] as HTMLInputElement, {
+      target: { value: '#0f172a' },
+    })
+    fireEvent.change(gradientColorInputs?.[3] as HTMLInputElement, {
+      target: { value: '#1d4ed8' },
+    })
+    fireEvent.change(customColorsSection?.querySelector('input[type="number"]') as HTMLInputElement, {
+      target: { value: '135' },
+    })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
       theme: 'custom',
       customColors: expect.objectContaining({
         primary: '#112233',
+        background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
       }),
     })
   })

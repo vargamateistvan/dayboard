@@ -2,7 +2,7 @@
 .app {
   height: 100dvh;
   overflow: hidden;
-  background: var(--color-bg);
+  background: var(--color-custom-bg, var(--color-bg));
   display: flex;
   flex-direction: column;
 }
@@ -166,7 +166,7 @@
   align-items: center;
   justify-content: center;
   padding: clamp(1.5rem, 4vw, 3.5rem);
-  background: var(--color-bg);
+  background: var(--color-custom-bg, var(--color-bg));
   overflow: hidden;
 }
 

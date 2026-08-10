@@ -13,8 +13,13 @@
   --color-success: #16a34a;
 }
 
+html[data-theme='custom'],
+html[data-theme='custom'] body {
+  background: var(--color-custom-bg, var(--color-bg));
+}
+
 [data-theme='custom'][data-color-scheme='dark'] {
-  --color-bg: var(--color-custom-bg, #0a0a0a);
+  --color-bg: #0a0a0a;
   --color-surface: #1a1a1a;
   --color-surface-alt: #2d2d2d;
   --color-border: #404040;

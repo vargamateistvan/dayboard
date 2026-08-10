@@ -121,7 +121,10 @@ describe('settings persistence', () => {
       financeRefreshMinutes: 5,
       worldClockCity: 'Tokyo',
       worldClockTimeZone: 'Asia/Tokyo',
-      customColors: DEFAULT_SETTINGS.customColors,
+      customColors: {
+        ...DEFAULT_SETTINGS.customColors,
+        background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
+      },
     }
     saveSettings(custom)
     expect(loadSettings()).toEqual(custom)

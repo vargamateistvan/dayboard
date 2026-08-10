@@ -396,6 +396,15 @@ function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
   return value === 'sunday' ? 'sunday' : DEFAULT_SETTINGS.calendarWeekStartsOn
 }
 
+function normalizeCustomBackground(value: unknown): string {
+  if (typeof value !== 'string') {
+    return DEFAULT_CUSTOM_COLORS.background
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : DEFAULT_CUSTOM_COLORS.background
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -522,7 +531,7 @@ export function applyTheme(settings: Settings): void {
 
     document.documentElement.style.setProperty('--color-accent', customColors.primary)
     document.documentElement.style.setProperty('--color-accent-hover', customColors.primaryHover)
-    document.documentElement.style.setProperty('--color-custom-bg', customColors.background)
+    document.documentElement.style.setProperty('--color-custom-bg', normalizeCustomBackground(customColors.background))
     document.documentElement.style.setProperty('--color-custom-text', customColors.fontColor)
     document.documentElement.style.setProperty('--color-custom-text-muted', customColors.secondaryFontColor)
   }

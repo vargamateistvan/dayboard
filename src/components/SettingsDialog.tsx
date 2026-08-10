@@ -99,6 +99,71 @@ function isValidTimeZone(value: string): boolean {
   }
 }
 
+type BackgroundMode = "solid" | "gradient";
+
+interface ParsedBackground {
+  mode: BackgroundMode;
+  solid: string;
+  gradientFrom: string;
+  gradientTo: string;
+  gradientAngle: number;
+}
+
+const DEFAULT_BACKGROUND_GRADIENT = {
+  from: DEFAULT_CUSTOM_COLORS.background,
+  to: "#1d4ed8",
+  angle: 135,
+} as const;
+
+const GRADIENT_BACKGROUND_REGEX =
+  /^linear-gradient\(\s*([0-9]+(?:\.[0-9]+)?)deg,\s*(#[0-9a-fA-F]{6})\s*,\s*(#[0-9a-fA-F]{6})\s*\)$/i;
+
+function isHexColor(value: string): boolean {
+  return /^#[0-9a-fA-F]{6}$/.test(value.trim());
+}
+
+function normalizeHexColor(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  return isHexColor(trimmed) ? trimmed : fallback;
+}
+
+function normalizeGradientAngle(value: number): number {
+  if (!Number.isFinite(value)) {
+    return DEFAULT_BACKGROUND_GRADIENT.angle;
+  }
+
+  return Math.min(360, Math.max(0, Math.round(value)));
+}
+
+function formatLinearGradient(angle: number, from: string, to: string): string {
+  return `linear-gradient(${normalizeGradientAngle(angle)}deg, ${from}, ${to})`;
+}
+
+function parseBackground(value: string): ParsedBackground {
+  const trimmed = value.trim();
+  const gradientMatch = trimmed.match(GRADIENT_BACKGROUND_REGEX);
+
+  if (gradientMatch) {
+    return {
+      mode: "gradient",
+      solid: gradientMatch[2],
+      gradientFrom: gradientMatch[2],
+      gradientTo: gradientMatch[3],
+      gradientAngle: normalizeGradientAngle(Number(gradientMatch[1])),
+    };
+  }
+
+  const solid = normalizeHexColor(trimmed, DEFAULT_CUSTOM_COLORS.background);
+
+  return {
+    mode: "solid",
+    solid,
+    gradientFrom: solid,
+    gradientTo: DEFAULT_BACKGROUND_GRADIENT.to,
+    gradientAngle: DEFAULT_BACKGROUND_GRADIENT.angle,
+  };
+}
+
 interface Props {
   readonly onClose: () => void;
 }
@@ -637,6 +702,7 @@ export function SettingsDialog({ onClose }: Props) {
   const [customColors, setCustomColors] = useState<CustomColors>(
     settings.customColors || DEFAULT_CUSTOM_COLORS,
   );
+  const background = parseBackground(customColors.background);
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
   const isTimezoneClockOnLayout = visibility.timezoneClock;
@@ -888,26 +954,159 @@ export function SettingsDialog({ onClose }: Props) {
                     </div>
                   </label>
                 </div>
-                <div className={styles.colorInputGroup}>
-                  <label className={styles.colorLabel}>
-                    Background Color
-                    <div className={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={customColors.background}
-                        onChange={(e) =>
+                <div className={[styles.colorInputGroup, styles.backgroundColorGroup].join(" ")}>
+                  <div className={styles.colorLabel}>
+                    Background
+                    <div className={styles.backgroundPreview} style={{ background: customColors.background }} />
+                    <div className={styles.segmentedBackground} role="group" aria-label="Background mode">
+                      <button
+                        type="button"
+                        className={[
+                          styles.segment,
+                          background.mode === "solid" ? styles.segmentActive : "",
+                        ].join(" ")}
+                        aria-pressed={background.mode === "solid"}
+                        onClick={() =>
                           setCustomColors({
                             ...customColors,
-                            background: e.target.value,
+                            background: background.solid,
                           })
                         }
-                      />
-                      <span className={styles.colorValue}>
-                        {customColors.background}
-                      </span>
+                      >
+                        Solid
+                      </button>
+                      <button
+                        type="button"
+                        className={[
+                          styles.segment,
+                          background.mode === "gradient" ? styles.segmentActive : "",
+                        ].join(" ")}
+                        aria-pressed={background.mode === "gradient"}
+                        onClick={() =>
+                          setCustomColors({
+                            ...customColors,
+                            background: formatLinearGradient(
+                              background.gradientAngle,
+                              background.gradientFrom,
+                              background.gradientTo,
+                            ),
+                          })
+                        }
+                      >
+                        Gradient
+                      </button>
                     </div>
-                  </label>
+
+                    {background.mode === "solid" ? (
+                      <div className={styles.colorInputWrapper}>
+                        <input
+                          type="color"
+                          className={styles.colorInput}
+                          value={background.solid}
+                          onChange={(e) =>
+                            setCustomColors({
+                              ...customColors,
+                              background: e.target.value,
+                            })
+                          }
+                        />
+                        <span className={styles.colorValue}>{background.solid}</span>
+                      </div>
+                    ) : (
+                      <div className={styles.backgroundGradientEditor}>
+                        <div className={styles.backgroundGradientRow}>
+                          <label className={styles.intervalLabel}>
+                            Start Color
+                            <div className={styles.colorInputWrapper}>
+                              <input
+                                type="color"
+                                className={styles.colorInput}
+                                aria-label="Start Color"
+                                value={background.gradientFrom}
+                                onChange={(e) =>
+                                  setCustomColors({
+                                    ...customColors,
+                                    background: formatLinearGradient(
+                                      background.gradientAngle,
+                                      e.target.value,
+                                      background.gradientTo,
+                                    ),
+                                  })
+                                }
+                              />
+                              <span className={styles.colorValue}>{background.gradientFrom}</span>
+                            </div>
+                          </label>
+                          <label className={styles.intervalLabel}>
+                            End Color
+                            <div className={styles.colorInputWrapper}>
+                              <input
+                                type="color"
+                                className={styles.colorInput}
+                                aria-label="End Color"
+                                value={background.gradientTo}
+                                onChange={(e) =>
+                                  setCustomColors({
+                                    ...customColors,
+                                    background: formatLinearGradient(
+                                      background.gradientAngle,
+                                      background.gradientFrom,
+                                      e.target.value,
+                                    ),
+                                  })
+                                }
+                              />
+                              <span className={styles.colorValue}>{background.gradientTo}</span>
+                            </div>
+                          </label>
+                        </div>
+
+                        <label className={styles.intervalLabel}>
+                          Angle
+                          <div className={styles.backgroundAngleRow}>
+                            <input
+                              type="range"
+                              min="0"
+                              max="360"
+                              step="1"
+                              aria-label="Angle slider"
+                              value={background.gradientAngle}
+                              onChange={(e) =>
+                                setCustomColors({
+                                  ...customColors,
+                                  background: formatLinearGradient(
+                                    Number(e.target.value),
+                                    background.gradientFrom,
+                                    background.gradientTo,
+                                  ),
+                                })
+                              }
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              max="360"
+                              step="1"
+                              className={styles.input}
+                              aria-label="Angle"
+                              value={background.gradientAngle}
+                              onChange={(e) =>
+                                setCustomColors({
+                                  ...customColors,
+                                  background: formatLinearGradient(
+                                    Number(e.target.value),
+                                    background.gradientFrom,
+                                    background.gradientTo,
+                                  ),
+                                })
+                              }
+                            />
+                          </div>
+                        </label>
+                      </div>
+                    )}
+                    <span className={styles.hint}>Choose a solid color or build a linear gradient.</span>
+                  </div>
                 </div>
                 <div className={styles.colorInputGroup}>
                   <label className={styles.colorLabel}>
