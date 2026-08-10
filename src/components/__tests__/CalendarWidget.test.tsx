@@ -104,6 +104,15 @@ RRULE:FREQ=DAILY
 END:VEVENT
 END:VCALENDAR`
 
+const TOMORROW_ICS = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Tomorrow Planning
+DTSTART:${TOMORROW_Y}${TOMORROW_M}${TOMORROW_D}T090000Z
+DTEND:${TOMORROW_Y}${TOMORROW_M}${TOMORROW_D}T100000Z
+END:VEVENT
+END:VCALENDAR`
+
 describe('CalendarWidget', () => {
   it('shows the monthly overview by default', () => {
     renderWithSettings([])
@@ -162,6 +171,63 @@ describe('CalendarWidget', () => {
     renderWithSettings([], { calendarShowMonthlyOverview: false })
 
     expect(screen.queryByLabelText('Current month calendar')).not.toBeInTheDocument()
+  })
+
+  it('shows weekly preview when calendar extra info mode is set to weekly', () => {
+    renderWithSettings([], { calendarExtraInfoPreview: 'weekly' })
+
+    expect(screen.getByLabelText('Current week calendar')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Current month calendar')).not.toBeInTheDocument()
+  })
+
+  it('navigates month view with previous and next controls', () => {
+    renderWithSettings([])
+
+    const initialMonth = new Date().toLocaleDateString(undefined, { month: 'short' })
+    expect(screen.getByText(initialMonth)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next month' }))
+    const nextMonthDate = new Date()
+    nextMonthDate.setMonth(nextMonthDate.getMonth() + 1)
+    const nextMonth = nextMonthDate.toLocaleDateString(undefined, { month: 'short' })
+    expect(screen.getByText(nextMonth)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous month' }))
+    expect(screen.getByText(initialMonth)).toBeInTheDocument()
+  })
+
+  it('navigates week view with previous and next controls', () => {
+    renderWithSettings([], { calendarExtraInfoPreview: 'weekly' })
+
+    const weekHeadersBefore = Array.from(document.querySelectorAll('[class*="weekDayLabel"]')).map(
+      (element) => element.textContent,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next week' }))
+
+    const weekHeadersAfter = Array.from(document.querySelectorAll('[class*="weekDayLabel"]')).map(
+      (element) => element.textContent,
+    )
+
+    expect(weekHeadersAfter).not.toEqual(weekHeadersBefore)
+  })
+
+  it('shows full day schedule items in weekly preview mode', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TOMORROW_ICS }),
+    )
+    renderWithSettings(
+      [{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }],
+      { calendarExtraInfoPreview: 'weekly' },
+    )
+
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    expect(screen.getByLabelText('Current week calendar')).toBeInTheDocument()
+    expect(screen.getByText('Tomorrow Planning')).toBeInTheDocument()
+
+    vi.unstubAllGlobals()
   })
 
   it('shows "no calendar connected" when no URL is set', () => {
@@ -232,6 +298,29 @@ describe('CalendarWidget', () => {
     expect(screen.getByText('Bring roadmap notes')).toBeInTheDocument()
     expect(screen.getByText('Invite')).toBeInTheDocument()
     expect(screen.getByText('https://meet.example.com/standup')).toBeInTheDocument()
+    vi.unstubAllGlobals()
+  })
+
+  it('shows hover tooltip details for weekly timeline events', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => TODAY_ICS_WITH_DETAILS }),
+    )
+    renderWithSettings(
+      [{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }],
+      { calendarExtraInfoPreview: 'weekly' },
+    )
+    await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
+
+    const weeklyEvent = document.querySelector('[class*="weekTimedEvent"]') as HTMLElement | null
+    expect(weeklyEvent).not.toBeNull()
+    fireEvent.mouseEnter(weeklyEvent as HTMLElement)
+
+    expect(screen.getByText('Location')).toBeInTheDocument()
+    expect(screen.getByText('HQ Room 4')).toBeInTheDocument()
+    expect(screen.getByText('Host')).toBeInTheDocument()
+    expect(screen.getByText('Alex Lead <alex@example.com>')).toBeInTheDocument()
+
     vi.unstubAllGlobals()
   })
 

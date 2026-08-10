@@ -68,15 +68,15 @@ describe('SettingsDialog', () => {
     expect(screen.getByTitle('Drag to add Weather')).toBeInTheDocument()
   })
 
-  it('persists the monthly overview toggle with calendar display settings', () => {
+  it('persists the calendar extra info preview mode', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
-    fireEvent.click(screen.getByRole('button', { name: /Show monthly overview/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Weekly' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
-      calendarShowMonthlyOverview: false,
+      calendarExtraInfoPreview: 'weekly',
     })
   })
 
@@ -387,6 +387,7 @@ describe('SettingsDialog', () => {
             calendarFeeds: [],
             calendarHidePastEvents: false,
             calendarShowMonthlyOverview: true,
+            calendarExtraInfoPreview: 'monthly',
             calendarShowAllDayEvents: true,
             calendarWeekStartsOn: 'monday',
             weatherRefreshMinutes: 10,

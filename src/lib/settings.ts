@@ -11,6 +11,7 @@ export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 's
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 export type WeatherUnitSystem = 'metric' | 'imperial'
 export type CalendarWeekStartsOn = 'sunday' | 'monday'
+export type CalendarExtraInfoPreview = 'monthly' | 'weekly'
 
 export interface CalendarFeed {
   url: string
@@ -33,6 +34,7 @@ export interface Settings {
   calendarFeeds: CalendarFeed[]
   calendarHidePastEvents: boolean
   calendarShowMonthlyOverview: boolean
+  calendarExtraInfoPreview: CalendarExtraInfoPreview
   calendarShowAllDayEvents: boolean
   calendarWeekStartsOn: CalendarWeekStartsOn
   weatherRefreshMinutes: number
@@ -139,6 +141,7 @@ export const DEFAULT_SETTINGS: Settings = {
   calendarFeeds: [],
   calendarHidePastEvents: false,
   calendarShowMonthlyOverview: true,
+  calendarExtraInfoPreview: 'monthly',
   calendarShowAllDayEvents: true,
   calendarWeekStartsOn: 'monday',
   weatherRefreshMinutes: 10,
@@ -455,6 +458,12 @@ function normalizeCalendarShowMonthlyOverview(value: unknown): boolean {
   return normalizeBoolean(value, DEFAULT_SETTINGS.calendarShowMonthlyOverview)
 }
 
+function normalizeCalendarExtraInfoPreview(value: unknown): CalendarExtraInfoPreview {
+  return value === 'monthly' || value === 'weekly'
+    ? (value as CalendarExtraInfoPreview)
+    : DEFAULT_SETTINGS.calendarExtraInfoPreview
+}
+
 function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
   return value === 'sunday' || value === 'monday' ? (value as CalendarWeekStartsOn) : DEFAULT_SETTINGS.calendarWeekStartsOn
 }
@@ -510,6 +519,9 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     ),
     calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(
       (rest as { calendarShowMonthlyOverview?: unknown }).calendarShowMonthlyOverview,
+    ),
+    calendarExtraInfoPreview: normalizeCalendarExtraInfoPreview(
+      (rest as { calendarExtraInfoPreview?: unknown }).calendarExtraInfoPreview,
     ),
     calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(
       (rest as { calendarShowAllDayEvents?: unknown }).calendarShowAllDayEvents,
@@ -595,6 +607,7 @@ export function saveSettings(settings: Settings): void {
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
       calendarHidePastEvents: normalizeCalendarHidePastEvents(settings.calendarHidePastEvents),
       calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(settings.calendarShowMonthlyOverview),
+      calendarExtraInfoPreview: normalizeCalendarExtraInfoPreview(settings.calendarExtraInfoPreview),
       calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(settings.calendarShowAllDayEvents),
       calendarWeekStartsOn: normalizeCalendarWeekStartsOn(settings.calendarWeekStartsOn),
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(settings.weatherRefreshMinutes),

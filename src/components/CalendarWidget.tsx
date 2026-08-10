@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchCalendarFeeds } from '../lib/fetchCalendarFeed'
 import {
   parseCalendarFeed,
@@ -16,6 +17,7 @@ const WEEKDAY_LABELS_BY_START: Record<CalendarWeekStartsOn, string[]> = {
   sunday: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
 }
 const MONTH_GRID_DAY_COUNT = 42
+const WEEK_DAY_COUNT = 7
 const MAX_TOOLTIP_EVENTS = 4
 
 interface MonthPreviewEvent {
@@ -30,6 +32,21 @@ interface ActiveMonthTooltip {
   previewEvents: MonthPreviewEvent[]
   extraCount: number
   anchorElement: HTMLDivElement
+}
+
+interface WeekTimedEventSegment {
+  event: CalendarEvent
+  startMinute: number
+  endMinute: number
+  lane: number
+  laneCount: number
+}
+
+interface WeekDaySchedule {
+  date: Date
+  isToday: boolean
+  allDayEvents: CalendarEvent[]
+  timedEvents: WeekTimedEventSegment[]
 }
 
 interface CalendarWidgetProps {
@@ -49,6 +66,23 @@ function formatMonthParts(date: Date): { year: string; month: string } {
     year: date.toLocaleDateString(undefined, { year: 'numeric' }),
     month: date.toLocaleDateString(undefined, { month: 'short' }),
   }
+}
+
+function formatWeekLabel(range: CalendarRange): string {
+  const sameYear = range.start.getFullYear() === range.end.getFullYear()
+  const sameMonth = sameYear && range.start.getMonth() === range.end.getMonth()
+
+  const startLabel = range.start.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  })
+  const endLabel = range.end.toLocaleDateString(undefined, {
+    ...(sameMonth ? {} : { month: 'short' }),
+    day: 'numeric',
+    year: sameYear ? undefined : 'numeric',
+  })
+
+  return `${startLabel} – ${endLabel}`
 }
 
 function startOfDay(date: Date): Date {
@@ -91,8 +125,28 @@ function getMonthGridRange(
   }
 }
 
+function getWeekRange(
+  referenceDate: Date,
+  weekStartsOn: CalendarWeekStartsOn,
+): CalendarRange {
+  const weekStart = new Date(referenceDate)
+  weekStart.setDate(referenceDate.getDate() - getWeekOffset(referenceDate.getDay(), weekStartsOn))
+
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekStart.getDate() + WEEK_DAY_COUNT - 1)
+
+  return {
+    start: startOfDay(weekStart),
+    end: endOfDay(weekEnd),
+  }
+}
+
 function getDayKey(date: Date): string {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
+}
+
+function getMinutesSinceStartOfDay(date: Date): number {
+  return date.getHours() * 60 + date.getMinutes()
 }
 
 function getEventKey(event: CalendarEvent): string {
@@ -196,6 +250,107 @@ function buildMonthCells(
       previewEvents: eventSummaries.get(dayKey)?.previewEvents ?? [],
     }
   })
+}
+
+function buildWeekTimedEventSegments(
+  events: Array<{ event: CalendarEvent; startMinute: number; endMinute: number }>,
+): WeekTimedEventSegment[] {
+  const sortedEvents = [...events].sort((a, b) => {
+    if (a.startMinute === b.startMinute) {
+      return a.endMinute - b.endMinute
+    }
+    return a.startMinute - b.startMinute
+  })
+  const lanesEndMinute: number[] = []
+
+  const withLane = sortedEvents.map((entry) => {
+    let lane = lanesEndMinute.findIndex((laneEndMinute) => laneEndMinute <= entry.startMinute)
+    if (lane === -1) {
+      lane = lanesEndMinute.length
+      lanesEndMinute.push(entry.endMinute)
+    } else {
+      lanesEndMinute[lane] = entry.endMinute
+    }
+
+    return {
+      ...entry,
+      lane,
+    }
+  })
+
+  const laneCount = Math.max(1, lanesEndMinute.length)
+
+  return withLane.map((entry) => ({
+    event: entry.event,
+    startMinute: entry.startMinute,
+    endMinute: entry.endMinute,
+    lane: entry.lane,
+    laneCount,
+  }))
+}
+
+function buildWeekSchedule(referenceDate: Date, events: CalendarEvent[], weekStartsOn: CalendarWeekStartsOn): WeekDaySchedule[] {
+  const weekRange = getWeekRange(referenceDate, weekStartsOn)
+  const weekStart = startOfDay(weekRange.start)
+  const todayKey = getDayKey(new Date())
+
+  return Array.from({ length: WEEK_DAY_COUNT }, (_value, index) => {
+    const date = new Date(weekStart)
+    date.setDate(weekStart.getDate() + index)
+    const dayRange = getTodayRange(date)
+    const dayStartMinute = getMinutesSinceStartOfDay(dayRange.start)
+    const dayEndMinute = getMinutesSinceStartOfDay(dayRange.end)
+    const dayEvents = events
+      .filter((event) => isEventWithinRange(event, dayRange))
+      .sort((a, b) => a.start.getTime() - b.start.getTime())
+    const allDayEvents = dayEvents.filter((event) => event.allDay)
+    const timedEvents = buildWeekTimedEventSegments(
+      dayEvents
+        .filter((event) => !event.allDay)
+        .map((event) => {
+          const clampedStart = event.start < dayRange.start ? dayRange.start : event.start
+          const clampedEnd = event.end > dayRange.end ? dayRange.end : event.end
+          const startMinute = Math.max(dayStartMinute, getMinutesSinceStartOfDay(clampedStart))
+          const endMinute = Math.max(startMinute + 15, Math.min(dayEndMinute, getMinutesSinceStartOfDay(clampedEnd)))
+
+          return {
+            event,
+            startMinute,
+            endMinute,
+          }
+        }),
+    )
+
+    return {
+      date,
+      isToday: getDayKey(date) === todayKey,
+      allDayEvents,
+      timedEvents,
+    }
+  })
+}
+
+function resolveWeekHourRange(days: WeekDaySchedule[]): { startHour: number; endHour: number } {
+  const startMinutes = days.flatMap((day) => day.timedEvents.map((event) => event.startMinute))
+  const endMinutes = days.flatMap((day) => day.timedEvents.map((event) => event.endMinute))
+
+  if (startMinutes.length === 0 || endMinutes.length === 0) {
+    return { startHour: 8, endHour: 20 }
+  }
+
+  const minHour = Math.max(0, Math.floor(Math.min(...startMinutes) / 60) - 1)
+  const maxHour = Math.min(24, Math.ceil(Math.max(...endMinutes) / 60) + 1)
+
+  return {
+    startHour: Math.min(minHour, 8),
+    endHour: Math.max(maxHour, 20),
+  }
+}
+
+function formatHourLabel(hour24: number): string {
+  const date = new Date()
+  date.setHours(hour24, 0, 0, 0)
+  return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
 }
 
 function formatResponseStatus(status: string | undefined): string | null {
@@ -331,7 +486,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
   const [activeTooltip, setActiveTooltip] = useState<{
     event: CalendarEvent
-    anchorElement: HTMLLIElement
+    anchorElement: HTMLElement
   } | null>(null)
   const [tooltipStyle, setTooltipStyle] = useState<CSSProperties>()
   const [activeMonthTooltip, setActiveMonthTooltip] = useState<ActiveMonthTooltip | null>(null)
@@ -343,7 +498,16 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const hasCalendarFeeds = settings.calendarFeeds.length > 0
   const now = useMemo(() => new Date(), [])
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
-  const monthGridRange = useMemo(() => getMonthGridRange(now, settings.calendarWeekStartsOn), [now, settings.calendarWeekStartsOn])
+  const monthGridRange = useMemo(
+    () => getMonthGridRange(selectedDate, settings.calendarWeekStartsOn),
+    [selectedDate, settings.calendarWeekStartsOn],
+  )
+  const showCalendarExtraInfo = settings.calendarShowMonthlyOverview
+  const isWeeklyPreview = settings.calendarExtraInfoPreview === 'weekly'
+  const weekRange = useMemo(
+    () => getWeekRange(selectedDate, settings.calendarWeekStartsOn),
+    [selectedDate, settings.calendarWeekStartsOn],
+  )
   const selectedRange = useMemo(() => getTodayRange(selectedDate), [selectedDate])
   const isToday = getDayKey(selectedDate) === getDayKey(now)
 
@@ -477,12 +641,62 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     [monthEvents, monthGridRange],
   )
   const monthCells = useMemo(
-    () => buildMonthCells(now, monthEventSummaries, settings.calendarWeekStartsOn),
-    [monthEventSummaries, now, settings.calendarWeekStartsOn],
+    () => buildMonthCells(selectedDate, monthEventSummaries, settings.calendarWeekStartsOn),
+    [monthEventSummaries, selectedDate, settings.calendarWeekStartsOn],
   )
-  const monthLabel = formatMonthLabel(now)
-  const { year, month } = formatMonthParts(now)
+  const monthLabel = formatMonthLabel(selectedDate)
+  const { year, month } = formatMonthParts(selectedDate)
+  const weekLabel = formatWeekLabel(weekRange)
+  const weekSchedule = useMemo(
+    () => buildWeekSchedule(selectedDate, monthEvents, settings.calendarWeekStartsOn),
+    [selectedDate, monthEvents, settings.calendarWeekStartsOn],
+  )
+  const weekHourRange = useMemo(() => resolveWeekHourRange(weekSchedule), [weekSchedule])
+  const weekHourTicks = useMemo(
+    () =>
+      Array.from(
+        { length: weekHourRange.endHour - weekHourRange.startHour + 1 },
+        (_value, index) => weekHourRange.startHour + index,
+      ),
+    [weekHourRange.endHour, weekHourRange.startHour],
+  )
+  const weekTotalMinutes = (weekHourRange.endHour - weekHourRange.startHour) * 60
+  const isNowInWeek = now >= weekRange.start && now <= weekRange.end
+  const currentTimePosition = isNowInWeek
+    ? ((getMinutesSinceStartOfDay(now) - weekHourRange.startHour * 60) / weekTotalMinutes) * 100
+    : null
+  const weekTimelineStyle = {
+    '--week-hour-count': String(Math.max(1, weekHourRange.endHour - weekHourRange.startHour)),
+  } as CSSProperties
   const isMissingCalendarLinkError = error?.toLowerCase().includes('calendar link is missing') ?? false
+  const previousPeriodLabel = isWeeklyPreview ? 'Previous week' : 'Previous month'
+  const nextPeriodLabel = isWeeklyPreview ? 'Next week' : 'Next month'
+
+  const goToPreviousPeriod = () => {
+    setSelectedDate((currentDate) => {
+      const nextDate = new Date(currentDate)
+      if (isWeeklyPreview) {
+        nextDate.setDate(currentDate.getDate() - WEEK_DAY_COUNT)
+      } else {
+        nextDate.setMonth(currentDate.getMonth() - 1)
+      }
+      return nextDate
+    })
+    setActiveMonthTooltip(null)
+  }
+
+  const goToNextPeriod = () => {
+    setSelectedDate((currentDate) => {
+      const nextDate = new Date(currentDate)
+      if (isWeeklyPreview) {
+        nextDate.setDate(currentDate.getDate() + WEEK_DAY_COUNT)
+      } else {
+        nextDate.setMonth(currentDate.getMonth() + 1)
+      }
+      return nextDate
+    })
+    setActiveMonthTooltip(null)
+  }
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} ref={widgetRef}>
@@ -493,9 +707,10 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
       <div
         className={[
           styles.content,
+          settings.calendarExtraInfoPreview === 'weekly' ? styles.contentWeekly : '',
           isFullscreen && !hasCalendarFeeds ? styles.contentNoFeedsFullscreen : '',
           isFullscreen && hasCalendarFeeds && visibleEvents.length === 0 ? styles.contentEmptyFullscreen : '',
-          settings.calendarShowMonthlyOverview ? '' : styles.contentFull,
+          showCalendarExtraInfo ? '' : styles.contentFull,
         ].join(' ')}
       >
         <section
@@ -610,140 +825,354 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
           )}
         </section>
 
-        {settings.calendarShowMonthlyOverview && (
+        {showCalendarExtraInfo && (
           <aside
             className={[
               styles.monthlyOverview,
+              settings.calendarExtraInfoPreview === 'weekly' ? styles.weeklyOverview : '',
               isFullscreen && !hasCalendarFeeds ? styles.monthlyOverviewCentered : '',
             ].join(' ')}
-            aria-label="Current month calendar"
+            aria-label={settings.calendarExtraInfoPreview === 'weekly' ? 'Current week calendar' : 'Current month calendar'}
           >
             <div className={styles.sectionHeader}>
               <div className={styles.sectionHeaderLabel}>
-                <span className={styles.monthYear}>{year}.</span>
-                <span className={styles.monthName}>{month}</span>
-                <span className={styles.monthLabelSrOnly}>{monthLabel}</span>
+                {settings.calendarExtraInfoPreview === 'weekly' ? (
+                  <>
+                    <span className={styles.monthName}>Week</span>
+                    <span className={styles.monthYear}>{weekLabel}</span>
+                    <span className={styles.monthLabelSrOnly}>{`Week of ${weekLabel}`}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.monthYear}>{year}.</span>
+                    <span className={styles.monthName}>{month}</span>
+                    <span className={styles.monthLabelSrOnly}>{monthLabel}</span>
+                  </>
+                )}
               </div>
-              {!isToday && (
+              <div className={styles.sectionHeaderActions}>
                 <button
-                  className={styles.todayButton}
-                  onClick={() => { setSelectedDate(new Date()) }}
-                  aria-label="Jump to today"
+                  className={styles.navButton}
+                  onClick={goToPreviousPeriod}
+                  aria-label={previousPeriodLabel}
+                  type="button"
                 >
-                  Today
+                  <ChevronLeft size={14} />
                 </button>
-              )}
-            </div>
-
-            <div className={styles.weekdayRow} aria-hidden="true">
-              {weekdayLabels.map((label, index) => (
-                <span key={`${label}-${index}`} className={styles.weekdayLabel}>
-                  {label}
-                </span>
-              ))}
-            </div>
-
-            <div className={styles.monthGrid}>
-              {monthCells.map((cell) => {
-                const isSelected = getDayKey(cell.date) === getDayKey(selectedDate)
-
-                return (
-                <div
-                  key={getDayKey(cell.date)}
-                  className={[
-                    styles.monthCell,
-                    cell.inCurrentMonth ? '' : styles.monthCellMuted,
-                    cell.isToday ? styles.monthCellToday : '',
-                    cell.eventCount > 0 ? styles.monthCellHasEvent : '',
-                    isSelected && !cell.isToday ? styles.monthCellSelected : '',
-                  ].join(' ')}
-                  aria-label={cell.date.toLocaleDateString(undefined, {
-                    weekday: 'long',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                  aria-current={cell.isToday ? 'date' : undefined}
-                  tabIndex={0}
-                  role="button"
-                  onClick={() => {
-                    setSelectedDate(new Date(cell.date))
-                    setActiveMonthTooltip(null)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      setSelectedDate(new Date(cell.date))
-                      setActiveMonthTooltip(null)
-                    }
-                  }}
-                  onMouseEnter={(currentEvent) => {
-                    if (cell.previewEvents.length === 0) {
-                      return
-                    }
-
-                    setActiveMonthTooltip({
-                      dayLabel: cell.date.toLocaleDateString(undefined, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      }),
-                      previewEvents: cell.previewEvents,
-                      extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
-                      anchorElement: currentEvent.currentTarget,
-                    })
-                  }}
-                  onMouseLeave={(currentEvent) => {
-                    setActiveMonthTooltip((currentTooltip) =>
-                      currentTooltip?.anchorElement === currentEvent.currentTarget &&
-                        document.activeElement === currentEvent.currentTarget
-                        ? currentTooltip
-                        : null,
-                    )
-                  }}
-                  onFocusCapture={(currentEvent) => {
-                    if (cell.previewEvents.length === 0) {
-                      return
-                    }
-
-                    setActiveMonthTooltip({
-                      dayLabel: cell.date.toLocaleDateString(undefined, {
-                        weekday: 'short',
-                        month: 'short',
-                        day: 'numeric',
-                      }),
-                      previewEvents: cell.previewEvents,
-                      extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
-                      anchorElement: currentEvent.currentTarget,
-                    })
-                  }}
-                  onBlurCapture={(currentEvent) => {
-                    const nextFocusedElement = currentEvent.relatedTarget
-                    if (nextFocusedElement instanceof Node && currentEvent.currentTarget.contains(nextFocusedElement)) {
-                      return
-                    }
-
-                    setActiveMonthTooltip((currentTooltip) =>
-                      currentTooltip?.anchorElement === currentEvent.currentTarget ? null : currentTooltip,
-                    )
-                  }}
+                {!isToday && (
+                  <button
+                    className={styles.todayButton}
+                    onClick={() => { setSelectedDate(new Date()) }}
+                    aria-label="Jump to today"
+                    type="button"
+                  >
+                    Today
+                  </button>
+                )}
+                <button
+                  className={styles.navButton}
+                  onClick={goToNextPeriod}
+                  aria-label={nextPeriodLabel}
+                  type="button"
                 >
-                  <span className={styles.monthCellNumber}>{cell.date.getDate()}</span>
-                  {cell.eventCount > 0 && (
-                    <>
-                      <span
-                        className={styles.monthEventBar}
-                        aria-hidden="true"
-                        style={{ backgroundColor: cell.eventColor }}
-                      />
-                      {cell.eventCount > 1 && (
-                        <span className={styles.monthEventCount}>+{cell.eventCount - 1}</span>
-                      )}
-                    </>
-                  )}
-                </div>
-                )
-              })}
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
+
+            {isWeeklyPreview ? (
+              <>
+                <div className={styles.weekTimeline}>
+                  <div className={styles.weekTimelineScroll}>
+                    <div className={styles.weekTimelineBody} style={weekTimelineStyle}>
+                      <div className={styles.weekTimeAxis} aria-hidden="true">
+                        <div className={styles.weekAllDayLabel}>all-day</div>
+                        <div className={styles.weekTimeLabels}>
+                          {weekHourTicks.map((hour, index) => (
+                            <span
+                              key={`week-hour-label-${hour}`}
+                              className={styles.weekTimeLabel}
+                              style={{ top: `${(index / Math.max(1, weekHourTicks.length - 1)) * 100}%` }}
+                            >
+                              {formatHourLabel(hour)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className={styles.weekScheduleGrid}>
+                        {weekSchedule.map((day) => {
+                          const isSelected = getDayKey(day.date) === getDayKey(selectedDate)
+                          const dayLabel = day.date.toLocaleDateString(undefined, {
+                            weekday: 'long',
+                            day: 'numeric',
+                          })
+
+                          return (
+                            <section
+                              key={`week-schedule-${getDayKey(day.date)}`}
+                              className={[
+                                styles.weekDayColumn,
+                                isSelected ? styles.weekDayColumnSelected : '',
+                                day.isToday ? styles.weekDayColumnToday : '',
+                              ].join(' ')}
+                              aria-label={`Schedule for ${day.date.toLocaleDateString(undefined, {
+                                weekday: 'long',
+                                month: 'long',
+                                day: 'numeric',
+                              })}`}
+                            >
+                              <button
+                                className={styles.weekDayHeader}
+                                onClick={() => {
+                                  setSelectedDate(new Date(day.date))
+                                  setActiveMonthTooltip(null)
+                                }}
+                                type="button"
+                              >
+                                <span className={styles.weekDayLabel}>{dayLabel}</span>
+                              </button>
+                              <div className={styles.weekAllDayEvents}>
+                                {day.allDayEvents.length === 0 ? (
+                                  <span className={styles.weekAllDayEmpty}>—</span>
+                                ) : (
+                                  day.allDayEvents.map((event) => {
+                                    const hasTooltipDetails = hasEventTooltipDetails(event)
+
+                                    return (
+                                      <span
+                                        key={`all-day-${getDayKey(day.date)}-${getEventKey(event)}`}
+                                        className={styles.weekAllDayEvent}
+                                        style={{ borderLeftColor: event.calendarColor ?? DEFAULT_CALENDAR_COLOR }}
+                                        onMouseEnter={(currentEvent) => {
+                                          if (!hasTooltipDetails) {
+                                            return
+                                          }
+
+                                          setActiveTooltip({ event, anchorElement: currentEvent.currentTarget })
+                                        }}
+                                        onMouseLeave={() => {
+                                          setActiveTooltip((currentTooltip) =>
+                                            currentTooltip?.event === event ? null : currentTooltip,
+                                          )
+                                        }}
+                                      >
+                                        {event.title}
+                                      </span>
+                                    )
+                                  })
+                                )}
+                              </div>
+                              <div className={styles.weekTimedArea}>
+                                {weekHourTicks.map((hour, index) => (
+                                  <span
+                                    key={`week-hour-line-${getDayKey(day.date)}-${hour}`}
+                                    className={styles.weekHourLine}
+                                    style={{ top: `${(index / Math.max(1, weekHourTicks.length - 1)) * 100}%` }}
+                                  />
+                                ))}
+                                {day.timedEvents.map((segment) => {
+                                  const visibleStart = weekHourRange.startHour * 60
+                                  const visibleEnd = weekHourRange.endHour * 60
+                                  const start = Math.max(segment.startMinute, visibleStart)
+                                  const end = Math.min(segment.endMinute, visibleEnd)
+                                  const hasTooltipDetails = hasEventTooltipDetails(segment.event)
+
+                                  if (end <= start) {
+                                    return null
+                                  }
+
+                                  const top = ((start - visibleStart) / weekTotalMinutes) * 100
+                                  const height = ((end - start) / weekTotalMinutes) * 100
+                                  const width = 100 / segment.laneCount
+                                  const left = segment.lane * width
+
+                                  return (
+                                    <article
+                                      key={`timed-${getDayKey(day.date)}-${getEventKey(segment.event)}`}
+                                      className={styles.weekTimedEvent}
+                                      style={{
+                                        top: `${top}%`,
+                                        height: `${Math.max(height, 2.2)}%`,
+                                        left: `${left}%`,
+                                        width: `${width}%`,
+                                        borderLeftColor: segment.event.calendarColor ?? DEFAULT_CALENDAR_COLOR,
+                                      }}
+                                      onClick={() => setSelectedDate(new Date(day.date))}
+                                      tabIndex={0}
+                                      onMouseEnter={(currentEvent) => {
+                                        if (!hasTooltipDetails) {
+                                          return
+                                        }
+
+                                        setActiveTooltip({
+                                          event: segment.event,
+                                          anchorElement: currentEvent.currentTarget,
+                                        })
+                                      }}
+                                      onMouseLeave={() => {
+                                        setActiveTooltip((currentTooltip) =>
+                                          currentTooltip?.event === segment.event ? null : currentTooltip,
+                                        )
+                                      }}
+                                      onFocusCapture={(currentEvent) => {
+                                        if (!hasTooltipDetails) {
+                                          return
+                                        }
+
+                                        setActiveTooltip({
+                                          event: segment.event,
+                                          anchorElement: currentEvent.currentTarget,
+                                        })
+                                      }}
+                                      onBlurCapture={(currentEvent) => {
+                                        const nextFocusedElement = currentEvent.relatedTarget
+                                        if (nextFocusedElement instanceof Node && currentEvent.currentTarget.contains(nextFocusedElement)) {
+                                          return
+                                        }
+
+                                        setActiveTooltip((currentTooltip) =>
+                                          currentTooltip?.event === segment.event ? null : currentTooltip,
+                                        )
+                                      }}
+                                    >
+                                      <span className={styles.weekTimedEventTime}>
+                                        {segment.event.allDay
+                                          ? 'All day'
+                                          : `${formatTime(segment.event.start)} – ${formatTime(segment.event.end)}`}
+                                      </span>
+                                      <span className={styles.weekTimedEventTitle}>{segment.event.title}</span>
+                                    </article>
+                                  )
+                                })}
+                                {day.isToday && currentTimePosition != null && currentTimePosition >= 0 && currentTimePosition <= 100 && (
+                                  <span
+                                    className={styles.weekCurrentTimeLine}
+                                    style={{ top: `${currentTimePosition}%` }}
+                                    aria-hidden="true"
+                                  />
+                                )}
+                              </div>
+                            </section>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.weekdayRow} aria-hidden="true">
+                  {weekdayLabels.map((label, index) => (
+                    <span key={`${label}-${index}`} className={styles.weekdayLabel}>
+                      {label}
+                    </span>
+                  ))}
+                </div>
+
+                <div className={styles.monthGrid}>
+                  {monthCells.map((cell) => {
+                    const isSelected = getDayKey(cell.date) === getDayKey(selectedDate)
+
+                    return (
+                    <div
+                      key={getDayKey(cell.date)}
+                      className={[
+                        styles.monthCell,
+                        cell.inCurrentMonth ? '' : styles.monthCellMuted,
+                        cell.isToday ? styles.monthCellToday : '',
+                        cell.eventCount > 0 ? styles.monthCellHasEvent : '',
+                        isSelected && !cell.isToday ? styles.monthCellSelected : '',
+                      ].join(' ')}
+                      aria-label={cell.date.toLocaleDateString(undefined, {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                      aria-current={cell.isToday ? 'date' : undefined}
+                      tabIndex={0}
+                      role="button"
+                      onClick={() => {
+                        setSelectedDate(new Date(cell.date))
+                        setActiveMonthTooltip(null)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          setSelectedDate(new Date(cell.date))
+                          setActiveMonthTooltip(null)
+                        }
+                      }}
+                      onMouseEnter={(currentEvent) => {
+                        if (cell.previewEvents.length === 0) {
+                          return
+                        }
+
+                        setActiveMonthTooltip({
+                          dayLabel: cell.date.toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          }),
+                          previewEvents: cell.previewEvents,
+                          extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
+                          anchorElement: currentEvent.currentTarget,
+                        })
+                      }}
+                      onMouseLeave={(currentEvent) => {
+                        setActiveMonthTooltip((currentTooltip) =>
+                          currentTooltip?.anchorElement === currentEvent.currentTarget &&
+                            document.activeElement === currentEvent.currentTarget
+                            ? currentTooltip
+                            : null,
+                        )
+                      }}
+                      onFocusCapture={(currentEvent) => {
+                        if (cell.previewEvents.length === 0) {
+                          return
+                        }
+
+                        setActiveMonthTooltip({
+                          dayLabel: cell.date.toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                          }),
+                          previewEvents: cell.previewEvents,
+                          extraCount: Math.max(0, cell.eventCount - MAX_TOOLTIP_EVENTS),
+                          anchorElement: currentEvent.currentTarget,
+                        })
+                      }}
+                      onBlurCapture={(currentEvent) => {
+                        const nextFocusedElement = currentEvent.relatedTarget
+                        if (nextFocusedElement instanceof Node && currentEvent.currentTarget.contains(nextFocusedElement)) {
+                          return
+                        }
+
+                        setActiveMonthTooltip((currentTooltip) =>
+                          currentTooltip?.anchorElement === currentEvent.currentTarget ? null : currentTooltip,
+                        )
+                      }}
+                    >
+                      <span className={styles.monthCellNumber}>{cell.date.getDate()}</span>
+                      {cell.eventCount > 0 && (
+                        <>
+                          <span
+                            className={styles.monthEventBar}
+                            aria-hidden="true"
+                            style={{ backgroundColor: cell.eventColor }}
+                          />
+                          {cell.eventCount > 1 && (
+                            <span className={styles.monthEventCount}>+{cell.eventCount - 1}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </aside>
         )}
       </div>

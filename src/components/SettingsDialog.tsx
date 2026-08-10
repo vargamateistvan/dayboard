@@ -44,6 +44,7 @@ import {
   type SettingsPresetSchedule,
   updatePresetSchedule,
   type CalendarFeed,
+  type CalendarExtraInfoPreview,
   type CalendarWeekStartsOn,
   type Theme,
   type ColorScheme,
@@ -99,6 +100,14 @@ const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
 const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
   { id: "monday", label: "Monday" },
   { id: "sunday", label: "Sunday" },
+];
+
+const CALENDAR_EXTRA_INFO_PREVIEW_OPTIONS: {
+  id: CalendarExtraInfoPreview;
+  label: string;
+}[] = [
+  { id: "monthly", label: "Monthly" },
+  { id: "weekly", label: "Weekly" },
 ];
 
 function isValidTimeZone(value: string): boolean {
@@ -984,6 +993,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [calendarShowMonthlyOverview, setCalendarShowMonthlyOverview] = useState(
     settings.calendarShowMonthlyOverview,
   );
+  const [calendarExtraInfoPreview, setCalendarExtraInfoPreview] =
+    useState<CalendarExtraInfoPreview>(settings.calendarExtraInfoPreview);
   const [calendarShowAllDayEvents, setCalendarShowAllDayEvents] = useState(
     settings.calendarShowAllDayEvents,
   );
@@ -1071,6 +1082,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setShowBuyMeACoffeeWidget(nextSettings.showBuyMeACoffeeWidget);
     setCalendarHidePastEvents(nextSettings.calendarHidePastEvents);
     setCalendarShowMonthlyOverview(nextSettings.calendarShowMonthlyOverview);
+    setCalendarExtraInfoPreview(nextSettings.calendarExtraInfoPreview);
     setCalendarShowAllDayEvents(nextSettings.calendarShowAllDayEvents);
     setCalendarWeekStartsOn(nextSettings.calendarWeekStartsOn);
     setWorkMin(nextSettings.pomodoroWorkMinutes);
@@ -1115,6 +1127,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     showBuyMeACoffeeWidget,
     calendarHidePastEvents,
     calendarShowMonthlyOverview,
+    calendarExtraInfoPreview,
     calendarShowAllDayEvents,
     calendarWeekStartsOn,
     pomodoroWorkMinutes: workMin,
@@ -1849,9 +1862,27 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           ) : (
                             <EyeOff size={14} />
                           )}
-                          <span>Show monthly overview</span>
+                          <span>Show calendar extra info</span>
                         </button>
                       </div>
+                      {calendarShowMonthlyOverview && (
+                        <div className={styles.segmented}>
+                          {CALENDAR_EXTRA_INFO_PREVIEW_OPTIONS.map((option) => (
+                            <button
+                              key={option.id}
+                              className={[
+                                styles.segment,
+                                calendarExtraInfoPreview === option.id ? styles.segmentActive : "",
+                              ].join(" ")}
+                              onClick={() => setCalendarExtraInfoPreview(option.id)}
+                              aria-pressed={calendarExtraInfoPreview === option.id}
+                              type="button"
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </section>
                   </>
                 )}

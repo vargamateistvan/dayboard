@@ -81,6 +81,7 @@ describe('settings persistence', () => {
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
     expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
     expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
+    expect(loaded.calendarExtraInfoPreview).toBe(DEFAULT_SETTINGS.calendarExtraInfoPreview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
   })
@@ -133,6 +134,7 @@ describe('settings persistence', () => {
       ],
       calendarHidePastEvents: true,
       calendarShowMonthlyOverview: false,
+      calendarExtraInfoPreview: 'weekly' as const,
       calendarShowAllDayEvents: false,
       calendarWeekStartsOn: 'sunday' as const,
       weatherRefreshMinutes: 15,
@@ -206,6 +208,7 @@ describe('settings persistence', () => {
       JSON.stringify({
         calendarHidePastEvents: 'no',
         calendarShowMonthlyOverview: 'sometimes',
+        calendarExtraInfoPreview: 'yearly',
         calendarShowAllDayEvents: 'yes',
         calendarWeekStartsOn: 'friday',
         weatherUnitSystem: 'kelvin',
@@ -237,6 +240,7 @@ describe('settings persistence', () => {
     expect(loaded.showBuyMeACoffeeWidget).toBe(DEFAULT_SETTINGS.showBuyMeACoffeeWidget)
     expect(loaded.calendarHidePastEvents).toBe(DEFAULT_SETTINGS.calendarHidePastEvents)
     expect(loaded.calendarShowMonthlyOverview).toBe(DEFAULT_SETTINGS.calendarShowMonthlyOverview)
+    expect(loaded.calendarExtraInfoPreview).toBe(DEFAULT_SETTINGS.calendarExtraInfoPreview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
     expect(loaded.worldClockCity).toBe(DEFAULT_SETTINGS.worldClockCity)
