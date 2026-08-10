@@ -263,11 +263,19 @@
   height: 2rem;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-bg) 84%, transparent);
+  background:
+    color-mix(
+      in srgb,
+      var(--color-custom-bg, var(--color-surface, var(--color-bg))) 82%,
+      transparent
+    );
   color: var(--color-text-muted);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 150ms ease, color 150ms ease, background 150ms ease;
+  transition:
+    opacity 150ms ease,
+    color 150ms ease,
+    background 150ms ease;
   backdrop-filter: blur(10px);
 }
 
@@ -279,7 +287,12 @@
 
 .widgetFullscreenBtn:hover {
   color: var(--color-text);
-  background: color-mix(in srgb, var(--color-surface, var(--color-bg)) 92%, transparent);
+  background:
+    color-mix(
+      in srgb,
+      var(--color-accent) 14%,
+      var(--color-custom-bg, var(--color-surface, var(--color-bg)))
+    );
 }
 
 .widgetCellHidden {
