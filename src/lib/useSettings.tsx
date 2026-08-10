@@ -18,6 +18,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null)
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const lastScheduledPresetRef = useRef<string | null>(null)
+  const scheduledPresetManualOverrideRef = useRef<string | null>(null)
 
   useEffect(() => {
     applyTheme(settings)
@@ -35,6 +36,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...patch }
+      const activePreset = getActiveScheduledPreset()
+
+      if (!activePreset) {
+        scheduledPresetManualOverrideRef.current = null
+      } else {
+        const activeSnapshot = JSON.stringify(activePreset.settings)
+        const nextSnapshot = JSON.stringify(next)
+
+        if (nextSnapshot === activeSnapshot) {
+          scheduledPresetManualOverrideRef.current = null
+          lastScheduledPresetRef.current = activePreset.name
+        } else {
+          scheduledPresetManualOverrideRef.current = activePreset.name
+        }
+      }
+
       saveSettings(next)
       return next
     })
@@ -45,6 +62,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
     if (!activePreset) {
       lastScheduledPresetRef.current = null
+      scheduledPresetManualOverrideRef.current = null
+      return
+    }
+
+    if (
+      scheduledPresetManualOverrideRef.current &&
+      scheduledPresetManualOverrideRef.current !== activePreset.name
+    ) {
+      scheduledPresetManualOverrideRef.current = null
+    }
+
+    if (scheduledPresetManualOverrideRef.current === activePreset.name) {
       return
     }
 

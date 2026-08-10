@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   loadSettings,
@@ -37,6 +37,23 @@ import { loadWidgetLayoutState } from '../useWidgetVisibility'
 function SettingsProbe() {
   const { settings } = useSettings()
   return React.createElement('div', { 'data-testid': 'theme-value' }, settings.theme)
+}
+
+function SettingsManualOverrideProbe() {
+  const { settings, updateSettings } = useSettings()
+  return React.createElement(
+    React.Fragment,
+    null,
+    React.createElement('div', { 'data-testid': 'theme-value' }, settings.theme),
+    React.createElement(
+      'button',
+      {
+        type: 'button',
+        onClick: () => updateSettings({ theme: 'retro' }),
+      },
+      'Set manual theme',
+    ),
+  )
 }
 
 describe('settings persistence', () => {
@@ -507,6 +524,38 @@ describe('settings profiles', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('theme-value')).toHaveTextContent('ocean')
+    })
+  })
+
+  it('does not re-apply an active scheduled preset after a manual theme change', async () => {
+    saveSettings(DEFAULT_SETTINGS)
+    savePreset(
+      'focus-hours',
+      { ...DEFAULT_SETTINGS, theme: 'ocean' as const },
+      { enabled: true, startTime: '00:00', endTime: '23:59' },
+    )
+
+    render(
+      React.createElement(
+        SettingsProvider,
+        null,
+        React.createElement(SettingsManualOverrideProbe),
+      ),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-value')).toHaveTextContent('ocean')
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Set manual theme' }))
+    expect(screen.getByTestId('theme-value')).toHaveTextContent('retro')
+
+    window.dispatchEvent(new Event('focus'))
+    document.dispatchEvent(new Event('visibilitychange'))
+    window.dispatchEvent(new CustomEvent('settingsPresetsChanged'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-value')).toHaveTextContent('retro')
     })
   })
 })
