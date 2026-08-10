@@ -164,8 +164,6 @@ function RadarPlot({
 
           return (
             <g key={flight.icao24} transform={`translate(${x.toFixed(2)} ${y.toFixed(2)})`}>
-              <circle className={styles.planeBlip} r="6.2" />
-              <circle className={styles.planePing} r="3.2" />
               <RadarPlaneIcon rotationDegrees={planeRotation} />
               {showLabels && index < labelLimit ? (
                 <text className={styles.planeLabel} x="3.8" y="-3.1">
