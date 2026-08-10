@@ -1,4 +1,10 @@
 import { createSavedMediaLink, normalizeSavedMediaLinks, type SavedMediaLink } from './mediaLinks'
+import {
+  loadWidgetLayoutState,
+  normalizeWidgetLayoutState,
+  saveWidgetLayoutState,
+  type WidgetLayoutState,
+} from './useWidgetVisibility'
 
 export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
@@ -147,6 +153,8 @@ export const DEFAULT_SETTINGS: Settings = {
 }
 
 const STORAGE_KEY = 'dayboard:settings'
+const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
+const LEGACY_PROFILE_STORAGE_KEY = 'settings_profiles'
 const CUSTOM_THEME_VARIABLES = [
   '--color-accent',
   '--color-accent-hover',
@@ -163,6 +171,15 @@ interface StoredSettings extends Partial<Omit<Settings, 'calendarFeeds'>> {
   stockSymbol?: unknown
   currencyBase?: unknown
   currencyTarget?: unknown
+}
+
+interface StoredPreset {
+  name?: unknown
+  settings?: unknown
+  layout?: unknown
+  createdAt?: unknown
+  updatedAt?: unknown
+  schedule?: unknown
 }
 
 function isHexColor(color: unknown): color is string {
@@ -406,82 +423,91 @@ function normalizeCustomColors(value: unknown): CustomColors {
   }
 }
 
+function normalizeStoredSettings(value: unknown): Settings | null {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+
+  const parsed = value as StoredSettings
+  const {
+    calendarUrl,
+    calendarUrls,
+    calendarFeeds,
+    ...rest
+  } = parsed
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...rest,
+    fontPreset: normalizeFontPreset(rest.fontPreset),
+    showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
+    calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
+    calendarHidePastEvents: normalizeCalendarHidePastEvents(
+      (rest as { calendarHidePastEvents?: unknown }).calendarHidePastEvents,
+    ),
+    calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(
+      (rest as { calendarShowMonthlyOverview?: unknown }).calendarShowMonthlyOverview,
+    ),
+    calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(
+      (rest as { calendarShowAllDayEvents?: unknown }).calendarShowAllDayEvents,
+    ),
+    calendarWeekStartsOn: normalizeCalendarWeekStartsOn(
+      (rest as { calendarWeekStartsOn?: unknown }).calendarWeekStartsOn,
+    ),
+    weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
+    weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
+    weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
+    worldClockCity: normalizeWorldClockCity((rest as { worldClockCity?: unknown }).worldClockCity),
+    worldClockTimeZone: normalizeWorldClockTimeZone((rest as { worldClockTimeZone?: unknown }).worldClockTimeZone),
+    spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
+    spotifyEmbedLinks: normalizeSavedMediaLinks(
+      (rest as { spotifyEmbedLinks?: unknown }).spotifyEmbedLinks,
+      (rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl
+        ? createSavedMediaLink((rest as { spotifyEmbedUrl?: string }).spotifyEmbedUrl!)
+        : undefined,
+    ),
+    appleMusicEmbedUrl: normalizeEmbedUrl((rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl),
+    appleMusicEmbedLinks: normalizeSavedMediaLinks(
+      (rest as { appleMusicEmbedLinks?: unknown }).appleMusicEmbedLinks,
+      (rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl
+        ? createSavedMediaLink((rest as { appleMusicEmbedUrl?: string }).appleMusicEmbedUrl!)
+        : undefined,
+    ),
+    applePodcastEmbedUrl: normalizeEmbedUrl((rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl),
+    applePodcastEmbedLinks: normalizeSavedMediaLinks(
+      (rest as { applePodcastEmbedLinks?: unknown }).applePodcastEmbedLinks,
+      (rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl
+        ? createSavedMediaLink((rest as { applePodcastEmbedUrl?: string }).applePodcastEmbedUrl!)
+        : undefined,
+    ),
+    stockSymbols: normalizeStockSymbols(
+      (rest as { stockSymbols?: unknown }).stockSymbols ?? rest.stockSymbol,
+    ),
+    currencyPairs: normalizeCurrencyPairs(
+      (rest as { currencyPairs?: unknown }).currencyPairs,
+      rest.currencyBase,
+      rest.currencyTarget,
+    ),
+    financeRefreshMinutes: normalizeFinanceRefreshMinutes(
+      (rest as { financeRefreshMinutes?: unknown }).financeRefreshMinutes,
+    ),
+    pomodoroWorkMinutes: normalizePomodoroWorkMinutes(
+      (rest as { pomodoroWorkMinutes?: unknown }).pomodoroWorkMinutes,
+    ),
+    pomodoroBreakMinutes: normalizePomodoroBreakMinutes(
+      (rest as { pomodoroBreakMinutes?: unknown }).pomodoroBreakMinutes,
+    ),
+    customColors: normalizeCustomColors(
+      (rest as { customColors?: unknown }).customColors,
+    ),
+  }
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_SETTINGS }
-    const parsed = JSON.parse(raw) as StoredSettings
-    const {
-      calendarUrl,
-      calendarUrls,
-      calendarFeeds,
-      ...rest
-    } = parsed
-    return {
-      ...DEFAULT_SETTINGS,
-      ...rest,
-      fontPreset: normalizeFontPreset(rest.fontPreset),
-      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
-      calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
-      calendarHidePastEvents: normalizeCalendarHidePastEvents(
-        (rest as { calendarHidePastEvents?: unknown }).calendarHidePastEvents,
-      ),
-      calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(
-        (rest as { calendarShowMonthlyOverview?: unknown }).calendarShowMonthlyOverview,
-      ),
-      calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(
-        (rest as { calendarShowAllDayEvents?: unknown }).calendarShowAllDayEvents,
-      ),
-      calendarWeekStartsOn: normalizeCalendarWeekStartsOn(
-        (rest as { calendarWeekStartsOn?: unknown }).calendarWeekStartsOn,
-      ),
-      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
-      weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
-      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
-      worldClockCity: normalizeWorldClockCity((rest as { worldClockCity?: unknown }).worldClockCity),
-      worldClockTimeZone: normalizeWorldClockTimeZone((rest as { worldClockTimeZone?: unknown }).worldClockTimeZone),
-      spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
-      spotifyEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { spotifyEmbedLinks?: unknown }).spotifyEmbedLinks,
-        (rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl
-          ? createSavedMediaLink((rest as { spotifyEmbedUrl?: string }).spotifyEmbedUrl!)
-          : undefined,
-      ),
-      appleMusicEmbedUrl: normalizeEmbedUrl((rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl),
-      appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { appleMusicEmbedLinks?: unknown }).appleMusicEmbedLinks,
-        (rest as { appleMusicEmbedUrl?: unknown }).appleMusicEmbedUrl
-          ? createSavedMediaLink((rest as { appleMusicEmbedUrl?: string }).appleMusicEmbedUrl!)
-          : undefined,
-      ),
-      applePodcastEmbedUrl: normalizeEmbedUrl((rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl),
-      applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        (rest as { applePodcastEmbedLinks?: unknown }).applePodcastEmbedLinks,
-        (rest as { applePodcastEmbedUrl?: unknown }).applePodcastEmbedUrl
-          ? createSavedMediaLink((rest as { applePodcastEmbedUrl?: string }).applePodcastEmbedUrl!)
-          : undefined,
-      ),
-      stockSymbols: normalizeStockSymbols(
-        (rest as { stockSymbols?: unknown }).stockSymbols ?? rest.stockSymbol,
-      ),
-      currencyPairs: normalizeCurrencyPairs(
-        (rest as { currencyPairs?: unknown }).currencyPairs,
-        rest.currencyBase,
-        rest.currencyTarget,
-      ),
-      financeRefreshMinutes: normalizeFinanceRefreshMinutes(
-        (rest as { financeRefreshMinutes?: unknown }).financeRefreshMinutes,
-      ),
-      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(
-        (rest as { pomodoroWorkMinutes?: unknown }).pomodoroWorkMinutes,
-      ),
-      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(
-        (rest as { pomodoroBreakMinutes?: unknown }).pomodoroBreakMinutes,
-      ),
-      customColors: normalizeCustomColors(
-        (rest as { customColors?: unknown }).customColors,
-      ),
-    }
+    return normalizeStoredSettings(JSON.parse(raw)) ?? { ...DEFAULT_SETTINGS }
   } catch {
     return { ...DEFAULT_SETTINGS }
   }
@@ -674,20 +700,9 @@ export function exportSettings(pretty = true): string {
  */
 export function importSettings(json: string): Settings | null {
   try {
-    const parsed = JSON.parse(json)
-    // Re-normalize to ensure consistency
-    const normalized = {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      fontPreset: normalizeFontPreset(parsed.fontPreset),
-      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(parsed.showBuyMeACoffeeWidget),
-      calendarFeeds: normalizeCalendarFeeds(parsed.calendarFeeds),
-      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(parsed.weatherRefreshMinutes),
-      weatherUnitSystem: normalizeWeatherUnitSystem(parsed.weatherUnitSystem),
-      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(parsed.weatherShowExtraDetails),
-      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(parsed.pomodoroWorkMinutes),
-      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(parsed.pomodoroBreakMinutes),
-      customColors: normalizeCustomColors(parsed.customColors),
+    const normalized = normalizeStoredSettings(JSON.parse(json))
+    if (!normalized) {
+      return null
     }
 
     const validation = validateSettings(normalized)
@@ -777,8 +792,202 @@ export function isValidSettings(value: unknown): value is Settings {
 export interface SettingsProfile {
   name: string
   settings: Settings
+  layout?: WidgetLayoutState
   createdAt: number
   updatedAt: number
+  schedule?: SettingsPresetSchedule
+}
+
+export interface SettingsPresetSchedule {
+  enabled: boolean
+  startTime: string
+  endTime: string
+}
+
+export type SettingsPreset = SettingsProfile
+
+const DEFAULT_PRESET_SCHEDULE: SettingsPresetSchedule = {
+  enabled: false,
+  startTime: '09:00',
+  endTime: '17:00',
+}
+
+function isValidTimeValue(value: unknown): value is string {
+  return typeof value === 'string' && /^([01]\d|2[0-3]):([0-5]\d)$/.test(value.trim())
+}
+
+function normalizePresetTime(value: unknown, fallback: string): string {
+  return isValidTimeValue(value) ? value.trim() : fallback
+}
+
+function normalizePresetSchedule(value: unknown): SettingsPresetSchedule | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined
+  }
+
+  const schedule = value as Record<string, unknown>
+  return {
+    enabled: normalizeBoolean(schedule.enabled, DEFAULT_PRESET_SCHEDULE.enabled),
+    startTime: normalizePresetTime(schedule.startTime, DEFAULT_PRESET_SCHEDULE.startTime),
+    endTime: normalizePresetTime(schedule.endTime, DEFAULT_PRESET_SCHEDULE.endTime),
+  }
+}
+
+function readPresetStore(): Record<string, SettingsPreset> {
+  const presetJson = localStorage.getItem(PRESET_STORAGE_KEY)
+  const legacyJson = localStorage.getItem(LEGACY_PROFILE_STORAGE_KEY)
+
+  if (!presetJson && !legacyJson) {
+    return {}
+  }
+
+  const rawStore = JSON.parse(presetJson ?? legacyJson ?? '{}') as Record<string, StoredPreset>
+  const presets: Record<string, SettingsPreset> = {}
+
+  Object.entries(rawStore).forEach(([fallbackName, rawPreset]) => {
+    const name = normalizeNonEmptyString(rawPreset?.name, fallbackName)
+    const settings = normalizeStoredSettings(rawPreset?.settings)
+    if (!settings) {
+      return
+    }
+
+    const createdAt =
+      typeof rawPreset?.createdAt === 'number' && Number.isFinite(rawPreset.createdAt)
+        ? rawPreset.createdAt
+        : Date.now()
+    const updatedAt =
+      typeof rawPreset?.updatedAt === 'number' && Number.isFinite(rawPreset.updatedAt)
+        ? rawPreset.updatedAt
+        : createdAt
+
+    presets[name] = {
+      name,
+      settings,
+      layout: rawPreset?.layout ? normalizeWidgetLayoutState(rawPreset.layout) : undefined,
+      createdAt,
+      updatedAt,
+      schedule: normalizePresetSchedule(rawPreset?.schedule),
+    }
+  })
+
+  return presets
+}
+
+function writePresetStore(presets: Record<string, SettingsPreset>): void {
+  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets))
+}
+
+function dispatchPresetChange(): void {
+  window.dispatchEvent(new CustomEvent('settingsPresetsChanged'))
+}
+
+function parseTimeMinutes(value: string): number {
+  const [hours, minutes] = value.split(':').map((part) => Number.parseInt(part, 10))
+  return (hours * 60) + minutes
+}
+
+export function isPresetScheduledNow(
+  schedule: SettingsPresetSchedule | undefined,
+  at: Date = new Date(),
+): boolean {
+  if (!schedule?.enabled) {
+    return false
+  }
+
+  const start = parseTimeMinutes(schedule.startTime)
+  const end = parseTimeMinutes(schedule.endTime)
+  const current = at.getHours() * 60 + at.getMinutes()
+
+  if (start === end) {
+    return true
+  }
+
+  if (start < end) {
+    return current >= start && current < end
+  }
+
+  return current >= start || current < end
+}
+
+export function savePreset(
+  name: string,
+  settings: Settings = loadSettings(),
+  schedule?: SettingsPresetSchedule,
+  layout: WidgetLayoutState = loadWidgetLayoutState(),
+): void {
+  if (!name.trim()) throw new Error('Preset name cannot be empty')
+
+  const presets = readPresetStore()
+  const now = Date.now()
+  const existingPreset = presets[name]
+
+  presets[name] = {
+    name,
+    settings: normalizeStoredSettings(settings) ?? loadSettings(),
+    layout: normalizeWidgetLayoutState(layout),
+    createdAt: existingPreset?.createdAt || now,
+    updatedAt: now,
+    schedule: schedule ?? existingPreset?.schedule,
+  }
+
+  writePresetStore(presets)
+  dispatchPresetChange()
+}
+
+export function loadPreset(name: string): SettingsPreset | null {
+  const presets = readPresetStore()
+  return presets[name] ?? null
+}
+
+export function applyPreset(name: string): void {
+  const preset = loadPreset(name)
+  if (!preset) throw new Error(`Preset '${name}' not found`)
+  saveSettings(preset.settings)
+  if (preset.layout) {
+    saveWidgetLayoutState(preset.layout)
+  }
+}
+
+export function deletePreset(name: string): void {
+  const presets = readPresetStore()
+  delete presets[name]
+  writePresetStore(presets)
+  dispatchPresetChange()
+}
+
+export function listPresets(): SettingsPreset[] {
+  return Object.values(readPresetStore()).sort((a, b) => b.updatedAt - a.updatedAt)
+}
+
+export function renamePreset(oldName: string, newName: string): void {
+  if (!newName.trim()) throw new Error('Preset name cannot be empty')
+
+  const presets = readPresetStore()
+  if (!presets[oldName]) throw new Error(`Preset '${oldName}' not found`)
+
+  presets[newName] = { ...presets[oldName], name: newName, updatedAt: Date.now() }
+  delete presets[oldName]
+  writePresetStore(presets)
+  dispatchPresetChange()
+}
+
+export function updatePresetSchedule(name: string, schedule?: SettingsPresetSchedule): void {
+  const presets = readPresetStore()
+  if (!presets[name]) throw new Error(`Preset '${name}' not found`)
+
+  presets[name] = {
+    ...presets[name],
+    updatedAt: Date.now(),
+    schedule,
+  }
+
+  writePresetStore(presets)
+  dispatchPresetChange()
+}
+
+export function getActiveScheduledPreset(at: Date = new Date()): SettingsPreset | null {
+  const matches = listPresets().filter((preset) => isPresetScheduledNow(preset.schedule, at))
+  return matches[0] ?? null
 }
 
 /**
@@ -788,19 +997,7 @@ export interface SettingsProfile {
  * @throws Error if profile name is empty
  */
 export function saveProfile(name: string, settings: Settings = loadSettings()): void {
-  if (!name.trim()) throw new Error('Profile name cannot be empty')
-
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-
-  const now = Date.now()
-  profiles[name] = {
-    name,
-    settings,
-    createdAt: profiles[name]?.createdAt || now,
-    updatedAt: now,
-  }
-
-  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+  savePreset(name, settings)
 }
 
 /**
@@ -809,8 +1006,7 @@ export function saveProfile(name: string, settings: Settings = loadSettings()): 
  * @returns Settings from the profile, or null if not found
  */
 export function loadProfile(name: string): Settings | null {
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-  return profiles[name]?.settings || null
+  return loadPreset(name)?.settings ?? null
 }
 
 /**
@@ -819,9 +1015,7 @@ export function loadProfile(name: string): Settings | null {
  * @throws Error if profile not found
  */
 export function applyProfile(name: string): void {
-  const settings = loadProfile(name)
-  if (!settings) throw new Error(`Profile '${name}' not found`)
-  saveSettings(settings)
+  applyPreset(name)
 }
 
 /**
@@ -829,9 +1023,7 @@ export function applyProfile(name: string): void {
  * @param name - Profile name to delete
  */
 export function deleteProfile(name: string): void {
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-  delete profiles[name]
-  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+  deletePreset(name)
 }
 
 /**
@@ -839,8 +1031,7 @@ export function deleteProfile(name: string): void {
  * @returns Array of profile metadata (without full settings)
  */
 export function listProfiles(): Array<{ name: string; createdAt: number; updatedAt: number }> {
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-  return Object.values(profiles).map(p => ({
+  return listPresets().map(p => ({
     name: p.name,
     createdAt: p.createdAt,
     updatedAt: p.updatedAt,
@@ -854,14 +1045,7 @@ export function listProfiles(): Array<{ name: string; createdAt: number; updated
  * @throws Error if old profile doesn't exist or new name is empty
  */
 export function renameProfile(oldName: string, newName: string): void {
-  if (!newName.trim()) throw new Error('Profile name cannot be empty')
-
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-  if (!profiles[oldName]) throw new Error(`Profile '${oldName}' not found`)
-
-  profiles[newName] = { ...profiles[oldName], name: newName }
-  delete profiles[oldName]
-  localStorage.setItem('settings_profiles', JSON.stringify(profiles))
+  renamePreset(oldName, newName)
 }
 
 /**
@@ -872,10 +1056,10 @@ export function renameProfile(oldName: string, newName: string): void {
  * @throws Error if profile not found
  */
 export function exportProfile(name: string, pretty = true): string {
-  const profiles: Record<string, SettingsProfile> = JSON.parse(localStorage.getItem('settings_profiles') || '{}')
-  if (!profiles[name]) throw new Error(`Profile '${name}' not found`)
+  const preset = loadPreset(name)
+  if (!preset) throw new Error(`Profile '${name}' not found`)
 
-  return pretty ? JSON.stringify(profiles[name], null, 2) : JSON.stringify(profiles[name])
+  return pretty ? JSON.stringify(preset, null, 2) : JSON.stringify(preset)
 }
 
 /**
@@ -886,12 +1070,29 @@ export function exportProfile(name: string, pretty = true): string {
  */
 export function importProfile(name: string, json: string): boolean {
   try {
-    const data = JSON.parse(json) as SettingsProfile | { settings: Settings }
-    const settings = 'settings' in data ? data.settings : data
+    const data = JSON.parse(json) as SettingsPreset | { settings: Settings; schedule?: SettingsPresetSchedule }
+    const presetSettings = 'settings' in data ? data.settings : data
+    const schedule = 'schedule' in data ? normalizePresetSchedule(data.schedule) : undefined
 
-    if (!isValidSettings(settings)) return false
+    if (
+      !presetSettings ||
+      typeof presetSettings !== 'object' ||
+      !(
+        'theme' in presetSettings ||
+        'colorScheme' in presetSettings ||
+        'fontPreset' in presetSettings ||
+        'calendarFeeds' in presetSettings ||
+        'calendarUrl' in presetSettings
+      )
+    ) {
+      return false
+    }
 
-    saveProfile(name, settings)
+    const settings = normalizeStoredSettings(presetSettings)
+
+    if (!settings || !isValidSettings(settings)) return false
+
+    savePreset(name, settings, schedule)
     return true
   } catch {
     return false

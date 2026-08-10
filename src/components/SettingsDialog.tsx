@@ -1,4 +1,4 @@
-import { useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { useSettings } from "../lib/useSettings";
 import {
   createSavedMediaLink,
@@ -22,6 +22,7 @@ import {
   type WidgetColumnSpan,
   type WidgetGridColumn,
   type WidgetGridRow,
+  type WidgetLayoutState,
   type WidgetPlacement,
   type WidgetRowSpan,
   type Widget,
@@ -32,6 +33,15 @@ import {
   DEFAULT_CALENDAR_COLORS,
   DEFAULT_CUSTOM_COLORS,
   FONT_PRESET_OPTIONS,
+  applyPreset,
+  deletePreset,
+  isPresetScheduledNow,
+  listPresets,
+  savePreset,
+  type Settings,
+  type SettingsPreset,
+  type SettingsPresetSchedule,
+  updatePresetSchedule,
   type CalendarFeed,
   type CalendarWeekStartsOn,
   type Theme,
@@ -166,6 +176,54 @@ function parseBackground(value: string): ParsedBackground {
 
 interface Props {
   readonly onClose: () => void;
+}
+
+type SettingsTabId = "appearance" | "layout" | "widgets" | "presets";
+
+const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTabId; label: string; description: string }> = [
+  {
+    id: "appearance",
+    label: "Appearance",
+    description: "Theme, colors, fonts, and support options.",
+  },
+  {
+    id: "layout",
+    label: "Layout",
+    description: "Widget placement and dashboard structure.",
+  },
+  {
+    id: "widgets",
+    label: "Widgets",
+    description: "Widget-specific content and refresh behavior.",
+  },
+  {
+    id: "presets",
+    label: "Presets",
+    description: "Save named setups and schedule automatic switching.",
+  },
+] as const;
+
+const DEFAULT_PRESET_SCHEDULE: SettingsPresetSchedule = {
+  enabled: true,
+  startTime: "09:00",
+  endTime: "17:00",
+};
+
+function formatPresetTimestamp(timestamp: number): string {
+  return new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatPresetSchedule(schedule?: SettingsPresetSchedule): string {
+  if (!schedule?.enabled) {
+    return "Manual only";
+  }
+
+  return `Daily ${schedule.startTime}–${schedule.endTime}`;
 }
 
 interface WidgetLayoutEditorProps {
@@ -625,9 +683,282 @@ function WidgetLayoutEditor({
   );
 }
 
+interface PresetCardProps {
+  readonly preset: SettingsPreset;
+  readonly draftSettings: Settings;
+  readonly draftLayout: WidgetLayoutState;
+  readonly isActive: boolean;
+  readonly onRefresh: () => void;
+  readonly onApply: (preset: SettingsPreset) => void;
+  readonly onEdit: (preset: SettingsPreset) => void;
+}
+
+function PresetCard({
+  preset,
+  draftSettings,
+  draftLayout,
+  isActive,
+  onRefresh,
+  onApply,
+  onEdit,
+}: PresetCardProps) {
+  const [scheduleEnabled, setScheduleEnabled] = useState(preset.schedule?.enabled ?? false);
+  const [startTime, setStartTime] = useState(
+    preset.schedule?.startTime ?? DEFAULT_PRESET_SCHEDULE.startTime,
+  );
+  const [endTime, setEndTime] = useState(
+    preset.schedule?.endTime ?? DEFAULT_PRESET_SCHEDULE.endTime,
+  );
+
+  useEffect(() => {
+    setScheduleEnabled(preset.schedule?.enabled ?? false);
+    setStartTime(preset.schedule?.startTime ?? DEFAULT_PRESET_SCHEDULE.startTime);
+    setEndTime(preset.schedule?.endTime ?? DEFAULT_PRESET_SCHEDULE.endTime);
+  }, [preset]);
+
+  const handleSaveCurrent = () => {
+    savePreset(
+      preset.name,
+      draftSettings,
+      scheduleEnabled
+        ? {
+            enabled: true,
+            startTime,
+            endTime,
+          }
+        : undefined,
+      draftLayout,
+    );
+    onRefresh();
+  };
+
+  const handleSaveSchedule = () => {
+    updatePresetSchedule(
+      preset.name,
+      scheduleEnabled
+        ? {
+            enabled: true,
+            startTime,
+            endTime,
+          }
+        : undefined,
+    );
+    onRefresh();
+  };
+
+  const handleDelete = () => {
+    if (!window.confirm(`Delete preset "${preset.name}"?`)) {
+      return;
+    }
+
+    deletePreset(preset.name);
+    onRefresh();
+  };
+
+  return (
+    <article className={styles.presetCard}>
+      <div className={styles.presetCardHeader}>
+        <div>
+          <div className={styles.presetCardTitleRow}>
+            <h4 className={styles.presetCardTitle}>{preset.name}</h4>
+            {isActive && <span className={styles.presetBadge}>Active now</span>}
+          </div>
+          <p className={styles.presetMeta}>Updated {formatPresetTimestamp(preset.updatedAt)}</p>
+        </div>
+        <div className={styles.presetActions}>
+          <button
+            className={styles.btnGhost}
+            onClick={() => {
+              applyPreset(preset.name);
+              onApply(preset);
+            }}
+            type="button"
+          >
+            Apply
+          </button>
+          <button
+            className={styles.btnGhost}
+            onClick={() => onEdit(preset)}
+            type="button"
+          >
+            Edit
+          </button>
+          <button
+            className={styles.btnGhost}
+            onClick={handleSaveCurrent}
+            type="button"
+          >
+            Save current
+          </button>
+          <button
+            className={styles.btnGhost}
+            onClick={handleDelete}
+            type="button"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.presetSchedule}>
+        <div className={styles.presetScheduleHeader}>
+          <div>
+            <p className={styles.presetScheduleLabel}>Auto-apply window</p>
+            <p className={styles.presetScheduleSummary}>
+              {formatPresetSchedule(
+                scheduleEnabled
+                  ? {
+                      enabled: true,
+                      startTime,
+                      endTime,
+                    }
+                  : undefined,
+              )}
+            </p>
+          </div>
+          <button
+            className={[
+              styles.widgetToggle,
+              scheduleEnabled ? styles.widgetVisible : "",
+            ].join(" ")}
+            onClick={() => setScheduleEnabled((value) => !value)}
+            type="button"
+            aria-pressed={scheduleEnabled}
+          >
+            {scheduleEnabled ? <Eye size={14} /> : <EyeOff size={14} />}
+            <span>{scheduleEnabled ? "Enabled" : "Disabled"}</span>
+          </button>
+        </div>
+
+        {scheduleEnabled && (
+          <div className={styles.presetScheduleInputs}>
+            <label className={styles.intervalLabel}>
+              <span>Start</span>
+              <input
+                className={styles.input}
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            </label>
+            <label className={styles.intervalLabel}>
+              <span>End</span>
+              <input
+                className={styles.input}
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </label>
+          </div>
+        )}
+
+        <button className={styles.btnGhost} onClick={handleSaveSchedule} type="button">
+          Save schedule
+        </button>
+      </div>
+    </article>
+  );
+}
+
+interface PresetShortcutPanelProps {
+  readonly presets: SettingsPreset[];
+  readonly presetName: string;
+  readonly selectedPresetName: string;
+  readonly presetError: string | null;
+  readonly presetFeedback: string | null;
+  readonly onPresetNameChange: (value: string) => void;
+  readonly onSelectedPresetNameChange: (value: string) => void;
+  readonly onCreatePreset: () => void;
+  readonly onUpdatePreset: () => void;
+  readonly onClearEditingPreset: () => void;
+}
+
+function PresetShortcutPanel({
+  presets,
+  presetName,
+  selectedPresetName,
+  presetError,
+  presetFeedback,
+  onPresetNameChange,
+  onSelectedPresetNameChange,
+  onCreatePreset,
+  onUpdatePreset,
+  onClearEditingPreset,
+}: PresetShortcutPanelProps) {
+  return (
+    <section className={styles.section}>
+      <div className={styles.sectionHeader}>
+        <div>
+          <h3 className={styles.sectionTitle}>Preset Shortcuts</h3>
+          <p className={styles.hint}>
+            Save the current changes into a new preset or update an existing one without leaving this tab.
+          </p>
+        </div>
+      </div>
+      <div className={styles.presetShortcutCard}>
+        {selectedPresetName && (
+          <div className={styles.presetEditorBanner}>
+            <div>
+              <p className={styles.presetEditorLabel}>Editing preset</p>
+              <p className={styles.presetEditorName}>{selectedPresetName}</p>
+            </div>
+            <button className={styles.btnGhost} onClick={onClearEditingPreset} type="button">
+              Stop editing
+            </button>
+          </div>
+        )}
+        <label className={styles.intervalLabel}>
+          <span>New preset name</span>
+          <input
+            className={styles.input}
+            type="text"
+            placeholder="Work Focus"
+            value={presetName}
+            onChange={(e) => onPresetNameChange(e.target.value)}
+          />
+        </label>
+        <div className={styles.presetShortcutActions}>
+          <button className={styles.btnPrimary} onClick={onCreatePreset} type="button">
+            Save as new preset
+          </button>
+        </div>
+        <label className={styles.intervalLabel}>
+          <span>Existing preset</span>
+          <select
+            className={styles.input}
+            value={selectedPresetName}
+            onChange={(e) => onSelectedPresetNameChange(e.target.value)}
+          >
+            <option value="">Choose a preset</option>
+            {presets.map((preset) => (
+              <option key={preset.name} value={preset.name}>
+                {preset.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className={styles.presetShortcutActions}>
+          <button
+            className={styles.btnGhost}
+            onClick={onUpdatePreset}
+            type="button"
+            disabled={!selectedPresetName}
+          >
+            {selectedPresetName ? `Save changes to ${selectedPresetName}` : 'Update selected preset'}
+          </button>
+        </div>
+        {presetError && <p className={styles.mediaLinkError}>{presetError}</p>}
+        {presetFeedback && <p className={styles.presetFeedback}>{presetFeedback}</p>}
+      </div>
+    </section>
+  );
+}
+
 
 export function SettingsDialog({ onClose }: Props) {
   const { settings, updateSettings } = useSettings();
+  const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
   const {
     visibility,
     order,
@@ -702,6 +1033,18 @@ export function SettingsDialog({ onClose }: Props) {
   const [customColors, setCustomColors] = useState<CustomColors>(
     settings.customColors || DEFAULT_CUSTOM_COLORS,
   );
+  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets());
+  const [presetName, setPresetName] = useState("");
+  const [selectedPresetName, setSelectedPresetName] = useState("");
+  const [newPresetAutoApply, setNewPresetAutoApply] = useState(false);
+  const [newPresetStartTime, setNewPresetStartTime] = useState(
+    DEFAULT_PRESET_SCHEDULE.startTime,
+  );
+  const [newPresetEndTime, setNewPresetEndTime] = useState(
+    DEFAULT_PRESET_SCHEDULE.endTime,
+  );
+  const [presetFeedback, setPresetFeedback] = useState<string | null>(null);
+  const [presetError, setPresetError] = useState<string | null>(null);
   const background = parseBackground(customColors.background);
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
@@ -715,6 +1058,107 @@ export function SettingsDialog({ onClose }: Props) {
   const isAppleMusicOnLayout = visibility.appleMusic;
   const isApplePodcastOnLayout = visibility.applePodcast;
   const isTimerOnLayout = visibility.timer;
+  const activePresetName = presets.find((preset) => isPresetScheduledNow(preset.schedule))?.name ?? null;
+
+  const refreshPresets = () => {
+    setPresets(listPresets());
+  };
+
+  useEffect(() => {
+    if (selectedPresetName && presets.some((preset) => preset.name === selectedPresetName)) {
+      return;
+    }
+
+    setSelectedPresetName(presets[0]?.name ?? "");
+  }, [presets, selectedPresetName]);
+
+  const syncDraftState = (nextSettings: Settings) => {
+    setCalendarFeeds(
+      nextSettings.calendarFeeds.length > 0
+        ? nextSettings.calendarFeeds
+        : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
+    );
+    setWeatherRefreshMin(nextSettings.weatherRefreshMinutes);
+    setWeatherUnitSystem(nextSettings.weatherUnitSystem);
+    setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
+    setWorldClockCity(nextSettings.worldClockCity);
+    setWorldClockTimeZone(nextSettings.worldClockTimeZone);
+    setWorldClockTimeZoneError(null);
+    setSpotifyEmbedUrl(nextSettings.spotifyEmbedUrl);
+    setSpotifyEmbedLinks(
+      normalizeSavedMediaLinks(nextSettings.spotifyEmbedLinks, nextSettings.spotifyEmbedUrl),
+    );
+    setSpotifyAddUrl("");
+    setSpotifyLinkError(null);
+    setAppleMusicEmbedUrl(nextSettings.appleMusicEmbedUrl);
+    setAppleMusicEmbedLinks(
+      normalizeSavedMediaLinks(nextSettings.appleMusicEmbedLinks, nextSettings.appleMusicEmbedUrl),
+    );
+    setAppleMusicAddUrl("");
+    setAppleMusicLinkError(null);
+    setApplePodcastEmbedUrl(nextSettings.applePodcastEmbedUrl);
+    setApplePodcastEmbedLinks(
+      normalizeSavedMediaLinks(nextSettings.applePodcastEmbedLinks, nextSettings.applePodcastEmbedUrl),
+    );
+    setApplePodcastAddUrl("");
+    setApplePodcastLinkError(null);
+    setStockSymbols(nextSettings.stockSymbols);
+    setStockAddInput("");
+    setCurrencyPairs(nextSettings.currencyPairs);
+    setCurrencyAddBase("");
+    setCurrencyAddTarget("");
+    setFinanceRefreshMin(nextSettings.financeRefreshMinutes);
+    setShowBuyMeACoffeeWidget(nextSettings.showBuyMeACoffeeWidget);
+    setCalendarHidePastEvents(nextSettings.calendarHidePastEvents);
+    setCalendarShowMonthlyOverview(nextSettings.calendarShowMonthlyOverview);
+    setCalendarShowAllDayEvents(nextSettings.calendarShowAllDayEvents);
+    setCalendarWeekStartsOn(nextSettings.calendarWeekStartsOn);
+    setWorkMin(nextSettings.pomodoroWorkMinutes);
+    setBreakMin(nextSettings.pomodoroBreakMinutes);
+    setCustomColors(nextSettings.customColors || DEFAULT_CUSTOM_COLORS);
+  };
+
+  const buildDraftSettings = (): Settings => ({
+    ...settings,
+    calendarFeeds,
+    weatherRefreshMinutes: weatherRefreshMin,
+    weatherUnitSystem,
+    weatherShowExtraDetails,
+    worldClockCity: worldClockCity.trim() || settings.worldClockCity,
+    worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
+    spotifyEmbedUrl,
+    spotifyEmbedLinks: normalizeSavedMediaLinks(
+      spotifyEmbedLinks,
+      spotifyEmbedUrl ? createSavedMediaLink(spotifyEmbedUrl) : undefined,
+    ),
+    appleMusicEmbedUrl,
+    appleMusicEmbedLinks: normalizeSavedMediaLinks(
+      appleMusicEmbedLinks,
+      appleMusicEmbedUrl ? createSavedMediaLink(appleMusicEmbedUrl) : undefined,
+    ),
+    applePodcastEmbedUrl,
+    applePodcastEmbedLinks: normalizeSavedMediaLinks(
+      applePodcastEmbedLinks,
+      applePodcastEmbedUrl ? createSavedMediaLink(applePodcastEmbedUrl) : undefined,
+    ),
+    stockSymbols,
+    currencyPairs,
+    financeRefreshMinutes: financeRefreshMin,
+    showBuyMeACoffeeWidget,
+    calendarHidePastEvents,
+    calendarShowMonthlyOverview,
+    calendarShowAllDayEvents,
+    calendarWeekStartsOn,
+    pomodoroWorkMinutes: workMin,
+    pomodoroBreakMinutes: breakMin,
+    customColors,
+  });
+
+  const buildDraftLayout = (): WidgetLayoutState => ({
+    rowCount,
+    visibility: structuredClone(visibility),
+    placements: structuredClone(placements),
+  });
 
   const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
     setCalendarFeeds((prev) =>
@@ -801,6 +1245,77 @@ export function SettingsDialog({ onClose }: Props) {
     setActiveUrl(nextLinks[0]?.url ?? '');
   };
 
+  const handleCreatePreset = () => {
+    const trimmedName = presetName.trim();
+    if (!trimmedName) {
+      setPresetError("Preset name cannot be empty.");
+      setPresetFeedback(null);
+      return;
+    }
+
+    savePreset(
+      trimmedName,
+      buildDraftSettings(),
+      newPresetAutoApply
+        ? {
+            enabled: true,
+            startTime: newPresetStartTime,
+            endTime: newPresetEndTime,
+          }
+        : undefined,
+      buildDraftLayout(),
+    );
+    refreshPresets();
+    setPresetName("");
+    setSelectedPresetName(trimmedName);
+    setPresetError(null);
+    setPresetFeedback(`Preset "${trimmedName}" saved.`);
+  };
+
+  const handleUpdateSelectedPreset = () => {
+    if (!selectedPresetName) {
+      setPresetError("Choose a preset to update.");
+      setPresetFeedback(null);
+      return;
+    }
+
+    const preset = presets.find((entry) => entry.name === selectedPresetName);
+    savePreset(
+      selectedPresetName,
+      buildDraftSettings(),
+      preset?.schedule,
+      buildDraftLayout(),
+    );
+    refreshPresets();
+    setPresetError(null);
+    setPresetFeedback(`Preset "${selectedPresetName}" updated.`);
+  };
+
+  const handleApplyPreset = (preset: SettingsPreset) => {
+    updateSettings(preset.settings);
+    syncDraftState(preset.settings);
+    setPresetError(null);
+    setPresetFeedback("Preset applied.");
+  };
+
+  const handleEditPreset = (preset: SettingsPreset) => {
+    applyPreset(preset.name);
+    updateSettings(preset.settings);
+    syncDraftState(preset.settings);
+    setSelectedPresetName(preset.name);
+    setPresetName(preset.name);
+    setActiveTab("appearance");
+    setPresetError(null);
+    setPresetFeedback(`Editing preset "${preset.name}". Update it from Appearance or Layout when you're done.`);
+  };
+
+  const handleClearEditingPreset = () => {
+    setSelectedPresetName("");
+    setPresetName("");
+    setPresetError(null);
+    setPresetFeedback("Preset editing cleared.");
+  };
+
   const save = () => {
     const trimmedTimeZone = worldClockTimeZone.trim();
     if (!isValidTimeZone(trimmedTimeZone)) {
@@ -810,40 +1325,9 @@ export function SettingsDialog({ onClose }: Props) {
       return;
     }
 
-    updateSettings({
-      calendarFeeds,
-      weatherRefreshMinutes: weatherRefreshMin,
-      weatherUnitSystem,
-      weatherShowExtraDetails,
-      worldClockCity: worldClockCity.trim() || settings.worldClockCity,
-      worldClockTimeZone: trimmedTimeZone,
-      spotifyEmbedUrl,
-      spotifyEmbedLinks: normalizeSavedMediaLinks(
-        spotifyEmbedLinks,
-        spotifyEmbedUrl ? createSavedMediaLink(spotifyEmbedUrl) : undefined,
-      ),
-      appleMusicEmbedUrl,
-      appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        appleMusicEmbedLinks,
-        appleMusicEmbedUrl ? createSavedMediaLink(appleMusicEmbedUrl) : undefined,
-      ),
-      applePodcastEmbedUrl,
-      applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        applePodcastEmbedLinks,
-        applePodcastEmbedUrl ? createSavedMediaLink(applePodcastEmbedUrl) : undefined,
-      ),
-      stockSymbols,
-      currencyPairs,
-      financeRefreshMinutes: financeRefreshMin,
-      showBuyMeACoffeeWidget,
-      calendarHidePastEvents,
-      calendarShowMonthlyOverview,
-      calendarShowAllDayEvents,
-      calendarWeekStartsOn,
-      pomodoroWorkMinutes: workMin,
-      pomodoroBreakMinutes: breakMin,
-      ...(settings.theme === "custom" && { customColors }),
-    });
+    const nextSettings = buildDraftSettings();
+    nextSettings.worldClockTimeZone = trimmedTimeZone;
+    updateSettings(nextSettings);
     onClose();
   };
 
@@ -867,921 +1351,1070 @@ export function SettingsDialog({ onClose }: Props) {
         </div>
 
         <div className={styles.body}>
-          {/* Widget Layout */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Widget Layout</h3>
-            <WidgetLayoutEditor
-              order={order}
-              visibility={visibility}
-              placements={placements}
-              rowCount={rowCount}
-              onSetWidgetPlacement={setWidgetPlacement}
-              onToggleWidget={toggleWidget}
-              onAddRow={addRow}
-              onRemoveRow={removeRow}
-            />
-            <p className={styles.hint}>
-              Drag widgets from the palette onto the grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
-            </p>
-          </section>
+          <aside className={styles.sidebar} aria-label="Settings sections">
+            {SETTINGS_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                id={`settings-tab-${tab.id}`}
+                className={[
+                  styles.sidebarTab,
+                  activeTab === tab.id ? styles.sidebarTabActive : "",
+                ].join(" ")}
+                onClick={() => setActiveTab(tab.id)}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`settings-panel-${tab.id}`}
+                type="button"
+              >
+                <span className={styles.sidebarTabLabel}>{tab.label}</span>
+                <span className={styles.sidebarTabDescription}>{tab.description}</span>
+              </button>
+            ))}
+          </aside>
 
-          {/* Theme */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Theme</h3>
-            <div className={styles.themeGrid}>
-              {THEMES.map((t) => (
-                <button
-                  key={t.id}
-                  className={[
-                    styles.themeSwatch,
-                    settings.theme === t.id ? styles.themeActive : "",
-                  ].join(" ")}
-                  onClick={() => updateSettings({ theme: t.id })}
-                  aria-pressed={settings.theme === t.id}
-                  type="button"
-                >
-                  <span className={styles.themeEmoji}>{t.icon}</span>
-                  <span className={styles.themeLabel}>{t.label}</span>
-                </button>
-              ))}
-            </div>
-          </section>
+          <div
+            className={styles.content}
+            id={`settings-panel-${activeTab}`}
+            role="tabpanel"
+            aria-labelledby={`settings-tab-${activeTab}`}
+          >
+            {activeTab === "layout" && (
+              <>
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Widget Layout</h3>
+                  <WidgetLayoutEditor
+                    order={order}
+                    visibility={visibility}
+                    placements={placements}
+                    rowCount={rowCount}
+                    onSetWidgetPlacement={setWidgetPlacement}
+                    onToggleWidget={toggleWidget}
+                    onAddRow={addRow}
+                    onRemoveRow={removeRow}
+                  />
+                  <p className={styles.hint}>
+                    Drag widgets from the palette onto the grid. Drag the corner to resize. Click × to remove a widget from the dashboard.
+                  </p>
+                </section>
+                <PresetShortcutPanel
+                  presets={presets}
+                  presetName={presetName}
+                  selectedPresetName={selectedPresetName}
+                  presetError={presetError}
+                  presetFeedback={presetFeedback}
+                  onPresetNameChange={setPresetName}
+                  onSelectedPresetNameChange={setSelectedPresetName}
+                  onCreatePreset={handleCreatePreset}
+                  onUpdatePreset={handleUpdateSelectedPreset}
+                  onClearEditingPreset={handleClearEditingPreset}
+                />
+              </>
+            )}
 
-          {/* Custom Colors (shown when custom theme is selected) */}
-          {settings.theme === "custom" && (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Custom Colors</h3>
-              <div className={styles.colorPickerGrid}>
-                <div className={styles.colorInputGroup}>
-                  <label className={styles.colorLabel}>
-                    Primary Color
-                    <div className={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={customColors.primary}
-                        onChange={(e) =>
-                          setCustomColors({
-                            ...customColors,
-                            primary: e.target.value,
-                          })
-                        }
-                      />
-                      <span className={styles.colorValue}>
-                        {customColors.primary}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-                <div className={styles.colorInputGroup}>
-                  <label className={styles.colorLabel}>
-                    Hover Color
-                    <div className={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={customColors.primaryHover}
-                        onChange={(e) =>
-                          setCustomColors({
-                            ...customColors,
-                            primaryHover: e.target.value,
-                          })
-                        }
-                      />
-                      <span className={styles.colorValue}>
-                        {customColors.primaryHover}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-                <div className={[styles.colorInputGroup, styles.backgroundColorGroup].join(" ")}>
-                  <div className={styles.colorLabel}>
-                    Background
-                    <div className={styles.backgroundPreview} style={{ background: customColors.background }} />
-                    <div className={styles.segmentedBackground} role="group" aria-label="Background mode">
+            {activeTab === "appearance" && (
+              <>
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Theme</h3>
+                  <div className={styles.themeGrid}>
+                    {THEMES.map((t) => (
                       <button
-                        type="button"
+                        key={t.id}
                         className={[
-                          styles.segment,
-                          background.mode === "solid" ? styles.segmentActive : "",
+                          styles.themeSwatch,
+                          settings.theme === t.id ? styles.themeActive : "",
                         ].join(" ")}
-                        aria-pressed={background.mode === "solid"}
-                        onClick={() =>
-                          setCustomColors({
-                            ...customColors,
-                            background: background.solid,
-                          })
-                        }
-                      >
-                        Solid
-                      </button>
-                      <button
+                        onClick={() => updateSettings({ theme: t.id })}
+                        aria-pressed={settings.theme === t.id}
                         type="button"
-                        className={[
-                          styles.segment,
-                          background.mode === "gradient" ? styles.segmentActive : "",
-                        ].join(" ")}
-                        aria-pressed={background.mode === "gradient"}
-                        onClick={() =>
-                          setCustomColors({
-                            ...customColors,
-                            background: formatLinearGradient(
-                              background.gradientAngle,
-                              background.gradientFrom,
-                              background.gradientTo,
-                            ),
-                          })
-                        }
                       >
-                        Gradient
+                        <span className={styles.themeEmoji}>{t.icon}</span>
+                        <span className={styles.themeLabel}>{t.label}</span>
                       </button>
-                    </div>
+                    ))}
+                  </div>
+                </section>
 
-                    {background.mode === "solid" ? (
-                      <div className={styles.colorInputWrapper}>
-                        <input
-                          type="color"
-                          className={styles.colorInput}
-                          value={background.solid}
-                          onChange={(e) =>
-                            setCustomColors({
-                              ...customColors,
-                              background: e.target.value,
-                            })
-                          }
-                        />
-                        <span className={styles.colorValue}>{background.solid}</span>
-                      </div>
-                    ) : (
-                      <div className={styles.backgroundGradientEditor}>
-                        <div className={styles.backgroundGradientRow}>
-                          <label className={styles.intervalLabel}>
-                            Start Color
-                            <div className={styles.colorInputWrapper}>
-                              <input
-                                type="color"
-                                className={styles.colorInput}
-                                aria-label="Start Color"
-                                value={background.gradientFrom}
-                                onChange={(e) =>
-                                  setCustomColors({
-                                    ...customColors,
-                                    background: formatLinearGradient(
-                                      background.gradientAngle,
-                                      e.target.value,
-                                      background.gradientTo,
-                                    ),
-                                  })
-                                }
-                              />
-                              <span className={styles.colorValue}>{background.gradientFrom}</span>
-                            </div>
-                          </label>
-                          <label className={styles.intervalLabel}>
-                            End Color
-                            <div className={styles.colorInputWrapper}>
-                              <input
-                                type="color"
-                                className={styles.colorInput}
-                                aria-label="End Color"
-                                value={background.gradientTo}
-                                onChange={(e) =>
-                                  setCustomColors({
-                                    ...customColors,
-                                    background: formatLinearGradient(
-                                      background.gradientAngle,
-                                      background.gradientFrom,
-                                      e.target.value,
-                                    ),
-                                  })
-                                }
-                              />
-                              <span className={styles.colorValue}>{background.gradientTo}</span>
-                            </div>
-                          </label>
-                        </div>
-
-                        <label className={styles.intervalLabel}>
-                          Angle
-                          <div className={styles.backgroundAngleRow}>
+                {settings.theme === "custom" && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Custom Colors</h3>
+                    <div className={styles.colorPickerGrid}>
+                      <div className={styles.colorInputGroup}>
+                        <label className={styles.colorLabel}>
+                          Primary Color
+                          <div className={styles.colorInputWrapper}>
                             <input
-                              type="range"
-                              min="0"
-                              max="360"
-                              step="1"
-                              aria-label="Angle slider"
-                              value={background.gradientAngle}
+                              type="color"
+                              className={styles.colorInput}
+                              value={customColors.primary}
                               onChange={(e) =>
                                 setCustomColors({
                                   ...customColors,
-                                  background: formatLinearGradient(
-                                    Number(e.target.value),
-                                    background.gradientFrom,
-                                    background.gradientTo,
-                                  ),
+                                  primary: e.target.value,
                                 })
                               }
                             />
-                            <input
-                              type="number"
-                              min="0"
-                              max="360"
-                              step="1"
-                              className={styles.input}
-                              aria-label="Angle"
-                              value={background.gradientAngle}
-                              onChange={(e) =>
-                                setCustomColors({
-                                  ...customColors,
-                                  background: formatLinearGradient(
-                                    Number(e.target.value),
-                                    background.gradientFrom,
-                                    background.gradientTo,
-                                  ),
-                                })
-                              }
-                            />
+                            <span className={styles.colorValue}>{customColors.primary}</span>
                           </div>
                         </label>
                       </div>
-                    )}
-                    <span className={styles.hint}>Choose a solid color or build a linear gradient.</span>
+                      <div className={styles.colorInputGroup}>
+                        <label className={styles.colorLabel}>
+                          Hover Color
+                          <div className={styles.colorInputWrapper}>
+                            <input
+                              type="color"
+                              className={styles.colorInput}
+                              value={customColors.primaryHover}
+                              onChange={(e) =>
+                                setCustomColors({
+                                  ...customColors,
+                                  primaryHover: e.target.value,
+                                })
+                              }
+                            />
+                            <span className={styles.colorValue}>{customColors.primaryHover}</span>
+                          </div>
+                        </label>
+                      </div>
+                      <div className={[styles.colorInputGroup, styles.backgroundColorGroup].join(" ")}>
+                        <div className={styles.colorLabel}>
+                          Background
+                          <div className={styles.backgroundPreview} style={{ background: customColors.background }} />
+                          <div className={styles.segmentedBackground} role="group" aria-label="Background mode">
+                            <button
+                              type="button"
+                              className={[
+                                styles.segment,
+                                background.mode === "solid" ? styles.segmentActive : "",
+                              ].join(" ")}
+                              aria-pressed={background.mode === "solid"}
+                              onClick={() =>
+                                setCustomColors({
+                                  ...customColors,
+                                  background: background.solid,
+                                })
+                              }
+                            >
+                              Solid
+                            </button>
+                            <button
+                              type="button"
+                              className={[
+                                styles.segment,
+                                background.mode === "gradient" ? styles.segmentActive : "",
+                              ].join(" ")}
+                              aria-pressed={background.mode === "gradient"}
+                              onClick={() =>
+                                setCustomColors({
+                                  ...customColors,
+                                  background: formatLinearGradient(
+                                    background.gradientAngle,
+                                    background.gradientFrom,
+                                    background.gradientTo,
+                                  ),
+                                })
+                              }
+                            >
+                              Gradient
+                            </button>
+                          </div>
+
+                          {background.mode === "solid" ? (
+                            <div className={styles.colorInputWrapper}>
+                              <input
+                                type="color"
+                                className={styles.colorInput}
+                                value={background.solid}
+                                onChange={(e) =>
+                                  setCustomColors({
+                                    ...customColors,
+                                    background: e.target.value,
+                                  })
+                                }
+                              />
+                              <span className={styles.colorValue}>{background.solid}</span>
+                            </div>
+                          ) : (
+                            <div className={styles.backgroundGradientEditor}>
+                              <div className={styles.backgroundGradientRow}>
+                                <label className={styles.intervalLabel}>
+                                  Start Color
+                                  <div className={styles.colorInputWrapper}>
+                                    <input
+                                      type="color"
+                                      className={styles.colorInput}
+                                      aria-label="Start Color"
+                                      value={background.gradientFrom}
+                                      onChange={(e) =>
+                                        setCustomColors({
+                                          ...customColors,
+                                          background: formatLinearGradient(
+                                            background.gradientAngle,
+                                            e.target.value,
+                                            background.gradientTo,
+                                          ),
+                                        })
+                                      }
+                                    />
+                                    <span className={styles.colorValue}>{background.gradientFrom}</span>
+                                  </div>
+                                </label>
+                                <label className={styles.intervalLabel}>
+                                  End Color
+                                  <div className={styles.colorInputWrapper}>
+                                    <input
+                                      type="color"
+                                      className={styles.colorInput}
+                                      aria-label="End Color"
+                                      value={background.gradientTo}
+                                      onChange={(e) =>
+                                        setCustomColors({
+                                          ...customColors,
+                                          background: formatLinearGradient(
+                                            background.gradientAngle,
+                                            background.gradientFrom,
+                                            e.target.value,
+                                          ),
+                                        })
+                                      }
+                                    />
+                                    <span className={styles.colorValue}>{background.gradientTo}</span>
+                                  </div>
+                                </label>
+                              </div>
+
+                              <label className={styles.intervalLabel}>
+                                Angle
+                                <div className={styles.backgroundAngleRow}>
+                                  <input
+                                    type="range"
+                                    min="0"
+                                    max="360"
+                                    step="1"
+                                    aria-label="Angle slider"
+                                    value={background.gradientAngle}
+                                    onChange={(e) =>
+                                      setCustomColors({
+                                        ...customColors,
+                                        background: formatLinearGradient(
+                                          Number(e.target.value),
+                                          background.gradientFrom,
+                                          background.gradientTo,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="360"
+                                    step="1"
+                                    className={styles.input}
+                                    aria-label="Angle"
+                                    value={background.gradientAngle}
+                                    onChange={(e) =>
+                                      setCustomColors({
+                                        ...customColors,
+                                        background: formatLinearGradient(
+                                          Number(e.target.value),
+                                          background.gradientFrom,
+                                          background.gradientTo,
+                                        ),
+                                      })
+                                    }
+                                  />
+                                </div>
+                              </label>
+                            </div>
+                          )}
+                          <span className={styles.hint}>Choose a solid color or build a linear gradient.</span>
+                        </div>
+                      </div>
+                      <div className={styles.colorInputGroup}>
+                        <label className={styles.colorLabel}>
+                          Font Color
+                          <div className={styles.colorInputWrapper}>
+                            <input
+                              type="color"
+                              className={styles.colorInput}
+                              value={customColors.fontColor}
+                              onChange={(e) =>
+                                setCustomColors({
+                                  ...customColors,
+                                  fontColor: e.target.value,
+                                })
+                              }
+                            />
+                            <span className={styles.colorValue}>{customColors.fontColor}</span>
+                          </div>
+                        </label>
+                      </div>
+                      <div className={styles.colorInputGroup}>
+                        <label className={styles.colorLabel}>
+                          Secondary Font Color
+                          <div className={styles.colorInputWrapper}>
+                            <input
+                              type="color"
+                              className={styles.colorInput}
+                              value={customColors.secondaryFontColor}
+                              onChange={(e) =>
+                                setCustomColors({
+                                  ...customColors,
+                                  secondaryFontColor: e.target.value,
+                                })
+                              }
+                            />
+                            <span className={styles.colorValue}>{customColors.secondaryFontColor}</span>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+                    <p className={styles.hint}>
+                      Choose your custom accent colors, background, and font colors.
+                      They will be applied to buttons, links, interactive elements,
+                      and text throughout the app.
+                    </p>
+                  </section>
+                )}
+
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Appearance</h3>
+                  <div className={styles.segmented}>
+                    {COLOR_SCHEMES.map((s) => (
+                      <button
+                        key={s.id}
+                        className={[
+                          styles.segment,
+                          settings.colorScheme === s.id ? styles.segmentActive : "",
+                        ].join(" ")}
+                        onClick={() => updateSettings({ colorScheme: s.id })}
+                        aria-pressed={settings.colorScheme === s.id}
+                        type="button"
+                      >
+                        {s.icon}
+                        {s.label}
+                      </button>
+                    ))}
                   </div>
-                </div>
-                <div className={styles.colorInputGroup}>
-                  <label className={styles.colorLabel}>
-                    Font Color
-                    <div className={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={customColors.fontColor}
-                        onChange={(e) =>
-                          setCustomColors({
-                            ...customColors,
-                            fontColor: e.target.value,
-                          })
-                        }
-                      />
-                      <span className={styles.colorValue}>
-                        {customColors.fontColor}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-                <div className={styles.colorInputGroup}>
-                  <label className={styles.colorLabel}>
-                    Secondary Font Color
-                    <div className={styles.colorInputWrapper}>
-                      <input
-                        type="color"
-                        className={styles.colorInput}
-                        value={customColors.secondaryFontColor}
-                        onChange={(e) =>
-                          setCustomColors({
-                            ...customColors,
-                            secondaryFontColor: e.target.value,
-                          })
-                        }
-                      />
-                      <span className={styles.colorValue}>
-                        {customColors.secondaryFontColor}
-                      </span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              <p className={styles.hint}>
-                Choose your custom accent colors, background, and font colors.
-                They will be applied to buttons, links, interactive elements,
-                and text throughout the app.
-              </p>
-            </section>
-          )}
+                </section>
 
-          {/* Appearance */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Appearance</h3>
-            <div className={styles.segmented}>
-              {COLOR_SCHEMES.map((s) => (
-                <button
-                  key={s.id}
-                  className={[
-                    styles.segment,
-                    settings.colorScheme === s.id ? styles.segmentActive : "",
-                  ].join(" ")}
-                  onClick={() => updateSettings({ colorScheme: s.id })}
-                  aria-pressed={settings.colorScheme === s.id}
-                  type="button"
-                >
-                  {s.icon}
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </section>
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Fonts</h3>
+                  <div className={styles.fontGrid}>
+                    {FONT_PRESET_OPTIONS.map((fontOption) => (
+                      <button
+                        key={fontOption.id}
+                        className={[
+                          styles.fontSwatch,
+                          settings.fontPreset === fontOption.id
+                            ? styles.fontActive
+                            : "",
+                        ].join(" ")}
+                        onClick={() => updateSettings({ fontPreset: fontOption.id })}
+                        aria-pressed={settings.fontPreset === fontOption.id}
+                        type="button"
+                      >
+                        <span className={styles.fontIcon}>
+                          <Type size={14} />
+                        </span>
+                        <span
+                          className={styles.fontLabel}
+                          style={{ fontFamily: fontOption.fontFamily }}
+                        >
+                          {fontOption.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
 
-          {/* Fonts */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Fonts</h3>
-            <div className={styles.fontGrid}>
-              {FONT_PRESET_OPTIONS.map((fontOption) => (
-                <button
-                  key={fontOption.id}
-                  className={[
-                    styles.fontSwatch,
-                    settings.fontPreset === fontOption.id
-                      ? styles.fontActive
-                      : "",
-                  ].join(" ")}
-                  onClick={() => updateSettings({ fontPreset: fontOption.id })}
-                  aria-pressed={settings.fontPreset === fontOption.id}
-                  type="button"
-                >
-                  <span className={styles.fontIcon}>
-                    <Type size={14} />
-                  </span>
-                  <span
-                    className={styles.fontLabel}
-                    style={{ fontFamily: fontOption.fontFamily }}
-                  >
-                    {fontOption.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          {isCalendarOnLayout && (
-            <>
-              {/* Calendar */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
-                  <button
-                    className={styles.addCalendarBtn}
-                    onClick={addCalendarFeed}
-                    type="button"
-                  >
-                    <Plus size={14} />
-                    Add link
-                  </button>
-                </div>
-                <p className={styles.hint}>
-                  Paste one or more ICS or CSV calendar URLs. Google share links,
-                  Outlook published calendar links, and webcal:// feeds are
-                  supported too. Choose a color for each calendar and its events
-                  will use that color in the calendar widget.
-                </p>
-                <div className={styles.calendarList}>
-                  {calendarFeeds.map((calendarFeed, index) => (
-                    <div
-                      className={styles.calendarRow}
-                      key={`${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>Support</h3>
+                  <div className={styles.widgetGrid}>
+                    <button
+                      className={[
+                        styles.widgetToggle,
+                        showBuyMeACoffeeWidget ? styles.widgetVisible : "",
+                      ].join(" ")}
+                      onClick={() => setShowBuyMeACoffeeWidget((value) => !value)}
+                      type="button"
                     >
-                      <input
-                        className={[styles.input, styles.calendarUrlInput].join(
-                          " ",
-                        )}
-                        type="url"
-                        placeholder={
-                          index === 0
-                            ? "https://calendar.example.com/feed.ics"
-                            : "https://outlook.office.com/calendar/.../calendar.ics"
-                        }
-                        value={calendarFeed.url}
-                        onChange={(e) =>
-                          updateCalendarFeed(index, { url: e.target.value })
-                        }
-                      />
-                      <label className={styles.calendarColorField}>
-                        <span className={styles.calendarColorLabel}>Color</span>
+                      {showBuyMeACoffeeWidget ? (
+                        <Eye size={14} />
+                      ) : (
+                        <EyeOff size={14} />
+                      )}
+                      <span>Show Buy Me a Coffee button</span>
+                    </button>
+                  </div>
+                  <p className={styles.hint}>
+                    Hide the floating support button anytime without affecting the
+                    rest of your layout.
+                  </p>
+                </section>
+                <PresetShortcutPanel
+                  presets={presets}
+                  presetName={presetName}
+                  selectedPresetName={selectedPresetName}
+                  presetError={presetError}
+                  presetFeedback={presetFeedback}
+                  onPresetNameChange={setPresetName}
+                  onSelectedPresetNameChange={setSelectedPresetName}
+                  onCreatePreset={handleCreatePreset}
+                  onUpdatePreset={handleUpdateSelectedPreset}
+                  onClearEditingPreset={handleClearEditingPreset}
+                />
+              </>
+            )}
+
+            {activeTab === "widgets" && (
+              <>
+                {!isCalendarOnLayout &&
+                  !isWeatherOnLayout &&
+                  !isTimezoneClockOnLayout &&
+                  !isFinanceOnLayout &&
+                  !isMusicOnLayout &&
+                  !isTimerOnLayout && (
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Widget Settings</h3>
+                      <p className={styles.emptyState}>
+                        Add widgets to the layout to unlock their widget-specific settings here.
+                      </p>
+                    </section>
+                  )}
+
+                {isCalendarOnLayout && (
+                  <>
+                    <section className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <h3 className={styles.sectionTitle}>Calendar Feeds</h3>
+                        <button
+                          className={styles.addCalendarBtn}
+                          onClick={addCalendarFeed}
+                          type="button"
+                        >
+                          <Plus size={14} />
+                          Add link
+                        </button>
+                      </div>
+                      <p className={styles.hint}>
+                        Paste one or more ICS or CSV calendar URLs. Google share links,
+                        Outlook published calendar links, and webcal:// feeds are
+                        supported too. Choose a color for each calendar and its events
+                        will use that color in the calendar widget.
+                      </p>
+                      <div className={styles.calendarList}>
+                        {calendarFeeds.map((calendarFeed, index) => (
+                          <div
+                            className={styles.calendarRow}
+                            key={`${calendarFeed.url || "new"}-${calendarFeed.color}-${index}`}
+                          >
+                            <input
+                              className={[styles.input, styles.calendarUrlInput].join(" ")}
+                              type="url"
+                              placeholder={
+                                index === 0
+                                  ? "https://calendar.example.com/feed.ics"
+                                  : "https://outlook.office.com/calendar/.../calendar.ics"
+                              }
+                              value={calendarFeed.url}
+                              onChange={(e) =>
+                                updateCalendarFeed(index, { url: e.target.value })
+                              }
+                            />
+                            <label className={styles.calendarColorField}>
+                              <span className={styles.calendarColorLabel}>Color</span>
+                              <input
+                                aria-label={`Calendar color ${index + 1}`}
+                                className={styles.calendarColorInput}
+                                type="color"
+                                value={calendarFeed.color}
+                                onChange={(e) =>
+                                  updateCalendarFeed(index, { color: e.target.value })
+                                }
+                              />
+                            </label>
+                            <button
+                              aria-label={`Remove calendar link ${index + 1}`}
+                              className={styles.removeCalendarBtn}
+                              onClick={() => removeCalendarFeed(index)}
+                              type="button"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Calendar Display</h3>
+                      <div className={styles.segmented}>
+                        {CALENDAR_WEEK_STARTS.map((option) => (
+                          <button
+                            key={option.id}
+                            className={[
+                              styles.segment,
+                              calendarWeekStartsOn === option.id ? styles.segmentActive : "",
+                            ].join(" ")}
+                            onClick={() => setCalendarWeekStartsOn(option.id)}
+                            aria-pressed={calendarWeekStartsOn === option.id}
+                            type="button"
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className={styles.widgetGrid}>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            !calendarHidePastEvents ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setCalendarHidePastEvents((value) => !value)}
+                          type="button"
+                          aria-pressed={!calendarHidePastEvents}
+                        >
+                          {!calendarHidePastEvents ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show past events</span>
+                        </button>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            calendarShowAllDayEvents ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setCalendarShowAllDayEvents((value) => !value)}
+                          type="button"
+                        >
+                          {calendarShowAllDayEvents ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show all-day events</span>
+                        </button>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            calendarShowMonthlyOverview ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() =>
+                            setCalendarShowMonthlyOverview((value) => !value)
+                          }
+                          type="button"
+                        >
+                          {calendarShowMonthlyOverview ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show monthly overview</span>
+                        </button>
+                      </div>
+                    </section>
+                  </>
+                )}
+
+                {isWeatherOnLayout && (
+                  <>
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Weather Display</h3>
+                      <div className={styles.segmented}>
+                        {WEATHER_UNITS.map((unit) => (
+                          <button
+                            key={unit.id}
+                            className={[
+                              styles.segment,
+                              weatherUnitSystem === unit.id ? styles.segmentActive : "",
+                            ].join(" ")}
+                            onClick={() => setWeatherUnitSystem(unit.id)}
+                            aria-pressed={weatherUnitSystem === unit.id}
+                            type="button"
+                          >
+                            {unit.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className={styles.widgetGrid}>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            weatherShowExtraDetails ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setWeatherShowExtraDetails((value) => !value)}
+                          type="button"
+                        >
+                          {weatherShowExtraDetails ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show extra weather details</span>
+                        </button>
+                      </div>
+                    </section>
+
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Weather Refresh</h3>
+                      <div className={styles.intervalRow}>
+                        <label className={styles.intervalLabel}>
+                          <span>Refresh every (min)</span>
+                          <input
+                            className={styles.numberInput}
+                            type="number"
+                            min={1}
+                            max={180}
+                            value={weatherRefreshMin}
+                            onChange={(e) =>
+                              setWeatherRefreshMin(
+                                Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                      <p className={styles.hint}>
+                        Weather updates automatically using this interval. You can still
+                        refresh it manually anytime.
+                      </p>
+                    </section>
+                  </>
+                )}
+
+                {isTimezoneClockOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Timezone Clock</h3>
+                    <div className={styles.calendarList}>
+                      <label className={styles.intervalLabel}>
+                        <span>City name</span>
                         <input
-                          aria-label={`Calendar color ${index + 1}`}
-                          className={styles.calendarColorInput}
-                          type="color"
-                          value={calendarFeed.color}
+                          className={styles.input}
+                          type="text"
+                          value={worldClockCity}
+                          placeholder="New York"
+                          onChange={(e) => setWorldClockCity(e.target.value)}
+                        />
+                      </label>
+                      <label className={styles.intervalLabel}>
+                        <span>Timezone (IANA)</span>
+                        <input
+                          className={styles.input}
+                          type="text"
+                          value={worldClockTimeZone}
+                          placeholder="America/New_York"
+                          onChange={(e) => {
+                            const nextValue = e.target.value;
+                            setWorldClockTimeZone(nextValue);
+                            const trimmedValue = nextValue.trim();
+                            setWorldClockTimeZoneError(
+                              trimmedValue.length === 0 || isValidTimeZone(trimmedValue)
+                                ? null
+                                : "Use a valid IANA timezone (for example: Europe/Budapest).",
+                            );
+                          }}
+                        />
+                      </label>
+                      {worldClockTimeZoneError && (
+                        <p className={styles.mediaLinkError}>{worldClockTimeZoneError}</p>
+                      )}
+                    </div>
+                    <p className={styles.hint}>
+                      This widget always shows your local time next to your selected city.
+                    </p>
+                  </section>
+                )}
+
+                {isFinanceOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Finance Widgets</h3>
+
+                    <div className={styles.intervalRow}>
+                      <label className={styles.intervalLabel}>
+                        <span>Refresh every (minutes)</span>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          min={1}
+                          max={1440}
+                          value={financeRefreshMin}
                           onChange={(e) =>
-                            updateCalendarFeed(index, { color: e.target.value })
+                            setFinanceRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
                           }
                         />
                       </label>
+                    </div>
+
+                    <p className={styles.listHeading}>Stock symbols</p>
+                    {stockSymbols.map((sym) => (
+                      <div key={sym} className={styles.calendarRow}>
+                        <span className={[styles.input, styles.calendarUrlInput, styles.readonlyPill].join(" ")}>{sym}</span>
+                        <button
+                          type="button"
+                          className={styles.removeCalendarBtn}
+                          onClick={() => setStockSymbols((prev) => prev.filter((s) => s !== sym))}
+                          aria-label={`Remove ${sym}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <div className={styles.calendarRow}>
+                      <input
+                        className={[styles.input, styles.calendarUrlInput].join(" ")}
+                        type="text"
+                        maxLength={12}
+                        value={stockAddInput}
+                        onChange={(e) => setStockAddInput(e.target.value.toUpperCase())}
+                        placeholder="e.g. TSLA"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            const sym = stockAddInput.trim().toUpperCase();
+                            if (sym && !stockSymbols.includes(sym)) {
+                              setStockSymbols((prev) => [...prev, sym]);
+                            }
+                            setStockAddInput("");
+                          }
+                        }}
+                      />
                       <button
-                        aria-label={`Remove calendar link ${index + 1}`}
-                        className={styles.removeCalendarBtn}
-                        onClick={() => removeCalendarFeed(index)}
                         type="button"
+                        className={styles.addCalendarBtn}
+                        onClick={() => {
+                          const sym = stockAddInput.trim().toUpperCase();
+                          if (sym && !stockSymbols.includes(sym)) {
+                            setStockSymbols((prev) => [...prev, sym]);
+                          }
+                          setStockAddInput("");
+                        }}
                       >
-                        <Trash2 size={14} />
+                        Add
                       </button>
                     </div>
-                  ))}
-                </div>
-              </section>
 
-              <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>Calendar Display</h3>
-                <div className={styles.segmented}>
-                  {CALENDAR_WEEK_STARTS.map((option) => (
-                    <button
-                      key={option.id}
-                      className={[
-                        styles.segment,
-                        calendarWeekStartsOn === option.id ? styles.segmentActive : "",
-                      ].join(" ")}
-                      onClick={() => setCalendarWeekStartsOn(option.id)}
-                      aria-pressed={calendarWeekStartsOn === option.id}
-                      type="button"
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-                <div className={styles.widgetGrid}>
-                  <button
-                    className={[
-                      styles.widgetToggle,
-                      !calendarHidePastEvents ? styles.widgetVisible : "",
-                    ].join(" ")}
-                    onClick={() => setCalendarHidePastEvents((value) => !value)}
-                    type="button"
-                    aria-pressed={!calendarHidePastEvents}
-                  >
-                    {!calendarHidePastEvents ? (
-                      <Eye size={14} />
-                    ) : (
-                      <EyeOff size={14} />
-                    )}
-                    <span>Show past events</span>
-                  </button>
-                  <button
-                    className={[
-                      styles.widgetToggle,
-                      calendarShowAllDayEvents ? styles.widgetVisible : "",
-                    ].join(" ")}
-                    onClick={() => setCalendarShowAllDayEvents((value) => !value)}
-                    type="button"
-                  >
-                    {calendarShowAllDayEvents ? (
-                      <Eye size={14} />
-                    ) : (
-                      <EyeOff size={14} />
-                    )}
-                    <span>Show all-day events</span>
-                  </button>
-                  <button
-                    className={[
-                      styles.widgetToggle,
-                      calendarShowMonthlyOverview ? styles.widgetVisible : "",
-                    ].join(" ")}
-                    onClick={() =>
-                      setCalendarShowMonthlyOverview((value) => !value)
-                    }
-                    type="button"
-                  >
-                    {calendarShowMonthlyOverview ? (
-                      <Eye size={14} />
-                    ) : (
-                      <EyeOff size={14} />
-                    )}
-                    <span>Show monthly overview</span>
-                  </button>
-                </div>
-              </section>
-            </>
-          )}
+                    <p className={styles.listHeading}>Currency pairs</p>
+                    {currencyPairs.map(([base, target]) => (
+                      <div key={`${base}/${target}`} className={styles.calendarRow}>
+                        <span className={[styles.input, styles.calendarUrlInput, styles.readonlyPill].join(" ")}>{base} → {target}</span>
+                        <button
+                          type="button"
+                          className={styles.removeCalendarBtn}
+                          onClick={() =>
+                            setCurrencyPairs((prev) =>
+                              prev.filter(([b, t]) => !(b === base && t === target)),
+                            )
+                          }
+                          aria-label={`Remove ${base}/${target}`}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <div className={styles.calendarRow}>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        maxLength={3}
+                        value={currencyAddBase}
+                        onChange={(e) => setCurrencyAddBase(e.target.value.toUpperCase())}
+                        placeholder="USD"
+                      />
+                      <span className={styles.currencyArrow}>→</span>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        maxLength={3}
+                        value={currencyAddTarget}
+                        onChange={(e) => setCurrencyAddTarget(e.target.value.toUpperCase())}
+                        placeholder="EUR"
+                      />
+                      <button
+                        type="button"
+                        className={styles.addCalendarBtn}
+                        onClick={() => {
+                          const base = currencyAddBase.trim().toUpperCase();
+                          const target = currencyAddTarget.trim().toUpperCase();
+                          if (
+                            /^[A-Z]{3}$/.test(base) &&
+                            /^[A-Z]{3}$/.test(target) &&
+                            !currencyPairs.some(([b, t]) => b === base && t === target)
+                          ) {
+                            setCurrencyPairs((prev) => [...prev, [base, target]]);
+                            setCurrencyAddBase("");
+                            setCurrencyAddTarget("");
+                          }
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
 
-          {isWeatherOnLayout && (
-            <>
-              {/* Weather */}
-              <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>Weather Display</h3>
-                <div className={styles.segmented}>
-                  {WEATHER_UNITS.map((unit) => (
-                    <button
-                      key={unit.id}
-                      className={[
-                        styles.segment,
-                        weatherUnitSystem === unit.id ? styles.segmentActive : "",
-                      ].join(" ")}
-                      onClick={() => setWeatherUnitSystem(unit.id)}
-                      aria-pressed={weatherUnitSystem === unit.id}
-                      type="button"
-                    >
-                      {unit.label}
-                    </button>
-                  ))}
-                </div>
-                <div className={styles.widgetGrid}>
-                  <button
-                    className={[
-                      styles.widgetToggle,
-                      weatherShowExtraDetails ? styles.widgetVisible : "",
-                    ].join(" ")}
-                    onClick={() => setWeatherShowExtraDetails((value) => !value)}
-                    type="button"
-                  >
-                    {weatherShowExtraDetails ? (
-                      <Eye size={14} />
-                    ) : (
-                      <EyeOff size={14} />
-                    )}
-                    <span>Show extra weather details</span>
-                  </button>
-                </div>
-              </section>
-
-              <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>Weather Refresh</h3>
-                <div className={styles.intervalRow}>
-                  <label className={styles.intervalLabel}>
-                    <span>Refresh every (min)</span>
-                    <input
-                      className={styles.numberInput}
-                      type="number"
-                      min={1}
-                      max={180}
-                      value={weatherRefreshMin}
-                      onChange={(e) =>
-                        setWeatherRefreshMin(
-                          Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-                <p className={styles.hint}>
-                  Weather updates automatically using this interval. You can still
-                  refresh it manually anytime.
-                </p>
-              </section>
-            </>
-          )}
-
-          {isTimezoneClockOnLayout && (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Timezone Clock</h3>
-              <div className={styles.calendarList}>
-                <label className={styles.intervalLabel}>
-                  <span>City name</span>
-                  <input
-                    className={styles.input}
-                    type="text"
-                    value={worldClockCity}
-                    placeholder="New York"
-                    onChange={(e) => setWorldClockCity(e.target.value)}
-                  />
-                </label>
-                <label className={styles.intervalLabel}>
-                  <span>Timezone (IANA)</span>
-                  <input
-                    className={styles.input}
-                    type="text"
-                    value={worldClockTimeZone}
-                    placeholder="America/New_York"
-                    onChange={(e) => {
-                      const nextValue = e.target.value;
-                      setWorldClockTimeZone(nextValue);
-                      const trimmedValue = nextValue.trim();
-                      setWorldClockTimeZoneError(
-                        trimmedValue.length === 0 || isValidTimeZone(trimmedValue)
-                          ? null
-                          : "Use a valid IANA timezone (for example: Europe/Budapest).",
-                      );
-                    }}
-                  />
-                </label>
-                {worldClockTimeZoneError && (
-                  <p className={styles.mediaLinkError}>{worldClockTimeZoneError}</p>
+                    <p className={styles.hint}>
+                      Data refreshes automatically at the selected interval. You can still refresh manually.
+                    </p>
+                  </section>
                 )}
-              </div>
-              <p className={styles.hint}>
-                This widget always shows your local time next to your selected city.
-              </p>
-            </section>
-          )}
 
-          {isFinanceOnLayout && (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Finance Widgets</h3>
-
-            {/* Auto-refresh interval */}
-            <div className={styles.intervalRow}>
-              <label className={styles.intervalLabel}>
-                <span>Refresh every (minutes)</span>
-                <input
-                  className={styles.input}
-                  type="number"
-                  min={1}
-                  max={1440}
-                  value={financeRefreshMin}
-                  onChange={(e) =>
-                    setFinanceRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
-                  }
-                />
-              </label>
-            </div>
-
-            {/* Stocks list */}
-            <p className={styles.hint} style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontWeight: 600 }}>
-              Stock symbols
-            </p>
-            {stockSymbols.map((sym) => (
-              <div key={sym} className={styles.calendarRow}>
-                <span className={[styles.input, styles.calendarUrlInput].join(' ')} style={{ display: 'flex', alignItems: 'center' }}>{sym}</span>
-                <button
-                  type="button"
-                  className={styles.removeCalendarBtn}
-                  onClick={() => setStockSymbols((prev) => prev.filter((s) => s !== sym))}
-                  aria-label={`Remove ${sym}`}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <div className={styles.calendarRow}>
-              <input
-                className={[styles.input, styles.calendarUrlInput].join(' ')}
-                type="text"
-                maxLength={12}
-                value={stockAddInput}
-                onChange={(e) => setStockAddInput(e.target.value.toUpperCase())}
-                placeholder="e.g. TSLA"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    const sym = stockAddInput.trim().toUpperCase()
-                    if (sym && !stockSymbols.includes(sym)) {
-                      setStockSymbols((prev) => [...prev, sym])
-                    }
-                    setStockAddInput('')
-                  }
-                }}
-              />
-              <button
-                type="button"
-                className={styles.addCalendarBtn}
-                onClick={() => {
-                  const sym = stockAddInput.trim().toUpperCase()
-                  if (sym && !stockSymbols.includes(sym)) {
-                    setStockSymbols((prev) => [...prev, sym])
-                  }
-                  setStockAddInput('')
-                }}
-              >
-                Add
-              </button>
-            </div>
-
-            {/* Currency pairs list */}
-            <p className={styles.hint} style={{ marginTop: '0.75rem', marginBottom: '0.25rem', fontWeight: 600 }}>
-              Currency pairs
-            </p>
-            {currencyPairs.map(([base, target]) => (
-              <div key={`${base}/${target}`} className={styles.calendarRow}>
-                <span className={[styles.input, styles.calendarUrlInput].join(' ')} style={{ display: 'flex', alignItems: 'center' }}>{base} → {target}</span>
-                <button
-                  type="button"
-                  className={styles.removeCalendarBtn}
-                  onClick={() =>
-                    setCurrencyPairs((prev) =>
-                      prev.filter(([b, t]) => !(b === base && t === target)),
-                    )
-                  }
-                  aria-label={`Remove ${base}/${target}`}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-            <div className={styles.calendarRow}>
-              <input
-                className={styles.input}
-                type="text"
-                maxLength={3}
-                value={currencyAddBase}
-                onChange={(e) => setCurrencyAddBase(e.target.value.toUpperCase())}
-                placeholder="USD"
-              />
-              <span style={{ alignSelf: 'center', color: 'var(--color-text-muted)', flexShrink: 0 }}>→</span>
-              <input
-                className={styles.input}
-                type="text"
-                maxLength={3}
-                value={currencyAddTarget}
-                onChange={(e) => setCurrencyAddTarget(e.target.value.toUpperCase())}
-                placeholder="EUR"
-              />
-              <button
-                type="button"
-                className={styles.addCalendarBtn}
-                onClick={() => {
-                  const base = currencyAddBase.trim().toUpperCase()
-                  const target = currencyAddTarget.trim().toUpperCase()
-                  if (
-                    /^[A-Z]{3}$/.test(base) &&
-                    /^[A-Z]{3}$/.test(target) &&
-                    !currencyPairs.some(([b, t]) => b === base && t === target)
-                  ) {
-                    setCurrencyPairs((prev) => [...prev, [base, target]])
-                    setCurrencyAddBase('')
-                    setCurrencyAddTarget('')
-                  }
-                }}
-              >
-                Add
-              </button>
-            </div>
-
-            <p className={styles.hint}>
-              Data refreshes automatically at the selected interval. You can still refresh manually.
-            </p>
-            </section>
-          )}
-
-          {isMusicOnLayout && (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Music Embeds</h3>
-              {isSpotifyOnLayout && (
-                <MediaLinkEditor
-                  title="Spotify"
-                  brand="spotify"
-                  activeUrl={spotifyEmbedUrl}
-                  savedLinks={spotifyEmbedLinks}
-                  addUrl={spotifyAddUrl}
-                  addPlaceholder="https://open.spotify.com/track/..."
-                  onSelectUrl={(url) => {
-                    setSpotifyEmbedUrl(url);
-                    setSpotifyLinkError(null);
-                  }}
-                  onRemoveSelected={() =>
-                    removeMediaLink(
-                      spotifyEmbedLinks,
-                      spotifyEmbedUrl,
-                      setSpotifyEmbedLinks,
-                      setSpotifyEmbedUrl,
-                    )
-                  }
-                  onAddUrlChange={setSpotifyAddUrl}
-                  onAddLink={() =>
-                    void
-                    addMediaLink({
-                      value: spotifyAddUrl,
-                      setValue: setSpotifyAddUrl,
-                      links: spotifyEmbedLinks,
-                      setLinks: setSpotifyEmbedLinks,
-                      validate: normalizeSpotifyEmbedUrl,
-                      setActiveUrl: setSpotifyEmbedUrl,
-                      setError: setSpotifyLinkError,
-                      errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
-                    })
-                  }
-                  error={spotifyLinkError}
-                />
-              )}
-              {isAppleMusicOnLayout && (
-                <MediaLinkEditor
-                  title="Apple Music"
-                  brand="apple-music"
-                  activeUrl={appleMusicEmbedUrl}
-                  savedLinks={appleMusicEmbedLinks}
-                  addUrl={appleMusicAddUrl}
-                  addPlaceholder="https://music.apple.com/..."
-                  onSelectUrl={(url) => {
-                    setAppleMusicEmbedUrl(url);
-                    setAppleMusicLinkError(null);
-                  }}
-                  onRemoveSelected={() =>
-                    removeMediaLink(
-                      appleMusicEmbedLinks,
-                      appleMusicEmbedUrl,
-                      setAppleMusicEmbedLinks,
-                      setAppleMusicEmbedUrl,
-                    )
-                  }
-                  onAddUrlChange={setAppleMusicAddUrl}
-                  onAddLink={() =>
-                    void
-                    addMediaLink({
-                      value: appleMusicAddUrl,
-                      setValue: setAppleMusicAddUrl,
-                      links: appleMusicEmbedLinks,
-                      setLinks: setAppleMusicEmbedLinks,
-                      validate: normalizeAppleMusicEmbedUrl,
-                      setActiveUrl: setAppleMusicEmbedUrl,
-                      setError: setAppleMusicLinkError,
-                      errorMessage: "Please paste a valid Apple Music album, playlist, song, or artist link.",
-                    })
-                  }
-                  error={appleMusicLinkError}
-                />
-              )}
-              {isApplePodcastOnLayout && (
-                <MediaLinkEditor
-                  title="Apple Podcast"
-                  brand="apple-podcasts"
-                  activeUrl={applePodcastEmbedUrl}
-                  savedLinks={applePodcastEmbedLinks}
-                  addUrl={applePodcastAddUrl}
-                  addPlaceholder="https://podcasts.apple.com/..."
-                  onSelectUrl={(url) => {
-                    setApplePodcastEmbedUrl(url);
-                    setApplePodcastLinkError(null);
-                  }}
-                  onRemoveSelected={() =>
-                    removeMediaLink(
-                      applePodcastEmbedLinks,
-                      applePodcastEmbedUrl,
-                      setApplePodcastEmbedLinks,
-                      setApplePodcastEmbedUrl,
-                    )
-                  }
-                  onAddUrlChange={setApplePodcastAddUrl}
-                  onAddLink={() =>
-                    void
-                    addMediaLink({
-                      value: applePodcastAddUrl,
-                      setValue: setApplePodcastAddUrl,
-                      links: applePodcastEmbedLinks,
-                      setLinks: setApplePodcastEmbedLinks,
-                      validate: normalizeApplePodcastEmbedUrl,
-                      setActiveUrl: setApplePodcastEmbedUrl,
-                      setError: setApplePodcastLinkError,
-                      errorMessage: "Please paste a valid Apple Podcast show or episode link.",
-                    })
-                  }
-                  error={applePodcastLinkError}
-                />
-              )}
-              <p className={styles.hint}>
-                Paste a public share link. Dayboard converts it to an embeddable player automatically.
-              </p>
-            </section>
-          )}
-
-          {isTimerOnLayout && (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
-            <div className={styles.intervalRow}>
-              <label className={styles.intervalLabel}>
-                <span>Work (min)</span>
-                <input
-                  className={styles.numberInput}
-                  type="number"
-                  min={1}
-                  max={120}
-                  value={workMin}
-                  onChange={(e) =>
-                    setWorkMin(
-                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                    )
-                  }
-                />
-              </label>
-              <label className={styles.intervalLabel}>
-                <span>Break (min)</span>
-                <input
-                  className={styles.numberInput}
-                  type="number"
-                  min={1}
-                  max={60}
-                  value={breakMin}
-                  onChange={(e) =>
-                    setBreakMin(
-                      Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                    )
-                  }
-                />
-              </label>
-              </div>
-            </section>
-          )}
-
-          {/* Support */}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>Support</h3>
-            <div className={styles.widgetGrid}>
-              <button
-                className={[
-                  styles.widgetToggle,
-                  showBuyMeACoffeeWidget ? styles.widgetVisible : "",
-                ].join(" ")}
-                onClick={() => setShowBuyMeACoffeeWidget((value) => !value)}
-                type="button"
-              >
-                {showBuyMeACoffeeWidget ? (
-                  <Eye size={14} />
-                ) : (
-                  <EyeOff size={14} />
+                {isMusicOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Music Embeds</h3>
+                    {isSpotifyOnLayout && (
+                      <MediaLinkEditor
+                        title="Spotify"
+                        brand="spotify"
+                        activeUrl={spotifyEmbedUrl}
+                        savedLinks={spotifyEmbedLinks}
+                        addUrl={spotifyAddUrl}
+                        addPlaceholder="https://open.spotify.com/track/..."
+                        onSelectUrl={(url) => {
+                          setSpotifyEmbedUrl(url);
+                          setSpotifyLinkError(null);
+                        }}
+                        onRemoveSelected={() =>
+                          removeMediaLink(
+                            spotifyEmbedLinks,
+                            spotifyEmbedUrl,
+                            setSpotifyEmbedLinks,
+                            setSpotifyEmbedUrl,
+                          )
+                        }
+                        onAddUrlChange={setSpotifyAddUrl}
+                        onAddLink={() =>
+                          void addMediaLink({
+                            value: spotifyAddUrl,
+                            setValue: setSpotifyAddUrl,
+                            links: spotifyEmbedLinks,
+                            setLinks: setSpotifyEmbedLinks,
+                            validate: normalizeSpotifyEmbedUrl,
+                            setActiveUrl: setSpotifyEmbedUrl,
+                            setError: setSpotifyLinkError,
+                            errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
+                          })
+                        }
+                        error={spotifyLinkError}
+                      />
+                    )}
+                    {isAppleMusicOnLayout && (
+                      <MediaLinkEditor
+                        title="Apple Music"
+                        brand="apple-music"
+                        activeUrl={appleMusicEmbedUrl}
+                        savedLinks={appleMusicEmbedLinks}
+                        addUrl={appleMusicAddUrl}
+                        addPlaceholder="https://music.apple.com/..."
+                        onSelectUrl={(url) => {
+                          setAppleMusicEmbedUrl(url);
+                          setAppleMusicLinkError(null);
+                        }}
+                        onRemoveSelected={() =>
+                          removeMediaLink(
+                            appleMusicEmbedLinks,
+                            appleMusicEmbedUrl,
+                            setAppleMusicEmbedLinks,
+                            setAppleMusicEmbedUrl,
+                          )
+                        }
+                        onAddUrlChange={setAppleMusicAddUrl}
+                        onAddLink={() =>
+                          void addMediaLink({
+                            value: appleMusicAddUrl,
+                            setValue: setAppleMusicAddUrl,
+                            links: appleMusicEmbedLinks,
+                            setLinks: setAppleMusicEmbedLinks,
+                            validate: normalizeAppleMusicEmbedUrl,
+                            setActiveUrl: setAppleMusicEmbedUrl,
+                            setError: setAppleMusicLinkError,
+                            errorMessage: "Please paste a valid Apple Music album, playlist, song, or artist link.",
+                          })
+                        }
+                        error={appleMusicLinkError}
+                      />
+                    )}
+                    {isApplePodcastOnLayout && (
+                      <MediaLinkEditor
+                        title="Apple Podcast"
+                        brand="apple-podcasts"
+                        activeUrl={applePodcastEmbedUrl}
+                        savedLinks={applePodcastEmbedLinks}
+                        addUrl={applePodcastAddUrl}
+                        addPlaceholder="https://podcasts.apple.com/..."
+                        onSelectUrl={(url) => {
+                          setApplePodcastEmbedUrl(url);
+                          setApplePodcastLinkError(null);
+                        }}
+                        onRemoveSelected={() =>
+                          removeMediaLink(
+                            applePodcastEmbedLinks,
+                            applePodcastEmbedUrl,
+                            setApplePodcastEmbedLinks,
+                            setApplePodcastEmbedUrl,
+                          )
+                        }
+                        onAddUrlChange={setApplePodcastAddUrl}
+                        onAddLink={() =>
+                          void addMediaLink({
+                            value: applePodcastAddUrl,
+                            setValue: setApplePodcastAddUrl,
+                            links: applePodcastEmbedLinks,
+                            setLinks: setApplePodcastEmbedLinks,
+                            validate: normalizeApplePodcastEmbedUrl,
+                            setActiveUrl: setApplePodcastEmbedUrl,
+                            setError: setApplePodcastLinkError,
+                            errorMessage: "Please paste a valid Apple Podcast show or episode link.",
+                          })
+                        }
+                        error={applePodcastLinkError}
+                      />
+                    )}
+                    <p className={styles.hint}>
+                      Paste a public share link. Dayboard converts it to an embeddable player automatically.
+                    </p>
+                  </section>
                 )}
-                <span>Show Buy Me a Coffee button</span>
-              </button>
-            </div>
-            <p className={styles.hint}>
-              Hide the floating support button anytime without affecting the
-              rest of your layout.
-            </p>
-          </section>
+
+                {isTimerOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
+                    <div className={styles.intervalRow}>
+                      <label className={styles.intervalLabel}>
+                        <span>Work (min)</span>
+                        <input
+                          className={styles.numberInput}
+                          type="number"
+                          min={1}
+                          max={120}
+                          value={workMin}
+                          onChange={(e) =>
+                            setWorkMin(
+                              Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className={styles.intervalLabel}>
+                        <span>Break (min)</span>
+                        <input
+                          className={styles.numberInput}
+                          type="number"
+                          min={1}
+                          max={60}
+                          value={breakMin}
+                          onChange={(e) =>
+                            setBreakMin(
+                              Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                  </section>
+                )}
+              </>
+            )}
+
+            {activeTab === "presets" && (
+              <>
+                <section className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <div>
+                      <h3 className={styles.sectionTitle}>Create Preset</h3>
+                      <p className={styles.hint}>
+                        Save the current setup as a preset like Work Focus, Deep Work, or Wind Down.
+                      </p>
+                    </div>
+                  </div>
+                  <div className={styles.presetCreateCard}>
+                    <label className={styles.intervalLabel}>
+                      <span>Preset name</span>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        placeholder="Work Focus"
+                        value={presetName}
+                        onChange={(e) => setPresetName(e.target.value)}
+                      />
+                    </label>
+                    <div className={styles.presetCreateSchedule}>
+                      <button
+                        className={[
+                          styles.widgetToggle,
+                          newPresetAutoApply ? styles.widgetVisible : "",
+                        ].join(" ")}
+                        onClick={() => setNewPresetAutoApply((value) => !value)}
+                        type="button"
+                        aria-pressed={newPresetAutoApply}
+                      >
+                        {newPresetAutoApply ? <Eye size={14} /> : <EyeOff size={14} />}
+                        <span>{newPresetAutoApply ? "Auto-apply on" : "Auto-apply off"}</span>
+                      </button>
+                      {newPresetAutoApply && (
+                        <div className={styles.presetScheduleInputs}>
+                          <label className={styles.intervalLabel}>
+                            <span>Start</span>
+                            <input
+                              className={styles.input}
+                              type="time"
+                              value={newPresetStartTime}
+                              onChange={(e) => setNewPresetStartTime(e.target.value)}
+                            />
+                          </label>
+                          <label className={styles.intervalLabel}>
+                            <span>End</span>
+                            <input
+                              className={styles.input}
+                              type="time"
+                              value={newPresetEndTime}
+                              onChange={(e) => setNewPresetEndTime(e.target.value)}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.presetCreateActions}>
+                      <button className={styles.btnPrimary} onClick={handleCreatePreset} type="button">
+                        Save preset
+                      </button>
+                    </div>
+                    {presetError && <p className={styles.mediaLinkError}>{presetError}</p>}
+                    {presetFeedback && <p className={styles.presetFeedback}>{presetFeedback}</p>}
+                  </div>
+                </section>
+
+                <section className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>Saved Presets</h3>
+                    <span className={styles.hint}>
+                      {activePresetName ? `Currently active: ${activePresetName}` : "No preset is scheduled right now."}
+                    </span>
+                  </div>
+                  {presets.length === 0 ? (
+                    <p className={styles.emptyState}>
+                      No presets yet. Save your current setup to switch between routines in one click.
+                    </p>
+                  ) : (
+                    <div className={styles.presetList}>
+                      {presets.map((preset) => (
+                        <PresetCard
+                          key={preset.name}
+                          preset={preset}
+                          draftSettings={buildDraftSettings()}
+                          draftLayout={buildDraftLayout()}
+                          isActive={activePresetName === preset.name}
+                          onRefresh={refreshPresets}
+                          onApply={handleApplyPreset}
+                          onEdit={handleEditPreset}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </>
+            )}
+          </div>
         </div>
 
         <div className={styles.footer}>

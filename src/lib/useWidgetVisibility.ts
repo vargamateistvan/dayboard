@@ -39,7 +39,7 @@ export interface WidgetPlacement {
 
 type WidgetPlacements = Record<Widget, WidgetPlacement>;
 
-interface WidgetLayoutState {
+export interface WidgetLayoutState {
   rowCount: number;
   visibility: WidgetVisibility;
   placements: WidgetPlacements;
@@ -330,6 +330,10 @@ function normalizeLayout(value: unknown): WidgetLayoutState {
     ),
     placements: normalizePlacements(candidate.placements, rowCount),
   };
+}
+
+export function normalizeWidgetLayoutState(value: unknown): WidgetLayoutState {
+  return normalizeLayout(value);
 }
 
 function migrateLegacyLayout(value: {
@@ -661,6 +665,7 @@ export function useWidgetVisibility() {
           rowSpan: Math.max(1, maxSpan),
         };
       }
+
     }
     writeLayout({
       ...currentLayout,
@@ -680,4 +685,12 @@ export function useWidgetVisibility() {
     addRow,
     removeRow,
   };
+}
+
+export function loadWidgetLayoutState(): WidgetLayoutState {
+  return structuredClone(readLayout());
+}
+
+export function saveWidgetLayoutState(layout: WidgetLayoutState): void {
+  writeLayout(layout);
 }

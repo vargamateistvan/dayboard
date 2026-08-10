@@ -19,7 +19,7 @@
   padding: 0;
   margin: 0;
   width: 100%;
-  max-width: 520px;
+  max-width: 1040px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -55,9 +55,65 @@
 }
 
 .body {
-  padding: var(--space-6);
-  overflow-y: auto;
+  min-height: 0;
   flex: 1;
+  display: flex;
+  gap: 0;
+}
+
+.sidebar {
+  width: 240px;
+  flex: 0 0 240px;
+  padding: var(--space-5);
+  border-right: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-alt) 65%, var(--color-surface));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebarTab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  text-align: left;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.sidebarTab:hover {
+  border-color: var(--color-border);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+
+.sidebarTabActive {
+  border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.sidebarTabLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+}
+
+.sidebarTabDescription {
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
@@ -88,6 +144,16 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
   line-height: 1.5;
+}
+
+.emptyState {
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  line-height: 1.6;
 }
 
 .infoList {
@@ -477,6 +543,170 @@
 
 .btnGhost:hover {
   color: var(--color-text);
+}
+
+.presetCreateCard,
+.presetCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+}
+
+.presetShortcutCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface-alt) 70%, var(--color-surface));
+}
+
+.presetEditorBanner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+}
+
+.presetEditorLabel,
+.presetEditorName {
+  margin: 0;
+}
+
+.presetEditorLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.presetEditorName {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.presetCreateSchedule,
+.presetSchedule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.presetCreateActions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.presetShortcutActions {
+  display: flex;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.presetFeedback {
+  margin: 0;
+  color: color-mix(in srgb, var(--color-accent) 80%, white);
+  font-size: var(--font-size-sm);
+}
+
+.presetList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.presetCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.presetCardTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.presetCardTitle {
+  margin: 0;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.presetBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-accent) 14%, var(--color-surface));
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+}
+
+.presetMeta,
+.presetScheduleSummary {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+}
+
+.presetActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.presetScheduleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.presetScheduleLabel {
+  margin: 0 0 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.presetScheduleInputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.listHeading {
+  margin: 0.75rem 0 0.25rem;
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.readonlyPill {
+  display: flex;
+  align-items: center;
+}
+
+.currencyArrow {
+  align-self: center;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
 }
 
 /* Widget toggles */
@@ -1001,13 +1231,35 @@
   }
 
   .body {
+    overflow-x: hidden;
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: auto;
+    flex: 0 0 auto;
+    flex-direction: row;
+    overflow-x: auto;
+    padding:
+      var(--space-4)
+      calc(var(--space-4) + env(safe-area-inset-right, 0px))
+      0
+      calc(var(--space-4) + env(safe-area-inset-left, 0px));
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .sidebarTab {
+    min-width: 12rem;
+  }
+
+  .content {
     padding:
       var(--space-4)
       calc(var(--space-4) + env(safe-area-inset-right, 0px))
       var(--space-4)
       calc(var(--space-4) + env(safe-area-inset-left, 0px));
     gap: var(--space-5);
-    overflow-x: hidden;
   }
 
   .sectionTitle,
@@ -1063,7 +1315,8 @@
   }
 
   .fontGrid,
-  .colorPickerGrid {
+  .colorPickerGrid,
+  .presetScheduleInputs {
     grid-template-columns: 1fr;
   }
 

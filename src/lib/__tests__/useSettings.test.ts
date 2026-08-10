@@ -1,3 +1,5 @@
+import React from 'react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   loadSettings,
@@ -14,17 +16,28 @@ import {
   saveProfile,
   loadProfile,
   applyProfile,
+  applyPreset,
   deleteProfile,
   listProfiles,
   renameProfile,
   exportProfile,
   importProfile,
+  getActiveScheduledPreset,
+  isPresetScheduledNow,
+  savePreset,
   encryptSettings,
   decryptSettings,
   isEncrypted,
   saveEncryptedSettings,
   loadEncryptedSettings,
 } from '../settings'
+import { SettingsProvider, useSettings } from '../useSettings'
+import { loadWidgetLayoutState } from '../useWidgetVisibility'
+
+function SettingsProbe() {
+  const { settings } = useSettings()
+  return React.createElement('div', { 'data-testid': 'theme-value' }, settings.theme)
+}
 
 describe('settings persistence', () => {
   beforeEach(() => localStorage.clear())
@@ -345,6 +358,32 @@ describe('settings profiles', () => {
     expect(loaded.theme).toBe('nature')
   })
 
+  it('applies a preset layout together with settings', () => {
+    savePreset(
+      'layout-preset',
+      { ...DEFAULT_SETTINGS, theme: 'retro' as const },
+      undefined,
+      {
+        rowCount: 4,
+        visibility: {
+          ...loadWidgetLayoutState().visibility,
+          tasks: true,
+        },
+        placements: loadWidgetLayoutState().placements,
+      },
+    )
+
+    applyPreset('layout-preset')
+
+    expect(loadSettings().theme).toBe('retro')
+    expect(loadWidgetLayoutState()).toMatchObject({
+      rowCount: 4,
+      visibility: {
+        tasks: true,
+      },
+    })
+  })
+
   it('deletes a profile', () => {
     saveProfile('temp-profile', DEFAULT_SETTINGS)
     expect(listProfiles()).toHaveLength(1)
@@ -384,6 +423,55 @@ describe('settings profiles', () => {
     const invalid = JSON.stringify({ settings: { invalid: true } })
     const success = importProfile('bad-profile', invalid)
     expect(success).toBe(false)
+  })
+
+  it('returns the scheduled preset that matches the current time', () => {
+    savePreset(
+      'work',
+      { ...DEFAULT_SETTINGS, theme: 'nature' as const },
+      { enabled: true, startTime: '09:00', endTime: '17:00' },
+    )
+
+    const activePreset = getActiveScheduledPreset(new Date('2026-08-10T10:30:00'))
+    expect(activePreset?.name).toBe('work')
+    expect(activePreset?.settings.theme).toBe('nature')
+  })
+
+  it('supports overnight preset schedules', () => {
+    expect(
+      isPresetScheduledNow(
+        { enabled: true, startTime: '22:00', endTime: '06:00' },
+        new Date('2026-08-10T23:30:00'),
+      ),
+    ).toBe(true)
+
+    expect(
+      isPresetScheduledNow(
+        { enabled: true, startTime: '22:00', endTime: '06:00' },
+        new Date('2026-08-10T12:00:00'),
+      ),
+    ).toBe(false)
+  })
+
+  it('auto-applies the active scheduled preset in the settings provider', async () => {
+    saveSettings(DEFAULT_SETTINGS)
+    savePreset(
+      'focus-hours',
+      { ...DEFAULT_SETTINGS, theme: 'ocean' as const },
+      { enabled: true, startTime: '00:00', endTime: '23:59' },
+    )
+
+    render(
+      React.createElement(
+        SettingsProvider,
+        null,
+        React.createElement(SettingsProbe),
+      ),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('theme-value')).toHaveTextContent('ocean')
+    })
   })
 })
 
@@ -457,4 +545,3 @@ describe('type guards', () => {
     expect(isValidSettings('string')).toBe(false)
   })
 })
-

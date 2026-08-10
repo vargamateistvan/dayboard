@@ -5,6 +5,7 @@ import { SettingsProvider } from '../../lib/useSettings'
 
 const LAYOUT_STORAGE_KEY = 'dayboard_widget_layout'
 const SETTINGS_STORAGE_KEY = 'dayboard:settings'
+const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
 
 function renderSettingsDialog() {
   return render(
@@ -41,6 +42,7 @@ describe('SettingsDialog', () => {
     )
 
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
 
     expect(screen.getByTestId('layout-widget-clock')).toBeInTheDocument()
     expect(screen.queryByTestId('layout-widget-weather')).not.toBeInTheDocument()
@@ -51,6 +53,7 @@ describe('SettingsDialog', () => {
 
   it('removes a widget from the grid when the × button is clicked', () => {
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
 
     // 4 widgets are visible by default (tasks is hidden)
     expect(screen.getByTestId('layout-widget-weather')).toBeInTheDocument()
@@ -67,6 +70,7 @@ describe('SettingsDialog', () => {
 
   it('persists the monthly overview toggle with calendar display settings', () => {
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     fireEvent.click(screen.getByRole('button', { name: /Show monthly overview/i }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -78,6 +82,7 @@ describe('SettingsDialog', () => {
 
   it('persists the calendar week start setting', () => {
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Sunday' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -89,6 +94,7 @@ describe('SettingsDialog', () => {
 
   it('shows the past events toggle as pressed only when past events are visible', () => {
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     const toggle = screen.getByRole('button', { name: /Show past events/i })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
@@ -114,6 +120,7 @@ describe('SettingsDialog', () => {
 
   it('persists weather display and refresh settings', () => {
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Show past events' }))
     fireEvent.click(screen.getByRole('button', { name: 'Show all-day events' }))
@@ -137,6 +144,7 @@ describe('SettingsDialog', () => {
       }),
     )
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     fireEvent.change(screen.getByPlaceholderText('New York'), {
       target: { value: 'Budapest' },
@@ -186,6 +194,7 @@ describe('SettingsDialog', () => {
     )
 
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     expect(screen.queryByText('Calendar Feeds')).not.toBeInTheDocument()
     expect(screen.queryByText('Weather Display')).not.toBeInTheDocument()
@@ -228,6 +237,7 @@ describe('SettingsDialog', () => {
     )
 
     renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     expect(screen.getByText('Music Embeds')).toBeInTheDocument()
     expect(screen.getByText('Apple Music saved links')).toBeInTheDocument()
@@ -265,6 +275,150 @@ describe('SettingsDialog', () => {
         primary: '#112233',
         background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
       }),
+    })
+  })
+
+  it('creates a preset with an auto-apply window', () => {
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+
+    fireEvent.change(screen.getByPlaceholderText('Work Focus'), {
+      target: { value: 'Work Focus' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Auto-apply off/i }))
+
+    fireEvent.change(screen.getByLabelText('Start'), { target: { value: '09:00' } })
+    fireEvent.change(screen.getByLabelText('End'), { target: { value: '17:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save preset' }))
+
+    expect(screen.getByText('Work Focus')).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      'Work Focus': {
+        name: 'Work Focus',
+        schedule: {
+          enabled: true,
+          startTime: '09:00',
+          endTime: '17:00',
+        },
+      },
+    })
+  })
+
+  it('can save a preset from the appearance tab', () => {
+    renderSettingsDialog()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'New preset name' }), {
+      target: { value: 'Dark Focus' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save as new preset' }))
+
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      'Dark Focus': {
+        name: 'Dark Focus',
+        settings: {
+          colorScheme: 'dark',
+        },
+      },
+    })
+  })
+
+  it('can update a preset from the layout tab including the layout state', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? 'null') ?? {
+            colorScheme: 'system',
+          },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Existing preset' }), {
+      target: { value: 'Work' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Add row' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes to Work' }))
+
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      Work: {
+        layout: {
+          rowCount: 4,
+        },
+      },
+    })
+  })
+
+  it('opens a preset in editor mode so appearance changes can be saved back', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: {
+            colorScheme: 'light',
+            theme: 'default',
+            fontPreset: 'space-grotesk',
+            showBuyMeACoffeeWidget: true,
+            calendarFeeds: [],
+            calendarHidePastEvents: false,
+            calendarShowMonthlyOverview: true,
+            calendarShowAllDayEvents: true,
+            calendarWeekStartsOn: 'monday',
+            weatherRefreshMinutes: 10,
+            weatherUnitSystem: 'metric',
+            weatherShowExtraDetails: true,
+            spotifyEmbedUrl: '',
+            spotifyEmbedLinks: [],
+            appleMusicEmbedUrl: '',
+            appleMusicEmbedLinks: [],
+            applePodcastEmbedUrl: '',
+            applePodcastEmbedLinks: [],
+            stockSymbols: ['AAPL'],
+            currencyPairs: [['USD', 'EUR']],
+            financeRefreshMinutes: 10,
+            pomodoroWorkMinutes: 25,
+            pomodoroBreakMinutes: 5,
+            worldClockCity: 'New York',
+            worldClockTimeZone: 'America/New_York',
+            customColors: {
+              primary: '#4f46e5',
+              primaryHover: '#4338ca',
+              background: '#0f172a',
+              fontColor: '#f5f5f5',
+              secondaryFontColor: '#999999',
+            },
+          },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(screen.getByRole('tab', { name: /Appearance/i })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Editing preset')).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Existing preset' })).toHaveValue('Work')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+    fireEvent.click(screen.getByRole('button', { name: /Save changes to Work/i }))
+
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      Work: {
+        settings: {
+          colorScheme: 'dark',
+        },
+      },
     })
   })
 })

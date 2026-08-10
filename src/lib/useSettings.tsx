@@ -1,7 +1,8 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   applyTheme,
   DEFAULT_SETTINGS,
+  getActiveScheduledPreset,
   loadSettings,
   saveSettings,
   type Settings,
@@ -16,6 +17,7 @@ const SettingsContext = createContext<SettingsContextValue | null>(null)
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
+  const lastScheduledPresetRef = useRef<string | null>(null)
 
   useEffect(() => {
     applyTheme(settings)
@@ -37,6 +39,49 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return next
     })
   }, [])
+
+  const syncScheduledPreset = useCallback(() => {
+    const activePreset = getActiveScheduledPreset()
+
+    if (!activePreset) {
+      lastScheduledPresetRef.current = null
+      return
+    }
+
+    setSettings((prev) => {
+      const prevSnapshot = JSON.stringify(prev)
+      const nextSnapshot = JSON.stringify(activePreset.settings)
+
+      if (
+        lastScheduledPresetRef.current === activePreset.name &&
+        prevSnapshot === nextSnapshot
+      ) {
+        return prev
+      }
+
+      lastScheduledPresetRef.current = activePreset.name
+      saveSettings(activePreset.settings)
+      return activePreset.settings
+    })
+  }, [])
+
+  useEffect(() => {
+    syncScheduledPreset()
+
+    const intervalId = window.setInterval(syncScheduledPreset, 60_000)
+    const handleVisibilityOrFocus = () => syncScheduledPreset()
+
+    window.addEventListener('focus', handleVisibilityOrFocus)
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+    window.addEventListener('settingsPresetsChanged', handleVisibilityOrFocus)
+
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', handleVisibilityOrFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+      window.removeEventListener('settingsPresetsChanged', handleVisibilityOrFocus)
+    }
+  }, [syncScheduledPreset])
 
   return (
     <SettingsContext.Provider value={{ settings, updateSettings }}>
