@@ -50,6 +50,7 @@ import {
   type ColorScheme,
   type CustomColors,
   type WeatherUnitSystem,
+  DEFAULT_SETTINGS,
 } from "../lib/settings";
 import {
   Globe,
@@ -1279,9 +1280,48 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       return;
     }
 
+    // Create a minimal layout with only the clock widget visible
+    const minimalLayout: WidgetLayoutState = {
+      rowCount: 2,
+      visibility: {
+        clock: true,
+        timezoneClock: false,
+        weather: false,
+        flights: false,
+        calendar: false,
+        timer: false,
+        tasks: false,
+        notes: false,
+        spotify: false,
+        appleMusic: false,
+        applePodcast: false,
+        stocks: false,
+        currencies: false,
+        quote: false,
+        deviceInfo: false,
+      },
+      placements: {
+        clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+        timezoneClock: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
+        weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
+        flights: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
+        calendar: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+        timer: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
+        tasks: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
+        notes: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
+        spotify: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
+        appleMusic: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
+        applePodcast: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+        stocks: { column: 1, row: 7, columnSpan: 1, rowSpan: 1 },
+        currencies: { column: 2, row: 7, columnSpan: 1, rowSpan: 1 },
+        quote: { column: 1, row: 8, columnSpan: 2, rowSpan: 1 },
+        deviceInfo: { column: 1, row: 9, columnSpan: 1, rowSpan: 1 },
+      },
+    };
+
     savePreset(
       trimmedName,
-      buildDraftSettings(),
+      DEFAULT_SETTINGS,
       newPresetAutoApply
         ? {
             enabled: true,
@@ -1289,7 +1329,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
             endTime: newPresetEndTime,
           }
         : undefined,
-      buildDraftLayout(),
+      minimalLayout,
     );
     refreshPresets();
     setPresetName("");
