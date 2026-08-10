@@ -1279,6 +1279,10 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     if (!trimmedName) {
       return;
     }
+    const presetSettings: Settings = {
+      ...DEFAULT_SETTINGS,
+      colorScheme: settings.colorScheme,
+    };
 
     // Create a minimal layout with only the clock widget visible
     const minimalLayout: WidgetLayoutState = {
@@ -1321,7 +1325,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
     savePreset(
       trimmedName,
-      DEFAULT_SETTINGS,
+      presetSettings,
       newPresetAutoApply
         ? {
             enabled: true,
@@ -1332,8 +1336,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       minimalLayout,
     );
     applyPreset(trimmedName);
-    updateSettings(DEFAULT_SETTINGS);
-    syncDraftState(DEFAULT_SETTINGS);
+    updateSettings(presetSettings);
+    syncDraftState(presetSettings);
     setEditingPresetName(trimmedName);
     refreshPresets();
     setPresetName("");

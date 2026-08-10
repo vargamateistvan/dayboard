@@ -375,6 +375,30 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('preserves current light or dark mode when creating a preset', () => {
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        colorScheme: 'dark',
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+    fireEvent.change(screen.getByPlaceholderText('Work Focus'), {
+      target: { value: 'Night Focus' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save preset' }))
+
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      'Night Focus': {
+        settings: {
+          colorScheme: 'dark',
+        },
+      },
+    })
+  })
+
   it('renames an existing preset from the presets tab', () => {
     localStorage.setItem(
       PRESET_STORAGE_KEY,
