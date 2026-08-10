@@ -122,8 +122,11 @@ describe('settings persistence', () => {
       worldClockCity: 'Tokyo',
       worldClockTimeZone: 'Asia/Tokyo',
       customColors: {
-        ...DEFAULT_SETTINGS.customColors,
+        primary: DEFAULT_SETTINGS.customColors!.primary,
+        primaryHover: DEFAULT_SETTINGS.customColors!.primaryHover,
         background: 'linear-gradient(135deg, #0f172a, #1d4ed8)',
+        fontColor: DEFAULT_SETTINGS.customColors!.fontColor,
+        secondaryFontColor: DEFAULT_SETTINGS.customColors!.secondaryFontColor,
       },
     }
     saveSettings(custom)
