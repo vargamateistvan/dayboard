@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { SettingsDialog } from '../SettingsDialog'
 import { SettingsProvider } from '../../lib/useSettings'
 
@@ -301,12 +301,12 @@ describe('SettingsDialog', () => {
           fontPreset: 'space-grotesk',
         },
         layout: {
-          rowCount: 2,
+          rowCount: 3,
           visibility: {
             clock: true,
-            weather: false,
-            calendar: false,
-            timer: false,
+            weather: true,
+            calendar: true,
+            timer: true,
             timezoneClock: false,
           },
           placements: {
@@ -322,7 +322,7 @@ describe('SettingsDialog', () => {
     })
   })
 
-  it('switches to the newly created preset immediately', () => {
+  it('saves the current setup into a new preset', () => {
     localStorage.setItem(
       SETTINGS_STORAGE_KEY,
       JSON.stringify({
@@ -357,17 +357,16 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save preset' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
-      theme: 'default',
-      colorScheme: 'system',
-      fontPreset: 'space-grotesk',
+      theme: 'retro',
+      colorScheme: 'dark',
     })
     expect(JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}')).toMatchObject({
-      rowCount: 2,
+      rowCount: 3,
       visibility: {
         clock: true,
-        weather: false,
-        calendar: false,
-        timer: false,
+        weather: true,
+        calendar: true,
+        timer: true,
       },
       placements: {
         clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
@@ -426,6 +425,55 @@ describe('SettingsDialog', () => {
     })
     expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}').Work).toBeUndefined()
     promptSpy.mockRestore()
+  })
+
+  it('does not overwrite an existing preset when renaming', () => {
+    localStorage.setItem(
+      PRESET_STORAGE_KEY,
+      JSON.stringify({
+        Work: {
+          name: 'Work',
+          settings: { colorScheme: 'light' },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        Home: {
+          name: 'Home',
+          settings: { colorScheme: 'dark' },
+          createdAt: 2,
+          updatedAt: 2,
+        },
+      }),
+    )
+
+    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue('Home')
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+
+    const workCard = screen.getByText('Work').closest('article')
+    expect(workCard).not.toBeNull()
+    fireEvent.click(within(workCard as HTMLElement).getByRole('button', { name: 'Rename' }))
+
+    expect(screen.getByText("Preset 'Home' already exists")).toBeInTheDocument()
+    expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
+      Work: { name: 'Work' },
+      Home: { name: 'Home' },
+    })
+    promptSpy.mockRestore()
+  })
+
+  it('supports keyboard navigation between settings tabs', () => {
+    renderSettingsDialog()
+
+    const sidebar = screen.getByRole('tablist', { name: /Settings sections/i })
+    expect(sidebar).toBeInTheDocument()
+
+    fireEvent.keyDown(screen.getByRole('tab', { name: /Appearance/i }), {
+      key: 'ArrowRight',
+    })
+
+    expect(screen.getByRole('tab', { name: /Layout/i })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('keeps preset shortcuts out of the layout and appearance tabs', () => {

@@ -1088,12 +1088,24 @@ export function listPresets(): SettingsPreset[] {
 }
 
 export function renamePreset(oldName: string, newName: string): void {
-  if (!newName.trim()) throw new Error('Preset name cannot be empty')
+  const trimmedName = newName.trim()
+  if (!trimmedName) throw new Error('Preset name cannot be empty')
 
   const presets = readPresetStore()
   if (!presets[oldName]) throw new Error(`Preset '${oldName}' not found`)
+  if (trimmedName !== oldName && presets[trimmedName]) {
+    throw new Error(`Preset '${trimmedName}' already exists`)
+  }
 
-  presets[newName] = { ...presets[oldName], name: newName, updatedAt: Date.now() }
+  if (trimmedName === oldName) {
+    return
+  }
+
+  presets[trimmedName] = {
+    ...presets[oldName],
+    name: trimmedName,
+    updatedAt: Date.now(),
+  }
   delete presets[oldName]
   writePresetStore(presets)
   dispatchPresetChange()
@@ -1370,4 +1382,3 @@ export function mergeCalendarFeeds(
 ): CalendarFeed[] {
   return [...globalFeeds, ...presetFeeds].filter(feed => feed.url.trim().length > 0)
 }
-
