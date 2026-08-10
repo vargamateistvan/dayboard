@@ -63,7 +63,28 @@
   color: var(--color-text);
   font-size: 0.78rem;
   font-family: inherit;
+  accent-color: var(--color-accent);
+  color-scheme: light dark;
   transition: border-color 0.2s;
+}
+
+.dateInput::-webkit-datetime-edit {
+  color: var(--color-text);
+}
+
+.dateInput::-webkit-datetime-edit-fields-wrapper {
+  color: var(--color-text);
+}
+
+.dateInput::-webkit-calendar-picker-indicator {
+  opacity: 0.75;
+  cursor: pointer;
+  filter: sepia(1) saturate(6) hue-rotate(165deg);
+}
+
+.dateInput:hover::-webkit-calendar-picker-indicator,
+.dateInput:focus::-webkit-calendar-picker-indicator {
+  opacity: 1;
 }
 
 .dateInput:focus {
