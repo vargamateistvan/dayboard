@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { afterEach } from 'vitest'
 
 // jsdom does not implement matchMedia — provide a minimal stub
 Object.defineProperty(window, 'matchMedia', {
@@ -13,4 +14,31 @@ Object.defineProperty(window, 'matchMedia', {
     removeEventListener: () => {},
     dispatchEvent: () => false,
   }),
+})
+
+// jsdom does not implement localStorage — provide a stub
+const localStorageMock = (() => {
+  let store: Record<string, string> = {}
+
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => {
+      store[key] = value.toString()
+    },
+    removeItem: (key: string) => {
+      delete store[key]
+    },
+    clear: () => {
+      store = {}
+    },
+  }
+})()
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+})
+
+// Clear localStorage after each test
+afterEach(() => {
+  localStorage.clear()
 })

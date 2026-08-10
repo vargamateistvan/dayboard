@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const STORAGE_KEY = 'dayboard_focus_mode'
 
@@ -14,14 +14,17 @@ export function useFocusMode() {
   }, [])
 
   // Save to localStorage
-  const toggleFocusMode = (enabled?: boolean) => {
-    const newValue = enabled !== undefined ? enabled : !focusMode
-    setFocusMode(newValue)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newValue))
-    
-    // Dispatch custom event for other components
-    window.dispatchEvent(new CustomEvent('focusModeChange', { detail: { focusMode: newValue } }))
-  }
+  const toggleFocusMode = useCallback((enabled?: boolean) => {
+    setFocusMode((prev) => {
+      const newValue = enabled !== undefined ? enabled : !prev
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newValue))
+      
+      // Dispatch custom event for other components
+      window.dispatchEvent(new CustomEvent('focusModeChange', { detail: { focusMode: newValue } }))
+      
+      return newValue
+    })
+  }, [])
 
   // Listen for Cmd+K or Ctrl+K
   useEffect(() => {
@@ -34,7 +37,7 @@ export function useFocusMode() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [focusMode])
+  }, [toggleFocusMode])
 
   return { focusMode, toggleFocusMode }
 }

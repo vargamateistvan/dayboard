@@ -1,7 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import {
   applyTheme,
-  DEFAULT_SETTINGS,
   getActiveScheduledPreset,
   loadSettings,
   saveSettings,
@@ -124,5 +124,3 @@ export function useSettings(): SettingsContextValue {
   if (!ctx) throw new Error('useSettings must be used inside SettingsProvider')
   return ctx
 }
-
-export { DEFAULT_SETTINGS }

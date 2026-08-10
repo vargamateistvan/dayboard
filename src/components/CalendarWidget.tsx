@@ -341,11 +341,9 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const monthTooltipRef = useRef<HTMLDivElement | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
   const hasCalendarFeeds = settings.calendarFeeds.length > 0
-  const now = new Date()
-  const nowYear = now.getFullYear()
-  const nowMonth = now.getMonth()
+  const now = useMemo(() => new Date(), [])
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
-  const monthGridRange = useMemo(() => getMonthGridRange(now, settings.calendarWeekStartsOn), [nowYear, nowMonth, settings.calendarWeekStartsOn])
+  const monthGridRange = useMemo(() => getMonthGridRange(now, settings.calendarWeekStartsOn), [now, settings.calendarWeekStartsOn])
   const selectedRange = useMemo(() => getTodayRange(selectedDate), [selectedDate])
   const isToday = getDayKey(selectedDate) === getDayKey(now)
 
