@@ -295,11 +295,82 @@ describe('SettingsDialog', () => {
     expect(JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) ?? '{}')).toMatchObject({
       'Work Focus': {
         name: 'Work Focus',
+        settings: {
+          theme: 'default',
+          colorScheme: 'system',
+          fontPreset: 'space-grotesk',
+        },
+        layout: {
+          rowCount: 2,
+          visibility: {
+            clock: true,
+            weather: false,
+            calendar: false,
+            timer: false,
+            timezoneClock: false,
+          },
+          placements: {
+            clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+          },
+        },
         schedule: {
           enabled: true,
           startTime: '09:00',
           endTime: '17:00',
         },
+      },
+    })
+  })
+
+  it('switches to the newly created preset immediately', () => {
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        theme: 'retro',
+        colorScheme: 'dark',
+      }),
+    )
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        rowCount: 3,
+        visibility: {
+          clock: true,
+          weather: true,
+          calendar: true,
+          timer: true,
+        },
+        placements: {
+          clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
+          weather: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
+          calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
+          timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+        },
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
+    fireEvent.change(screen.getByPlaceholderText('Work Focus'), {
+      target: { value: 'Deep Work' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save preset' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      theme: 'default',
+      colorScheme: 'system',
+      fontPreset: 'space-grotesk',
+    })
+    expect(JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}')).toMatchObject({
+      rowCount: 2,
+      visibility: {
+        clock: true,
+        weather: false,
+        calendar: false,
+        timer: false,
+      },
+      placements: {
+        clock: { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
       },
     })
   })

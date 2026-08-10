@@ -1331,6 +1331,10 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
         : undefined,
       minimalLayout,
     );
+    applyPreset(trimmedName);
+    updateSettings(DEFAULT_SETTINGS);
+    syncDraftState(DEFAULT_SETTINGS);
+    setEditingPresetName(trimmedName);
     refreshPresets();
     setPresetName("");
   };
