@@ -132,6 +132,7 @@ describe('settings persistence', () => {
         { url: 'https://example.com/cal.ics', color: '#123456' },
         { url: 'webcal://outlook.live.com/calendar/foo/bar/calendar.ics', color: '#654321' },
       ],
+      globalCalendarFeeds: [],
       calendarHidePastEvents: true,
       calendarShowMonthlyOverview: false,
       calendarExtraInfoPreview: 'weekly' as const,
