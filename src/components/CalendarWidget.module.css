@@ -22,7 +22,7 @@
 
 .content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(11rem, 14rem);
+  grid-template-columns: minmax(0, 1fr) minmax(12.5rem, 16rem);
   grid-template-rows: minmax(0, 1fr);
   gap: clamp(0.45rem, 0.9vw, 0.75rem);
   align-items: stretch;
