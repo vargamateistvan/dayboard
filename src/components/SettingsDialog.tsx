@@ -1309,6 +1309,29 @@ export function SettingsDialog({ onClose }: Props) {
     setPresetFeedback(`Editing preset "${preset.name}". Update it from Appearance or Layout when you're done.`);
   };
 
+  const handleSelectPresetForEditing = (presetName: string) => {
+    setSelectedPresetName(presetName);
+
+    if (!presetName) {
+      setPresetError(null);
+      setPresetFeedback(null);
+      return;
+    }
+
+    const preset = presets.find((entry) => entry.name === presetName);
+    if (!preset) {
+      setPresetError(`Preset "${presetName}" could not be loaded.`);
+      setPresetFeedback(null);
+      return;
+    }
+
+    applyPreset(preset.name);
+    updateSettings(preset.settings);
+    syncDraftState(preset.settings);
+    setPresetError(null);
+    setPresetFeedback(`Loaded preset "${preset.name}" into the editor.`);
+  };
+
   const handleClearEditingPreset = () => {
     setSelectedPresetName("");
     setPresetName("");
@@ -1403,7 +1426,7 @@ export function SettingsDialog({ onClose }: Props) {
                   presetError={presetError}
                   presetFeedback={presetFeedback}
                   onPresetNameChange={setPresetName}
-                  onSelectedPresetNameChange={setSelectedPresetName}
+                  onSelectedPresetNameChange={handleSelectPresetForEditing}
                   onCreatePreset={handleCreatePreset}
                   onUpdatePreset={handleUpdateSelectedPreset}
                   onClearEditingPreset={handleClearEditingPreset}
@@ -1759,7 +1782,7 @@ export function SettingsDialog({ onClose }: Props) {
                   presetError={presetError}
                   presetFeedback={presetFeedback}
                   onPresetNameChange={setPresetName}
-                  onSelectedPresetNameChange={setSelectedPresetName}
+                  onSelectedPresetNameChange={handleSelectPresetForEditing}
                   onCreatePreset={handleCreatePreset}
                   onUpdatePreset={handleUpdateSelectedPreset}
                   onClearEditingPreset={handleClearEditingPreset}
