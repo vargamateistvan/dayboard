@@ -186,6 +186,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [locationSource, setLocationSource] = useState('Device location')
+  const [hasInitialized, setHasInitialized] = useState(false)
 
   const load = useCallback(() => {
     const manualCoordinates = getManualCoordinates(
@@ -210,18 +211,23 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
         setLastRefreshedAt(Date.now())
         setNow(Date.now())
         setError(null)
+        setHasInitialized(true)
       } catch (loadError: unknown) {
         setError(
           loadError instanceof Error
             ? loadError.message
             : 'Could not load nearby flights.',
         )
+        setHasInitialized(true)
       } finally {
         setLoading(false)
       }
     }
 
-    setLoading(true)
+    // Only show loading state on initial load, not on refresh
+    if (!hasInitialized) {
+      setLoading(true)
+    }
     setError(null)
 
     if (!settings.flightsUseDeviceLocation) {
@@ -229,6 +235,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
         setFlights([])
         setLoading(false)
         setError('Add valid manual coordinates in settings to load nearby flights.')
+        setHasInitialized(true)
         return
       }
 
@@ -245,6 +252,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
       setFlights([])
       setLoading(false)
       setError('Geolocation is unavailable. Add manual coordinates in settings to use the flights widget.')
+      setHasInitialized(true)
       return
     }
 
@@ -267,6 +275,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
         setFlights([])
         setLoading(false)
         setError('Location access denied. Add manual coordinates or allow location access to see nearby flights.')
+        setHasInitialized(true)
       },
       {
         enableHighAccuracy: false,
@@ -281,6 +290,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
     settings.flightsRefreshSeconds,
     settings.flightsShowOnlyAirborne,
     settings.flightsUseDeviceLocation,
+    hasInitialized,
   ])
 
   useEffect(() => {
