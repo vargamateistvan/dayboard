@@ -211,7 +211,7 @@ function Dashboard() {
   const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
 
   useEffect(() => {
-    if (!selectedPresetName && currentPresetName) {
+    if (currentPresetName && currentPresetName !== selectedPresetName) {
       setSelectedPresetName(currentPresetName)
     }
   }, [currentPresetName, selectedPresetName])
@@ -356,7 +356,7 @@ function Dashboard() {
       {settingsOpen && (
         <SettingsDialog
           onClose={() => setSettingsOpen(false)}
-          selectedPresetName={selectedPresetName}
+          selectedPresetName={visiblePresetName}
         />
       )}
     </div>
