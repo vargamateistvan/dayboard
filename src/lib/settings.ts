@@ -393,7 +393,7 @@ function normalizeCalendarShowMonthlyOverview(value: unknown): boolean {
 }
 
 function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
-  return value === 'sunday' ? 'sunday' : DEFAULT_SETTINGS.calendarWeekStartsOn
+  return value === 'sunday' || value === 'monday' ? (value as CalendarWeekStartsOn) : DEFAULT_SETTINGS.calendarWeekStartsOn
 }
 
 function normalizeCustomBackground(value: unknown): string {
@@ -403,6 +403,37 @@ function normalizeCustomBackground(value: unknown): string {
 
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : DEFAULT_CUSTOM_COLORS.background
+}
+
+function normalizePomodoroWorkMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.pomodoroWorkMinutes
+  }
+
+  return Math.max(1, Math.round(value))
+}
+
+function normalizePomodoroBreakMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.pomodoroBreakMinutes
+  }
+
+  return Math.max(1, Math.round(value))
+}
+
+function normalizeCustomColors(value: unknown): CustomColors {
+  if (!value || typeof value !== 'object') {
+    return DEFAULT_CUSTOM_COLORS
+  }
+
+  const obj = value as Record<string, unknown>
+  return {
+    primary: isHexColor(obj.primary) ? (obj.primary as string) : DEFAULT_CUSTOM_COLORS.primary,
+    primaryHover: isHexColor(obj.primaryHover) ? (obj.primaryHover as string) : DEFAULT_CUSTOM_COLORS.primaryHover,
+    background: normalizeCustomBackground(obj.background),
+    fontColor: typeof obj.fontColor === 'string' && obj.fontColor.trim().length > 0 ? obj.fontColor.trim() : DEFAULT_CUSTOM_COLORS.fontColor,
+    secondaryFontColor: typeof obj.secondaryFontColor === 'string' && obj.secondaryFontColor.trim().length > 0 ? obj.secondaryFontColor.trim() : DEFAULT_CUSTOM_COLORS.secondaryFontColor,
+  }
 }
 
 export function loadSettings(): Settings {
@@ -471,6 +502,15 @@ export function loadSettings(): Settings {
       financeRefreshMinutes: normalizeFinanceRefreshMinutes(
         (rest as { financeRefreshMinutes?: unknown }).financeRefreshMinutes,
       ),
+      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(
+        (rest as { pomodoroWorkMinutes?: unknown }).pomodoroWorkMinutes,
+      ),
+      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(
+        (rest as { pomodoroBreakMinutes?: unknown }).pomodoroBreakMinutes,
+      ),
+      customColors: normalizeCustomColors(
+        (rest as { customColors?: unknown }).customColors,
+      ),
     }
   } catch {
     return { ...DEFAULT_SETTINGS }
@@ -498,8 +538,11 @@ export function saveSettings(settings: Settings): void {
       stockSymbols: normalizeStockSymbols(settings.stockSymbols),
       currencyPairs: normalizeCurrencyPairs(settings.currencyPairs),
       financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
+      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(settings.pomodoroWorkMinutes),
+      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(settings.pomodoroBreakMinutes),
       worldClockCity: normalizeWorldClockCity(settings.worldClockCity),
       worldClockTimeZone: normalizeWorldClockTimeZone(settings.worldClockTimeZone),
+      customColors: normalizeCustomColors(settings.customColors),
     }),
   )
 }
