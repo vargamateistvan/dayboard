@@ -173,7 +173,7 @@ describe('App fullscreen widgets', () => {
     ).toHaveAttribute('href', 'https://github.com/vargamateistvan/dayboard/issues')
   })
 
-  it('shows a top-right preset selector when more than one preset exists', () => {
+  it('shows a preset selector when more than one preset exists', () => {
     localStorage.setItem(
       PRESET_STORAGE_KEY,
       JSON.stringify({
@@ -194,12 +194,14 @@ describe('App fullscreen widgets', () => {
 
     render(<App />)
 
-    expect(screen.getByRole('combobox', { name: 'Select preset' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+
+    expect(screen.getByRole('listbox', { name: 'Preset options' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Work' })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: 'Focus' })).toBeInTheDocument()
   })
 
-  it('applies a selected preset from the top-right selector', () => {
+  it('applies a selected preset from the preset menu', () => {
     localStorage.setItem(
       PRESET_STORAGE_KEY,
       JSON.stringify({
@@ -220,11 +222,10 @@ describe('App fullscreen widgets', () => {
 
     render(<App />)
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Select preset' }), {
-      target: { value: 'Focus' },
-    })
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+    fireEvent.click(screen.getByRole('option', { name: 'Focus' }))
 
-    expect(screen.getByRole('combobox', { name: 'Select preset' })).toHaveValue('Focus')
+    expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Focus')
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
       colorScheme: 'dark',
     })

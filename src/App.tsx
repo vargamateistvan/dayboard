@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Info, Maximize2, Minimize2, Settings } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Check, ChevronDown, Info, Maximize2, Minimize2, Settings } from 'lucide-react'
 import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
 import { SettingsProvider, useSettings } from './lib/useSettings'
 import { useEventNotifications } from './lib/useEventNotifications'
@@ -85,10 +85,12 @@ function Dashboard() {
   const [appFullscreen, setAppFullscreen] = useState(false)
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false)
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
+  const presetMenuRef = useRef<HTMLDivElement | null>(null)
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
       return false
@@ -142,6 +144,34 @@ function Dashboard() {
     return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
   }, [])
 
+  useEffect(() => {
+    if (!presetMenuOpen) {
+      return undefined
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (presetMenuRef.current?.contains(event.target as Node)) {
+        return
+      }
+
+      setPresetMenuOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPresetMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [presetMenuOpen])
+
   const toggleAppFullscreen = async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen()
@@ -180,6 +210,7 @@ function Dashboard() {
 
     applyPreset(preset.name)
     updateSettings(preset.settings)
+    setPresetMenuOpen(false)
   }
 
   return (
@@ -191,24 +222,46 @@ function Dashboard() {
       ].join(' ')}
     >
       {presets.length > 1 ? (
-        <label className={styles.presetSelectorWrap}>
-          <span className={styles.presetSelectorLabel}>Preset</span>
-          <select
-            className={styles.presetSelector}
+        <div className={styles.presetSelectorWrap} ref={presetMenuRef}>
+          <button
+            className={styles.presetSelectorTrigger}
             aria-label="Select preset"
-            value={currentPresetName}
-            onChange={(event) => handlePresetChange(event.target.value)}
+            aria-haspopup="listbox"
+            aria-expanded={presetMenuOpen}
+            type="button"
+            onClick={() => setPresetMenuOpen((current) => !current)}
           >
-            <option value="" disabled>
-              Custom
-            </option>
-            {presets.map((preset) => (
-              <option key={preset.name} value={preset.name}>
-                {preset.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            <span className={styles.presetSelectorLabel}>Preset</span>
+            <span className={styles.presetSelectorValue}>{currentPresetName || 'Custom'}</span>
+            <ChevronDown
+              size={16}
+              className={[styles.presetSelectorChevron, presetMenuOpen ? styles.presetSelectorChevronOpen : ''].join(' ')}
+            />
+          </button>
+          {presetMenuOpen ? (
+            <div className={styles.presetMenu} role="listbox" aria-label="Preset options">
+              {presets.map((preset) => {
+                const isSelected = preset.name === currentPresetName
+
+                return (
+                  <button
+                    key={preset.name}
+                    className={[styles.presetMenuItem, isSelected ? styles.presetMenuItemSelected : ''].join(' ')}
+                    role="option"
+                    aria-selected={isSelected}
+                    type="button"
+                    onClick={() => handlePresetChange(preset.name)}
+                  >
+                    <span className={styles.presetMenuItemCheck}>
+                      {isSelected ? <Check size={14} /> : null}
+                    </span>
+                    <span className={styles.presetMenuItemLabel}>{preset.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
+        </div>
       ) : null}
       <div className={styles.toolbarButtons}>
         <button
