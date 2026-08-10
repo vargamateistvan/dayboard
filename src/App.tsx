@@ -67,6 +67,9 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <QuoteWidget isFullscreen={isFullscreen} />
     case 'deviceInfo':
       return <DeviceInfoWidget isFullscreen={isFullscreen} />
+    default:
+      console.error(`Unknown widget type: ${widget}`)
+      return null
   }
 }
 
@@ -153,7 +156,7 @@ function Dashboard() {
       return undefined
     }
 
-    const handlePointerDown = (event: MouseEvent) => {
+    const handlePointerDown = (event: Event) => {
       if (presetMenuRef.current?.contains(event.target as Node)) {
         return
       }
@@ -182,7 +185,11 @@ function Dashboard() {
       return
     }
 
-    await document.documentElement.requestFullscreen()
+    try {
+      await document.documentElement.requestFullscreen()
+    } catch (error) {
+      console.error('Fullscreen request failed:', error)
+    }
   }
 
   const currentPresetName =
@@ -211,16 +218,17 @@ function Dashboard() {
   const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
 
   useEffect(() => {
+    // Sync selected preset with current preset when current changes
     if (currentPresetName && currentPresetName !== selectedPresetName) {
       setSelectedPresetName(currentPresetName)
+      return
     }
-  }, [currentPresetName, selectedPresetName])
 
-  useEffect(() => {
+    // Clear selected preset if it no longer exists
     if (selectedPresetName && !selectedPresetExists) {
       setSelectedPresetName('')
     }
-  }, [selectedPresetExists, selectedPresetName])
+  }, [currentPresetName, selectedPresetName, selectedPresetExists])
 
   const handlePresetChange = (presetName: string) => {
     const preset = presets.find((candidate) => candidate.name === presetName)
