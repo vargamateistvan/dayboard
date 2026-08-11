@@ -197,6 +197,7 @@ function RadarPlot({
               ].join(' ')}
               role="button"
               tabIndex={0}
+              aria-pressed={isSelected}
               aria-label={`Select ${getFlightName(flight)} on radar`}
               onClick={() => onSelectFlight(flight)}
               onKeyDown={(event) => {
@@ -493,23 +494,34 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                 <div className={styles.rows} role="list" aria-label="Nearby flights">
                   {flights
                     .slice(0, isFullscreen ? 12 : 5)
-                    .map((flight) => (
-                      <div key={flight.icao24} className={styles.row} role="listitem">
-                        <div className={styles.rowHeader}>
-                          <span className={styles.flightName}>{getFlightName(flight)}</span>
-                          <span className={styles.flightDistance}>{flight.distanceKm.toFixed(1)} km</span>
-                        </div>
-                        <div className={styles.rowMeta}>
-                          <span>{formatAltitude(flight.altitudeMeters)}</span>
-                          <span>{formatGroundSpeed(flight.groundspeedKmh)}</span>
-                          <span>{formatHeading(flight.headingDegrees)}</span>
-                        </div>
-                        <div className={styles.rowFooter}>
-                          <span>{flight.originCountry ?? 'Unknown origin'}</span>
-                          <span>Seen {flight.lastSeenSecondsAgo}s ago</span>
-                        </div>
+                    .map((flight) => {
+                      const isSelected = selectedFlightIcao === flight.icao24
+
+                      return (
+                      <div key={flight.icao24} role="listitem">
+                        <button
+                          className={[styles.row, isSelected ? styles.rowSelected : ''].join(' ')}
+                          type="button"
+                          aria-pressed={isSelected}
+                          aria-label={`Select ${getFlightName(flight)} from list`}
+                          onClick={() => setSelectedFlightIcao(flight.icao24)}
+                        >
+                          <div className={styles.rowHeader}>
+                            <span className={styles.flightName}>{getFlightName(flight)}</span>
+                            <span className={styles.flightDistance}>{flight.distanceKm.toFixed(1)} km</span>
+                          </div>
+                          <div className={styles.rowMeta}>
+                            <span>{formatAltitude(flight.altitudeMeters)}</span>
+                            <span>{formatGroundSpeed(flight.groundspeedKmh)}</span>
+                            <span>{formatHeading(flight.headingDegrees)}</span>
+                          </div>
+                          <div className={styles.rowFooter}>
+                            <span>{flight.originCountry ?? 'Unknown origin'}</span>
+                            <span>Seen {flight.lastSeenSecondsAgo}s ago</span>
+                          </div>
+                        </button>
                       </div>
-                    ))}
+                    )})}
                 </div>
               </div>
             </div>

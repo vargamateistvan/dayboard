@@ -223,4 +223,45 @@ describe('FlightWidget', () => {
     expect(screen.getByText(/Type: A21N/i)).toBeInTheDocument()
     expect(screen.getByText(/Model: AIRBUS A321neo/i)).toBeInTheDocument()
   })
+
+  it('highlights the radar plane when selecting a flight from the list', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.4979, longitude: 19.0402 } } as GeolocationPosition)
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ac: [
+            {
+              hex: '49d099',
+              flight: 'WZZ123',
+              r: 'HA-LVE',
+              t: 'A21N',
+              desc: 'AIRBUS A321neo',
+              lat: 47.5375,
+              lon: 19.0623,
+              alt_baro: 17_975,
+              alt_geom: 19_175,
+              gs: 206.3,
+              true_heading: 49.52,
+              geom_rate: -128,
+              seen: 7,
+            },
+          ],
+        }),
+      }),
+    )
+
+    renderWithSettings({ flightsRadiusKm: 50 })
+    await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
+
+    const listButton = screen.getByRole('button', { name: /Select WZZ123 from list/i })
+    fireEvent.click(listButton)
+
+    expect(listButton).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /Select WZZ123 on radar/i })).toHaveAttribute('aria-pressed', 'true')
+  })
 })
