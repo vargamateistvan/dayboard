@@ -294,6 +294,7 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
                         <span className={styles.matchup}>Final</span>
                       </div>
                       <div className={[styles.teamBlock, styles.teamBlockRight].join(' ')}>
+                        <span className={styles.teamName}>{score.awayTeamName}</span>
                         {score.awayTeamBadgeUrl ? (
                           <img
                             src={score.awayTeamBadgeUrl}
@@ -302,7 +303,6 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
                             loading="lazy"
                           />
                         ) : null}
-                        <span className={styles.teamName}>{score.awayTeamName}</span>
                       </div>
                     </div>
                     <div className={styles.gameMeta}>
