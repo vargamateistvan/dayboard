@@ -1,33 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fetchNearbyFlights, resetFlightRequestCache } from '../flights'
 
-function buildOpenSkyPayload() {
-  return {
-    time: 1_786_362_327,
-    states: [
-      [
-        '49d099',
-        'WZZ123',
-        'Hungary',
-        1_786_362_326,
-        1_786_362_320,
-        19.0623,
-        47.5375,
-        5_478.78,
-        false,
-        106.19,
-        49.52,
-        -0.65,
-        null,
-        5_844.54,
-        '1000',
-        false,
-        0,
-      ],
-    ],
-  }
-}
-
 function buildAirplanesLivePayload() {
   return {
     ac: [
