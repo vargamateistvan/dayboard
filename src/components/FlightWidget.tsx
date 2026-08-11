@@ -207,7 +207,6 @@ function RadarPlot({
               }}
             >
               <circle className={styles.planeHitArea} cx="0" cy="0" r="3.8" />
-              {isSelected ? <circle className={styles.planeSelectionRing} cx="0" cy="0" r="3.3" /> : null}
               <RadarPlaneIcon rotationDegrees={planeRotation} />
               {showLabels && index < labelLimit ? (
                 <text className={styles.planeLabel} x="3.8" y="-3.1">

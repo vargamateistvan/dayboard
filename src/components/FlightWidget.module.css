@@ -254,27 +254,26 @@
   outline: none;
 }
 
-.planeMarker:focus-visible .planeSelectionRing {
-  opacity: 1;
-}
-
 .planeHitArea {
   fill: transparent;
 }
 
-.planeSelectionRing {
-  fill: none;
-  stroke: color-mix(in srgb, var(--color-accent) 88%, white);
-  stroke-width: 0.5;
-  opacity: 0.88;
-}
-
 .planeMarkerSelected .planeMarkerFill {
-  fill: color-mix(in srgb, var(--color-accent) 92%, white);
+  fill: color-mix(in srgb, var(--color-accent-hover) 82%, white);
 }
 
 .planeMarkerSelected .planeMarkerOutline {
-  stroke: color-mix(in srgb, white 60%, var(--color-accent));
+  stroke: color-mix(in srgb, var(--color-accent-hover) 72%, var(--color-text));
+  stroke-width: 0.48;
+}
+
+.planeMarker:focus-visible .planeMarkerFill {
+  fill: color-mix(in srgb, var(--color-accent) 65%, white);
+}
+
+.planeMarker:focus-visible .planeMarkerOutline {
+  stroke: color-mix(in srgb, var(--color-accent) 60%, var(--color-text));
+  stroke-width: 0.44;
 }
 
 .radarLabel,
