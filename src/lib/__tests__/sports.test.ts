@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { fetchLastGameForTeam, fetchRecentLeagueScores, resetSportsApiCacheForTests, searchSportsTeams } from '../sports'
+import type { SportsFavoriteTeam } from '../settings'
 
 describe('searchSportsTeams', () => {
   afterEach(() => {
@@ -209,12 +210,12 @@ describe('fetchLastGameForTeam', () => {
       })
     vi.stubGlobal('fetch', fetchMock)
 
-    const team = {
+    const team: SportsFavoriteTeam = {
       id: '133604',
       name: 'Arsenal',
       leagueId: 'EPL',
       leagueName: 'Premier League',
-      sport: 'soccer' as const,
+      sport: 'soccer',
     }
 
     await fetchLastGameForTeam(team)
