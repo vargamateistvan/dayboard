@@ -30,7 +30,7 @@ interface SportsDbEvent {
   dateEvent?: string
 }
 
-export interface SportsTeamSearchResult extends SportsFavoriteTeam {}
+export type SportsTeamSearchResult = SportsFavoriteTeam
 
 export interface SportsLastGame {
   teamId: string
