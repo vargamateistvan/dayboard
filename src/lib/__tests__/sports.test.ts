@@ -1,58 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { fetchRecentLeagueScores, searchSportsTeams } from '../sports'
+import { fetchLastGameForTeam, fetchRecentLeagueScores, resetSportsApiCacheForTests, searchSportsTeams } from '../sports'
 
 describe('searchSportsTeams', () => {
   afterEach(() => {
     vi.restoreAllMocks()
-  })
-
-  describe('fetchRecentLeagueScores', () => {
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('maps completed league events into score rows', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({
-            events: [
-              {
-                idEvent: 'e1',
-                strHomeTeam: 'Arsenal',
-                strAwayTeam: 'Chelsea',
-                intHomeScore: '2',
-                intAwayScore: '1',
-                strStatus: 'Match Finished',
-                strTimestamp: '2026-08-10T16:30:00+00:00',
-              },
-              {
-                idEvent: 'e2',
-                strHomeTeam: 'Team A',
-                strAwayTeam: 'Team B',
-                intHomeScore: null,
-                intAwayScore: null,
-              },
-            ],
-          }),
-        }),
-      )
-
-      const results = await fetchRecentLeagueScores(['EPL'])
-      expect(results).toEqual([
-        expect.objectContaining({
-          id: 'e1',
-          leagueId: 'EPL',
-          leagueName: 'Premier League',
-          homeTeamName: 'Arsenal',
-          awayTeamName: 'Chelsea',
-          homeScore: 2,
-          awayScore: 1,
-          status: 'FT',
-        }),
-      ])
-    })
+    resetSportsApiCacheForTests()
   })
 
   it('falls back to enabled league team lists when direct team search is sparse', async () => {
@@ -141,5 +93,132 @@ describe('searchSportsTeams', () => {
         name: 'Arsenal',
       }),
     )
+  })
+})
+
+describe('fetchRecentLeagueScores', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    resetSportsApiCacheForTests()
+  })
+
+  it('maps completed league events into score rows', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          events: [
+            {
+              idEvent: 'e1',
+              strHomeTeam: 'Arsenal',
+              strAwayTeam: 'Chelsea',
+              intHomeScore: '2',
+              intAwayScore: '1',
+              strStatus: 'Match Finished',
+              strTimestamp: '2026-08-10T16:30:00+00:00',
+            },
+            {
+              idEvent: 'e2',
+              strHomeTeam: 'Team A',
+              strAwayTeam: 'Team B',
+              intHomeScore: null,
+              intAwayScore: null,
+            },
+          ],
+        }),
+      }),
+    )
+
+    const results = await fetchRecentLeagueScores(['EPL'])
+    expect(results).toEqual([
+      expect.objectContaining({
+        id: 'e1',
+        leagueId: 'EPL',
+        leagueName: 'Premier League',
+        homeTeamName: 'Arsenal',
+        awayTeamName: 'Chelsea',
+        homeScore: 2,
+        awayScore: 1,
+        status: 'FT',
+      }),
+    ])
+  })
+
+  it('reuses cached league scores within ttl', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        events: [
+          {
+            idEvent: 'e1',
+            strHomeTeam: 'Arsenal',
+            strAwayTeam: 'Chelsea',
+            intHomeScore: '2',
+            intAwayScore: '1',
+            strStatus: 'Match Finished',
+            strTimestamp: '2026-08-10T16:30:00+00:00',
+          },
+        ],
+      }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchRecentLeagueScores(['EPL'])
+    await fetchRecentLeagueScores(['EPL'])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('fetchLastGameForTeam', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    resetSportsApiCacheForTests()
+  })
+
+  it('reuses cached team game and badge requests within ttl', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              idHomeTeam: '133604',
+              idAwayTeam: '133602',
+              strHomeTeam: 'Arsenal',
+              strAwayTeam: 'Chelsea',
+              intHomeScore: '2',
+              intAwayScore: '1',
+              strStatus: 'Match Finished',
+              strTimestamp: '2026-08-10T16:30:00+00:00',
+            },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          teams: [{ idTeam: '133604', strBadge: 'https://images.example.com/arsenal.png' }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          teams: [{ idTeam: '133602', strBadge: 'https://images.example.com/chelsea.png' }],
+        }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const team = {
+      id: '133604',
+      name: 'Arsenal',
+      leagueId: 'EPL',
+      leagueName: 'Premier League',
+      sport: 'soccer' as const,
+    }
+
+    await fetchLastGameForTeam(team)
+    await fetchLastGameForTeam(team)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
