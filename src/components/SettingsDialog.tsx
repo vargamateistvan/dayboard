@@ -1013,6 +1013,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [sportsEnabledLeagues, setSportsEnabledLeagues] = useState<SportsLeagueId[]>(
     settings.sportsEnabledLeagues,
   );
+  const [sportsFollowedLeagues, setSportsFollowedLeagues] = useState<SportsLeagueId[]>(
+    settings.sportsFollowedLeagues,
+  );
   const [sportsRefreshMin, setSportsRefreshMin] = useState(settings.sportsRefreshMinutes);
   const [sportsTeamQuery, setSportsTeamQuery] = useState("");
   const [debouncedSportsTeamQuery, setDebouncedSportsTeamQuery] = useState("");
@@ -1146,6 +1149,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setSportsFavoriteTeams(nextSettings.sportsFavoriteTeams);
     sportsFavoriteTeamsRef.current = nextSettings.sportsFavoriteTeams;
     setSportsEnabledLeagues(nextSettings.sportsEnabledLeagues);
+    setSportsFollowedLeagues(nextSettings.sportsFollowedLeagues);
     setSportsRefreshMin(nextSettings.sportsRefreshMinutes);
     setSportsTeamQuery("");
     setDebouncedSportsTeamQuery("");
@@ -1200,6 +1204,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     financeRefreshMinutes: financeRefreshMin,
     sportsFavoriteTeams: sportsFavoriteTeamsRef.current,
     sportsEnabledLeagues,
+    sportsFollowedLeagues,
     sportsRefreshMinutes: sportsRefreshMin,
     showBuyMeACoffeeWidget,
     calendarHidePastEvents,
@@ -1284,6 +1289,22 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       return [...previous, leagueId];
     });
   };
+
+  const toggleSportsFollowedLeague = (leagueId: SportsLeagueId) => {
+    setSportsFollowedLeagues((previous) => {
+      let next: SportsLeagueId[]
+      if (previous.includes(leagueId)) {
+        next = previous.filter((entry) => entry !== leagueId)
+      } else {
+        next = [...previous, leagueId]
+      }
+
+      if (next !== previous) {
+        updateSettings({ sportsFollowedLeagues: next })
+      }
+      return next
+    })
+  }
 
   const addFavoriteTeam = (team: SportsTeamSearchResult) => {
     const alreadyExists = sportsFavoriteTeamsRef.current.some(
@@ -2590,6 +2611,28 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             aria-pressed={enabled}
                           >
                             {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                            <span>{league.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className={styles.listHeading}>Followed leagues (league score feed)</p>
+                    <div className={styles.widgetGrid}>
+                      {SPORTS_LEAGUE_OPTIONS.map((league) => {
+                        const followed = sportsFollowedLeagues.includes(league.id);
+                        return (
+                          <button
+                            key={`follow-${league.id}`}
+                            className={[
+                              styles.widgetToggle,
+                              followed ? styles.widgetVisible : "",
+                            ].join(" ")}
+                            onClick={() => toggleSportsFollowedLeague(league.id)}
+                            type="button"
+                            aria-pressed={followed}
+                          >
+                            {followed ? <Eye size={14} /> : <EyeOff size={14} />}
                             <span>{league.label}</span>
                           </button>
                         );

@@ -181,6 +181,7 @@ describe('settings persistence', () => {
       financeRefreshMinutes: 5,
       sportsFavoriteTeams: [],
       sportsEnabledLeagues: [...DEFAULT_SETTINGS.sportsEnabledLeagues],
+      sportsFollowedLeagues: ['EPL', 'NBA'],
       sportsRefreshMinutes: 15,
       worldClockCity: 'Tokyo',
       worldClockTimeZone: 'Asia/Tokyo',
@@ -230,6 +231,7 @@ describe('settings persistence', () => {
         worldClockTimeZone: 'Mars/Phobos',
         sportsFavoriteTeams: 'arsenal',
         sportsEnabledLeagues: [],
+        sportsFollowedLeagues: 'premier league',
         sportsRefreshMinutes: 0,
       }),
     )
@@ -254,6 +256,7 @@ describe('settings persistence', () => {
     expect(loaded.worldClockTimeZone).toBe(DEFAULT_SETTINGS.worldClockTimeZone)
     expect(loaded.sportsFavoriteTeams).toEqual(DEFAULT_SETTINGS.sportsFavoriteTeams)
     expect(loaded.sportsEnabledLeagues).toEqual(DEFAULT_SETTINGS.sportsEnabledLeagues)
+    expect(loaded.sportsFollowedLeagues).toEqual(DEFAULT_SETTINGS.sportsFollowedLeagues)
     expect(loaded.sportsRefreshMinutes).toBe(1)
   })
 

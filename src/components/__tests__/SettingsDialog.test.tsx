@@ -153,7 +153,9 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
 
     fireEvent.change(screen.getByLabelText('Refresh every (minutes)'), { target: { value: '20' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Premier League' }))
+    const premierLeagueButtons = screen.getAllByRole('button', { name: 'Premier League' })
+    fireEvent.click(premierLeagueButtons[0])
+    fireEvent.click(premierLeagueButtons[1])
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
@@ -161,6 +163,7 @@ describe('SettingsDialog', () => {
       sportsRefreshMinutes: 20,
     })
     expect(saved.sportsEnabledLeagues).not.toContain('EPL')
+    expect(saved.sportsFollowedLeagues).toContain('EPL')
   })
 
   it('persists sports favorite team removals immediately without pressing save', () => {

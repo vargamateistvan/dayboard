@@ -18,6 +18,7 @@ interface SportsDbTeam {
 }
 
 interface SportsDbEvent {
+  idEvent?: string
   idHomeTeam?: string
   idAwayTeam?: string
   strHomeTeam?: string
@@ -42,6 +43,18 @@ export interface SportsLastGame {
   playedAt: string
   leagueName: string
   result: 'W' | 'L' | 'D'
+  status: 'FT' | 'AET' | 'PEN'
+}
+
+export interface SportsLeagueScore {
+  id: string
+  leagueId: SportsLeagueId
+  leagueName: string
+  homeTeamName: string
+  awayTeamName: string
+  homeScore: number
+  awayScore: number
+  playedAt: string
   status: 'FT' | 'AET' | 'PEN'
 }
 
@@ -133,19 +146,7 @@ function resolveLeagueForTeam(team: SportsDbTeam): typeof SPORTS_LEAGUE_OPTIONS[
     }
 
     const leagueIdFromTeam = typeof team.idLeague === 'string' ? team.idLeague.trim() : ''
-    const leagueIdMatch = (
-      (league.id === 'EPL' && leagueIdFromTeam === '4328') ||
-      (league.id === 'LALIGA' && leagueIdFromTeam === '4335') ||
-      (league.id === 'SERIE_A' && leagueIdFromTeam === '4332') ||
-      (league.id === 'BUNDESLIGA' && leagueIdFromTeam === '4331') ||
-      (league.id === 'LIGUE_1' && leagueIdFromTeam === '4334') ||
-      (league.id === 'EREDIVISIE' && leagueIdFromTeam === '4337') ||
-      (league.id === 'PRIMEIRA_LIGA' && leagueIdFromTeam === '4344') ||
-      (league.id === 'NBA' && leagueIdFromTeam === '4387') ||
-      (league.id === 'NFL' && leagueIdFromTeam === '4391') ||
-      (league.id === 'MLB' && leagueIdFromTeam === '4424') ||
-      (league.id === 'NHL' && leagueIdFromTeam === '4380')
-    )
+    const leagueIdMatch = Boolean(league.providerLeagueId) && league.providerLeagueId === leagueIdFromTeam
     if (leagueIdMatch) {
       return true
     }
@@ -159,6 +160,13 @@ function resolveLeagueForTeam(team: SportsDbTeam): typeof SPORTS_LEAGUE_OPTIONS[
       leagueAlternateName === labelName
     )
   }) ?? null
+}
+
+function toEventTimestamp(event: SportsDbEvent): string {
+  if (typeof event.strTimestamp === 'string' && event.strTimestamp.length > 0) {
+    return event.strTimestamp
+  }
+  return `${event.dateEvent ?? ''}T00:00:00Z`
 }
 
 export async function searchSportsTeams(
@@ -332,9 +340,7 @@ export async function fetchLastGameForTeam(team: SportsFavoriteTeam): Promise<Sp
   const opponentName = isHomeTeam
     ? completedEvent.strAwayTeam ?? 'Opponent'
     : completedEvent.strHomeTeam ?? 'Opponent'
-  const playedAt = typeof completedEvent.strTimestamp === 'string' && completedEvent.strTimestamp.length > 0
-    ? completedEvent.strTimestamp
-    : `${completedEvent.dateEvent ?? ''}T00:00:00Z`
+  const playedAt = toEventTimestamp(completedEvent)
 
   const teamBadgePromise = team.badgeUrl && team.badgeUrl.trim().length > 0
     ? Promise.resolve(team.badgeUrl.trim())
@@ -363,4 +369,67 @@ export async function fetchLastGameForTeam(team: SportsFavoriteTeam): Promise<Sp
     result: teamScore === opponentScore ? 'D' : teamScore > opponentScore ? 'W' : 'L',
     status: parseEventStatus(completedEvent.strStatus),
   }
+}
+
+export async function fetchRecentLeagueScores(
+  followedLeagues: SportsLeagueId[],
+  gamesPerLeague = 6,
+): Promise<SportsLeagueScore[]> {
+  if (followedLeagues.length === 0) {
+    return []
+  }
+
+  const followedSet = new Set<SportsLeagueId>(followedLeagues)
+  const leagues = SPORTS_LEAGUE_OPTIONS.filter(
+    (league) => followedSet.has(league.id) && Boolean(league.providerLeagueId),
+  )
+
+  const responses = await Promise.all(
+    leagues.map(async (league) => {
+      const providerLeagueId = league.providerLeagueId
+      if (!providerLeagueId) {
+        return [] as SportsLeagueScore[]
+      }
+      const response = await fetch(
+        `${SPORTS_DB_BASE_URL}/eventspastleague.php?id=${encodeURIComponent(providerLeagueId)}`,
+      )
+      if (!response.ok) {
+        return [] as SportsLeagueScore[]
+      }
+
+      const data = await response.json() as { events?: SportsDbEvent[] | null }
+      const events = Array.isArray(data.events) ? data.events : []
+      const scores: SportsLeagueScore[] = []
+      for (const event of events) {
+        const homeScore = parseScore(event.intHomeScore)
+        const awayScore = parseScore(event.intAwayScore)
+        if (homeScore === null || awayScore === null) {
+          continue
+        }
+
+        scores.push({
+          id: event.idEvent ?? `${league.id}:${event.dateEvent ?? 'unknown'}:${event.strHomeTeam ?? 'home'}:${event.strAwayTeam ?? 'away'}`,
+          leagueId: league.id,
+          leagueName: league.label,
+          homeTeamName: event.strHomeTeam?.trim() || 'Home',
+          awayTeamName: event.strAwayTeam?.trim() || 'Away',
+          homeScore,
+          awayScore,
+          playedAt: toEventTimestamp(event),
+          status: parseEventStatus(event.strStatus),
+        })
+      }
+
+      return scores.slice(0, gamesPerLeague)
+    }),
+  )
+
+  return responses
+    .flat()
+    .sort((left, right) => {
+      if (left.leagueName !== right.leagueName) {
+        return left.leagueName.localeCompare(right.leagueName)
+      }
+      return right.playedAt.localeCompare(left.playedAt)
+    })
 }

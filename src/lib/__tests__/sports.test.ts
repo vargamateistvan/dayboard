@@ -1,9 +1,58 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { searchSportsTeams } from '../sports'
+import { fetchRecentLeagueScores, searchSportsTeams } from '../sports'
 
 describe('searchSportsTeams', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  describe('fetchRecentLeagueScores', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('maps completed league events into score rows', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            events: [
+              {
+                idEvent: 'e1',
+                strHomeTeam: 'Arsenal',
+                strAwayTeam: 'Chelsea',
+                intHomeScore: '2',
+                intAwayScore: '1',
+                strStatus: 'Match Finished',
+                strTimestamp: '2026-08-10T16:30:00+00:00',
+              },
+              {
+                idEvent: 'e2',
+                strHomeTeam: 'Team A',
+                strAwayTeam: 'Team B',
+                intHomeScore: null,
+                intAwayScore: null,
+              },
+            ],
+          }),
+        }),
+      )
+
+      const results = await fetchRecentLeagueScores(['EPL'])
+      expect(results).toEqual([
+        expect.objectContaining({
+          id: 'e1',
+          leagueId: 'EPL',
+          leagueName: 'Premier League',
+          homeTeamName: 'Arsenal',
+          awayTeamName: 'Chelsea',
+          homeScore: 2,
+          awayScore: 1,
+          status: 'FT',
+        }),
+      ])
+    })
   })
 
   it('falls back to enabled league team lists when direct team search is sparse', async () => {

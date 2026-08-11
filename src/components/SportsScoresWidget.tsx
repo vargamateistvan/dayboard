@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useSettings } from '../lib/useSettings'
-import { fetchLastGameForTeam, type SportsLastGame } from '../lib/sports'
+import { fetchLastGameForTeam, fetchRecentLeagueScores, type SportsLastGame, type SportsLeagueScore } from '../lib/sports'
 import type { SportsFavoriteTeam } from '../lib/settings'
 import styles from './SportsScoresWidget.module.css'
 
@@ -53,9 +53,13 @@ function formatLastRefresh(lastRefreshedAt: number, now: number): string {
 export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetProps) {
   const { settings } = useSettings()
   const favorites = settings.sportsFavoriteTeams
+  const followedLeagues = settings.sportsFollowedLeagues
   const refreshMs = settings.sportsRefreshMinutes * 60_000
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
+  const [leagueScores, setLeagueScores] = useState<SportsLeagueScore[]>([])
+  const [leagueScoresLoading, setLeagueScoresLoading] = useState(false)
+  const [leagueScoresError, setLeagueScoresError] = useState<string | null>(null)
   const [rows, setRows] = useState<Map<string, TeamRowState>>(() => {
     return new Map(
       favorites.map((team) => [favoriteKey(team), { game: null, loading: true, error: null }]),
@@ -93,14 +97,36 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
       })
   }, [])
 
+  const loadLeagueScores = useCallback(() => {
+    if (followedLeagues.length === 0) {
+      setLeagueScores([])
+      setLeagueScoresLoading(false)
+      setLeagueScoresError(null)
+      return
+    }
+
+    setLeagueScoresLoading(true)
+    setLeagueScoresError(null)
+    fetchRecentLeagueScores(followedLeagues, 4)
+      .then((scores) => {
+        setLeagueScores(scores)
+        setLeagueScoresLoading(false)
+      })
+      .catch((error: unknown) => {
+        setLeagueScoresError(error instanceof Error ? error.message : 'Could not load league scores.')
+        setLeagueScoresLoading(false)
+      })
+  }, [followedLeagues])
+
   const loadAll = useCallback(() => {
     const startedAt = Date.now()
     setNow(startedAt)
     favorites.forEach((team) => loadTeam(team))
-    if (favorites.length > 0) {
+    loadLeagueScores()
+    if (favorites.length > 0 || followedLeagues.length > 0) {
       setLastRefreshedAt(startedAt)
     }
-  }, [favorites, loadTeam])
+  }, [favorites, followedLeagues.length, loadLeagueScores, loadTeam])
 
   useEffect(() => {
     setRows((prev) => {
@@ -112,20 +138,20 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
       return next
     })
 
-    if (favorites.length > 0) {
+    if (favorites.length > 0 || followedLeagues.length > 0) {
       loadAll()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favorites.map((team) => favoriteKey(team)).join(',')])
+  }, [favorites.map((team) => favoriteKey(team)).join(','), followedLeagues.join(',')])
 
   useEffect(() => {
-    if (favorites.length === 0 || refreshMs <= 0) {
+    if ((favorites.length === 0 && followedLeagues.length === 0) || refreshMs <= 0) {
       return
     }
 
     const intervalId = window.setInterval(loadAll, refreshMs)
     return () => window.clearInterval(intervalId)
-  }, [favorites.length, loadAll, refreshMs])
+  }, [favorites.length, followedLeagues.length, loadAll, refreshMs])
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60_000)
@@ -133,8 +159,8 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
   }, [])
 
   const anyLoading = useMemo(
-    () => [...rows.values()].some((state) => state.loading),
-    [rows],
+    () => [...rows.values()].some((state) => state.loading) || leagueScoresLoading,
+    [leagueScoresLoading, rows],
   )
   const lastRefreshLabel = useMemo(
     () => (lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now)),
@@ -145,7 +171,7 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <span className={styles.title}>Sports Scores</span>
-        {!anyLoading && favorites.length > 0 ? (
+        {!anyLoading && (favorites.length > 0 || followedLeagues.length > 0) ? (
           <div className={styles.refreshGroup}>
             {lastRefreshLabel ? <span className={styles.refreshHint}>{lastRefreshLabel}</span> : null}
             <button
@@ -161,12 +187,13 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
         ) : null}
       </div>
 
-      {favorites.length === 0 ? (
+      {favorites.length === 0 && followedLeagues.length === 0 ? (
         <p className={styles.emptyState}>
-          Pick favorite teams in Settings to see each team&apos;s latest final score.
+          Pick favorite teams or followed leagues in Settings to see live score feeds.
         </p>
       ) : (
         <div className={styles.list}>
+          {favorites.length > 0 ? <p className={styles.sectionHeading}>Favorite teams</p> : null}
           {favorites.map((team) => {
             const key = favoriteKey(team)
             const row = rows.get(key) ?? { game: null, loading: true, error: null }
@@ -234,6 +261,42 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
               </article>
             )
           })}
+
+          {followedLeagues.length > 0 ? <p className={styles.sectionHeading}>League scores</p> : null}
+          {leagueScoresLoading ? <div className={styles.rowLoading}>Loading league scores…</div> : null}
+          {!leagueScoresLoading && leagueScoresError ? <div className={styles.rowError}>{leagueScoresError}</div> : null}
+          {!leagueScoresLoading && !leagueScoresError && leagueScores.length === 0 && followedLeagues.length > 0 ? (
+            <div className={styles.rowLoading}>No completed league games found yet.</div>
+          ) : null}
+          {!leagueScoresLoading && !leagueScoresError
+            ? leagueScores.map((score) => (
+                <article key={score.id} className={styles.row}>
+                  <div className={styles.rowHeader}>
+                    <span className={styles.leagueName}>{score.leagueName}</span>
+                  </div>
+                  <div className={styles.rowBody}>
+                    <div className={styles.matchupGrid}>
+                      <div className={styles.teamBlock}>
+                        <span className={styles.teamName}>{score.homeTeamName}</span>
+                      </div>
+                      <div className={styles.scoreBlock}>
+                        <span className={styles.score}>
+                          {score.homeScore} - {score.awayScore}
+                        </span>
+                        <span className={styles.matchup}>Final</span>
+                      </div>
+                      <div className={[styles.teamBlock, styles.teamBlockRight].join(' ')}>
+                        <span className={styles.teamName}>{score.awayTeamName}</span>
+                      </div>
+                    </div>
+                    <div className={styles.gameMeta}>
+                      <span>{formatPlayedAt(score.playedAt)}</span>
+                      <span>{score.status}</span>
+                    </div>
+                  </div>
+                </article>
+              ))
+            : null}
         </div>
       )}
     </div>

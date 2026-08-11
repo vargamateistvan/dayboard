@@ -34,6 +34,7 @@ export interface SportsLeagueOption {
   label: string
   sport: SportsSport
   providerLeagueName: string
+  providerLeagueId?: string
 }
 
 export interface SportsFavoriteTeam {
@@ -92,6 +93,7 @@ export interface Settings {
   financeRefreshMinutes: number
   sportsFavoriteTeams: SportsFavoriteTeam[]
   sportsEnabledLeagues: SportsLeagueId[]
+  sportsFollowedLeagues: SportsLeagueId[]
   sportsRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
@@ -101,23 +103,24 @@ export interface Settings {
 }
 
 export const SPORTS_LEAGUE_OPTIONS: ReadonlyArray<SportsLeagueOption> = [
-  { id: 'EPL', label: 'Premier League', sport: 'soccer', providerLeagueName: 'English Premier League' },
-  { id: 'LALIGA', label: 'La Liga', sport: 'soccer', providerLeagueName: 'Spanish La Liga' },
-  { id: 'SERIE_A', label: 'Serie A', sport: 'soccer', providerLeagueName: 'Italian Serie A' },
-  { id: 'BUNDESLIGA', label: 'Bundesliga', sport: 'soccer', providerLeagueName: 'German Bundesliga' },
-  { id: 'LIGUE_1', label: 'Ligue 1', sport: 'soccer', providerLeagueName: 'French Ligue 1' },
-  { id: 'UCL', label: 'Champions League', sport: 'soccer', providerLeagueName: 'UEFA Champions League' },
-  { id: 'UEL', label: 'Europa League', sport: 'soccer', providerLeagueName: 'UEFA Europa League' },
+  { id: 'EPL', label: 'Premier League', sport: 'soccer', providerLeagueName: 'English Premier League', providerLeagueId: '4328' },
+  { id: 'LALIGA', label: 'La Liga', sport: 'soccer', providerLeagueName: 'Spanish La Liga', providerLeagueId: '4335' },
+  { id: 'SERIE_A', label: 'Serie A', sport: 'soccer', providerLeagueName: 'Italian Serie A', providerLeagueId: '4332' },
+  { id: 'BUNDESLIGA', label: 'Bundesliga', sport: 'soccer', providerLeagueName: 'German Bundesliga', providerLeagueId: '4331' },
+  { id: 'LIGUE_1', label: 'Ligue 1', sport: 'soccer', providerLeagueName: 'French Ligue 1', providerLeagueId: '4334' },
+  { id: 'UCL', label: 'Champions League', sport: 'soccer', providerLeagueName: 'UEFA Champions League', providerLeagueId: '4480' },
+  { id: 'UEL', label: 'Europa League', sport: 'soccer', providerLeagueName: 'UEFA Europa League', providerLeagueId: '4481' },
   { id: 'UECL', label: 'Conference League', sport: 'soccer', providerLeagueName: 'UEFA Europa Conference League' },
-  { id: 'EREDIVISIE', label: 'Eredivisie', sport: 'soccer', providerLeagueName: 'Dutch Eredivisie' },
-  { id: 'PRIMEIRA_LIGA', label: 'Primeira Liga', sport: 'soccer', providerLeagueName: 'Portuguese Primeira Liga' },
-  { id: 'NBA', label: 'NBA', sport: 'basketball', providerLeagueName: 'NBA' },
-  { id: 'NFL', label: 'NFL', sport: 'american_football', providerLeagueName: 'NFL' },
-  { id: 'MLB', label: 'MLB', sport: 'baseball', providerLeagueName: 'MLB' },
-  { id: 'NHL', label: 'NHL', sport: 'hockey', providerLeagueName: 'NHL' },
+  { id: 'EREDIVISIE', label: 'Eredivisie', sport: 'soccer', providerLeagueName: 'Dutch Eredivisie', providerLeagueId: '4337' },
+  { id: 'PRIMEIRA_LIGA', label: 'Primeira Liga', sport: 'soccer', providerLeagueName: 'Portuguese Primeira Liga', providerLeagueId: '4344' },
+  { id: 'NBA', label: 'NBA', sport: 'basketball', providerLeagueName: 'NBA', providerLeagueId: '4387' },
+  { id: 'NFL', label: 'NFL', sport: 'american_football', providerLeagueName: 'NFL', providerLeagueId: '4391' },
+  { id: 'MLB', label: 'MLB', sport: 'baseball', providerLeagueName: 'MLB', providerLeagueId: '4424' },
+  { id: 'NHL', label: 'NHL', sport: 'hockey', providerLeagueName: 'NHL', providerLeagueId: '4380' },
 ] as const
 
 const DEFAULT_SPORTS_ENABLED_LEAGUES: SportsLeagueId[] = SPORTS_LEAGUE_OPTIONS.map((league) => league.id)
+const DEFAULT_SPORTS_FOLLOWED_LEAGUES: SportsLeagueId[] = []
 
 export const DEFAULT_CUSTOM_COLORS: CustomColors = {
   primary: '#4f46e5',
@@ -222,6 +225,7 @@ export const DEFAULT_SETTINGS: Settings = {
   financeRefreshMinutes: 10,
   sportsFavoriteTeams: [],
   sportsEnabledLeagues: DEFAULT_SPORTS_ENABLED_LEAGUES,
+  sportsFollowedLeagues: DEFAULT_SPORTS_FOLLOWED_LEAGUES,
   sportsRefreshMinutes: 15,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
@@ -524,6 +528,23 @@ function normalizeSportsEnabledLeagues(value: unknown): SportsLeagueId[] {
   return normalized.length > 0 ? normalized : DEFAULT_SETTINGS.sportsEnabledLeagues
 }
 
+function normalizeSportsFollowedLeagues(value: unknown): SportsLeagueId[] {
+  if (!Array.isArray(value)) {
+    return DEFAULT_SETTINGS.sportsFollowedLeagues
+  }
+
+  const seen = new Set<SportsLeagueId>()
+  const normalized: SportsLeagueId[] = []
+  for (const entry of value) {
+    if (isSportsLeagueId(entry) && !seen.has(entry)) {
+      seen.add(entry)
+      normalized.push(entry)
+    }
+  }
+
+  return normalized
+}
+
 function normalizeSportsFavoriteTeams(value: unknown): SportsFavoriteTeam[] {
   if (!Array.isArray(value)) {
     return []
@@ -727,6 +748,9 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     sportsEnabledLeagues: normalizeSportsEnabledLeagues(
       (rest as { sportsEnabledLeagues?: unknown }).sportsEnabledLeagues,
     ),
+    sportsFollowedLeagues: normalizeSportsFollowedLeagues(
+      (rest as { sportsFollowedLeagues?: unknown }).sportsFollowedLeagues,
+    ),
     sportsRefreshMinutes: normalizeSportsRefreshMinutes(
       (rest as { sportsRefreshMinutes?: unknown }).sportsRefreshMinutes,
     ),
@@ -798,6 +822,7 @@ export function saveSettings(settings: Settings): void {
       financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
       sportsFavoriteTeams: normalizeSportsFavoriteTeams(settings.sportsFavoriteTeams),
       sportsEnabledLeagues: normalizeSportsEnabledLeagues(settings.sportsEnabledLeagues),
+      sportsFollowedLeagues: normalizeSportsFollowedLeagues(settings.sportsFollowedLeagues),
       sportsRefreshMinutes: normalizeSportsRefreshMinutes(settings.sportsRefreshMinutes),
       pomodoroWorkMinutes: normalizePomodoroWorkMinutes(settings.pomodoroWorkMinutes),
       pomodoroBreakMinutes: normalizePomodoroBreakMinutes(settings.pomodoroBreakMinutes),
@@ -937,6 +962,10 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (!Array.isArray(settings.sportsEnabledLeagues) || settings.sportsEnabledLeagues.length === 0) {
     errors.push('sportsEnabledLeagues must be a non-empty array')
+  }
+
+  if (!Array.isArray(settings.sportsFollowedLeagues)) {
+    errors.push('sportsFollowedLeagues must be an array')
   }
 
   if (settings.sportsRefreshMinutes < 1 || settings.sportsRefreshMinutes > 1440) {
@@ -1079,6 +1108,7 @@ export function isValidSettings(value: unknown): value is Settings {
     Array.isArray(s.currencyPairs) &&
     Array.isArray(s.sportsFavoriteTeams) &&
     Array.isArray(s.sportsEnabledLeagues) &&
+    Array.isArray(s.sportsFollowedLeagues) &&
     typeof s.sportsRefreshMinutes === 'number' &&
     typeof s.worldClockCity === 'string' &&
     typeof s.worldClockTimeZone === 'string'

@@ -245,7 +245,7 @@ describe('SportsScoresWidget', () => {
     renderWithSettings(<SportsScoresWidget />, { sportsFavoriteTeams: [] })
 
     expect(
-      screen.getByText(/Pick favorite teams in Settings to see each team's latest final score/i),
+      screen.getByText(/Pick favorite teams or followed leagues in Settings to see live score feeds/i),
     ).toBeInTheDocument()
   })
 
@@ -304,6 +304,7 @@ describe('SportsScoresWidget', () => {
           sport: 'soccer',
         },
       ],
+      sportsFollowedLeagues: [],
       sportsRefreshMinutes: 15,
     })
 
@@ -321,5 +322,39 @@ describe('SportsScoresWidget', () => {
       'src',
       'https://images.example.com/chelsea.png',
     )
+  })
+
+  it('renders followed league scores', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          events: [
+            {
+              idEvent: 'epl-1',
+              strHomeTeam: 'Arsenal',
+              strAwayTeam: 'Chelsea',
+              intHomeScore: '2',
+              intAwayScore: '1',
+              strStatus: 'Match Finished',
+              strTimestamp: '2026-08-10T16:30:00+00:00',
+            },
+          ],
+        }),
+      }),
+    )
+
+    renderWithSettings(<SportsScoresWidget />, {
+      sportsFavoriteTeams: [],
+      sportsFollowedLeagues: ['EPL'],
+      sportsRefreshMinutes: 15,
+    })
+
+    expect(await screen.findByText('League scores')).toBeInTheDocument()
+    expect(screen.getByText('Arsenal')).toBeInTheDocument()
+    expect(screen.getByText('Chelsea')).toBeInTheDocument()
+    expect(screen.getByText('2 - 1')).toBeInTheDocument()
+    expect(screen.getByText('Premier League')).toBeInTheDocument()
   })
 })
