@@ -92,6 +92,13 @@ function formatVerticalRate(verticalRateMetersPerMinute: number | null): string 
   return `${direction} ${Math.abs(verticalRateMetersPerMinute)} m/min`
 }
 
+function formatSelectedMetadata(
+  label: string,
+  value: string | null,
+): string {
+  return `${label}: ${value ?? 'Unknown'}`
+}
+
 function getFlightName(flight: NearbyFlight): string {
   return flight.callsign ?? flight.icao24.toUpperCase()
 }
@@ -451,6 +458,9 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                     <div className={styles.selectedFlightGrid}>
                       <span>ICAO24: {selectedFlight.icao24.toUpperCase()}</span>
                       <span>Origin: {selectedFlight.originCountry ?? 'Unknown'}</span>
+                      <span>{formatSelectedMetadata('Registration', selectedFlight.registration)}</span>
+                      <span>{formatSelectedMetadata('Type', selectedFlight.aircraftTypeCode)}</span>
+                      <span>{formatSelectedMetadata('Model', selectedFlight.aircraftDescription)}</span>
                       <span>Distance: {selectedFlight.distanceKm.toFixed(1)} km</span>
                       <span>Altitude: {formatAltitude(selectedFlight.altitudeMeters)}</span>
                       <span>Speed: {formatGroundSpeed(selectedFlight.groundspeedKmh)}</span>

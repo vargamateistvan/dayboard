@@ -1,13 +1,35 @@
-const FLIGHTS_PROXY_PATH = '/api/flights'
+const AIRPLANES_LIVE_API_BASE = 'https://api.airplanes.live/v2'
+const KM_PER_NAUTICAL_MILE = 1.852
+const METERS_PER_FOOT = 0.3048
 const EARTH_RADIUS_KM = 6371
 const MIN_FETCH_INTERVAL_MS = 10_000
 const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000
 const MAX_RATE_LIMIT_BACKOFF_MS = 300_000
-const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() ?? ''
+const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() || AIRPLANES_LIVE_API_BASE
 
 interface CachedFlightPayload {
   readonly flights: NearbyFlight[]
   readonly fetchedAtMs: number
+}
+
+interface AirplanesLiveAircraft {
+  readonly hex?: unknown
+  readonly flight?: unknown
+  readonly r?: unknown
+  readonly t?: unknown
+  readonly desc?: unknown
+  readonly lat?: unknown
+  readonly lon?: unknown
+  readonly alt_baro?: unknown
+  readonly alt_geom?: unknown
+  readonly gs?: unknown
+  readonly true_heading?: unknown
+  readonly mag_heading?: unknown
+  readonly track?: unknown
+  readonly baro_rate?: unknown
+  readonly geom_rate?: unknown
+  readonly seen?: unknown
+  readonly seen_pos?: unknown
 }
 
 const flightResponseCache = new Map<string, CachedFlightPayload>()
@@ -24,6 +46,9 @@ export interface NearbyFlight {
   icao24: string
   callsign: string | null
   originCountry: string | null
+  registration: string | null
+  aircraftTypeCode: string | null
+  aircraftDescription: string | null
   latitude: number
   longitude: number
   altitudeMeters: number | null
@@ -34,13 +59,6 @@ export interface NearbyFlight {
   bearingDegrees: number
   lastSeenSecondsAgo: number
   onGround: boolean
-}
-
-interface FlightBounds {
-  lamin: number
-  lomin: number
-  lamax: number
-  lomax: number
 }
 
 function toRadians(value: number): number {
@@ -91,19 +109,6 @@ function calculateBearingDegrees(
   return normalizeDegrees((Math.atan2(y, x) * 180) / Math.PI)
 }
 
-function buildFlightBounds(latitude: number, longitude: number, radiusKm: number): FlightBounds {
-  const latitudeDelta = radiusKm / 111
-  const longitudeScale = Math.max(Math.cos(toRadians(latitude)), 0.2)
-  const longitudeDelta = radiusKm / (111 * longitudeScale)
-
-  return {
-    lamin: Math.max(-90, latitude - latitudeDelta),
-    lomin: Math.max(-180, longitude - longitudeDelta),
-    lamax: Math.min(90, latitude + latitudeDelta),
-    lomax: Math.min(180, longitude + longitudeDelta),
-  }
-}
-
 function parseFiniteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
@@ -117,7 +122,24 @@ function parseString(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null
 }
 
-function parseFlight(rawState: unknown, snapshotTime: number, originLatitude: number, originLongitude: number): NearbyFlight | null {
+function convertFeetToMeters(value: number | null): number | null {
+  return value === null ? null : Math.round(value * METERS_PER_FOOT)
+}
+
+function convertKnotsToKmh(value: number | null): number | null {
+  return value === null ? null : Math.round(value * KM_PER_NAUTICAL_MILE)
+}
+
+function convertFeetPerMinuteToMetersPerMinute(value: number | null): number | null {
+  return value === null ? null : Math.round(value * METERS_PER_FOOT)
+}
+
+function parseOpenSkyFlight(
+  rawState: unknown,
+  snapshotTime: number,
+  originLatitude: number,
+  originLongitude: number,
+): NearbyFlight | null {
   if (!Array.isArray(rawState)) {
     return null
   }
@@ -145,6 +167,9 @@ function parseFlight(rawState: unknown, snapshotTime: number, originLatitude: nu
     icao24,
     callsign: parseString(rawState[1]),
     originCountry: parseString(rawState[2]),
+    registration: null,
+    aircraftTypeCode: null,
+    aircraftDescription: null,
     latitude,
     longitude,
     altitudeMeters,
@@ -162,38 +187,81 @@ function parseFlight(rawState: unknown, snapshotTime: number, originLatitude: nu
   }
 }
 
-function buildFlightRequestUrl(bounds: FlightBounds): string {
-  const params = new URLSearchParams({
-    lamin: bounds.lamin.toFixed(4),
-    lomin: bounds.lomin.toFixed(4),
-    lamax: bounds.lamax.toFixed(4),
-    lomax: bounds.lomax.toFixed(4),
-  })
+function parseAirplanesLiveAltitudeMeters(aircraft: AirplanesLiveAircraft): number | null {
+  const geometricAltitudeFeet = parseFiniteNumber(aircraft.alt_geom)
+  const barometricAltitude = aircraft.alt_baro
 
-  const runtimeOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
-  const runtimeHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname
-
-  if (FLIGHTS_API_BASE.length > 0) {
-    const configuredBase = new URL(FLIGHTS_API_BASE, runtimeOrigin)
-    const configuredPath = configuredBase.pathname.replace(/\/$/, '')
-    configuredBase.pathname = configuredPath.endsWith('/api/flights')
-      ? configuredPath
-      : `${configuredPath}/api/flights`
-    configuredBase.search = params.toString()
-    return configuredBase.toString()
+  if (typeof barometricAltitude === 'string' && barometricAltitude.toLowerCase() === 'ground') {
+    return 0
   }
 
-  if (
-    runtimeHost === 'localhost' ||
-    runtimeHost === '127.0.0.1' ||
-    runtimeHost === '[::1]'
-  ) {
-    return `${FLIGHTS_PROXY_PATH}?${params.toString()}`
+  const barometricAltitudeFeet = parseFiniteNumber(barometricAltitude)
+  return convertFeetToMeters(geometricAltitudeFeet ?? barometricAltitudeFeet)
+}
+
+function parseAirplanesLiveFlight(
+  rawAircraft: unknown,
+  originLatitude: number,
+  originLongitude: number,
+): NearbyFlight | null {
+  if (typeof rawAircraft !== 'object' || rawAircraft === null) {
+    return null
   }
 
-  throw new Error(
-    'Flight data is unavailable in this deployment. Configure VITE_FLIGHTS_API_BASE to a deployed backend that serves /api/flights.',
+  const aircraft = rawAircraft as AirplanesLiveAircraft
+  const icao24 = parseString(aircraft.hex)
+  const latitude = parseFiniteNumber(aircraft.lat)
+  const longitude = parseFiniteNumber(aircraft.lon)
+
+  if (!icao24 || latitude === null || longitude === null) {
+    return null
+  }
+
+  const altitudeMeters = parseAirplanesLiveAltitudeMeters(aircraft)
+  const onGround =
+    altitudeMeters === 0 ||
+    (typeof aircraft.alt_baro === 'string' && aircraft.alt_baro.toLowerCase() === 'ground')
+  const groundspeedKmh = convertKnotsToKmh(parseFiniteNumber(aircraft.gs))
+  const headingDegreesSource =
+    parseFiniteNumber(aircraft.true_heading) ??
+    parseFiniteNumber(aircraft.mag_heading) ??
+    parseFiniteNumber(aircraft.track)
+  const verticalRateMetersPerMinute = convertFeetPerMinuteToMetersPerMinute(
+    parseFiniteNumber(aircraft.geom_rate) ?? parseFiniteNumber(aircraft.baro_rate),
   )
+  const seenSeconds =
+    parseFiniteNumber(aircraft.seen) ?? parseFiniteNumber(aircraft.seen_pos) ?? 0
+  const distanceKm = calculateDistanceKm(originLatitude, originLongitude, latitude, longitude)
+  const bearingDegrees = calculateBearingDegrees(originLatitude, originLongitude, latitude, longitude)
+
+  return {
+    icao24,
+    callsign: parseString(aircraft.flight),
+    originCountry: null,
+    registration: parseString(aircraft.r),
+    aircraftTypeCode: parseString(aircraft.t),
+    aircraftDescription: parseString(aircraft.desc),
+    latitude,
+    longitude,
+    altitudeMeters,
+    groundspeedKmh,
+    headingDegrees:
+      headingDegreesSource === null ? null : Math.round(normalizeDegrees(headingDegreesSource)),
+    verticalRateMetersPerMinute,
+    distanceKm: Math.round(distanceKm * 10) / 10,
+    bearingDegrees: Math.round(bearingDegrees),
+    lastSeenSecondsAgo: Math.max(0, Math.round(seenSeconds)),
+    onGround,
+  }
+}
+
+function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): string {
+  const baseUrl = new URL(FLIGHTS_API_BASE)
+  const radiusNm = Math.min(250, Math.max(1, radiusKm / KM_PER_NAUTICAL_MILE))
+  const basePath = baseUrl.pathname.replace(/\/$/, '')
+  baseUrl.pathname = `${basePath}/point/${latitude.toFixed(4)}/${longitude.toFixed(4)}/${radiusNm.toFixed(1)}`
+  baseUrl.search = ''
+  return baseUrl.toString()
 }
 
 function buildRequestKey({
@@ -207,7 +275,6 @@ function buildRequestKey({
   radiusKm: number
   onlyAirborne: boolean
 }): string {
-  // Quantize coordinates so tiny GPS drift does not create fresh API keys on every refresh.
   return [
     latitude.toFixed(2),
     longitude.toFixed(2),
@@ -277,7 +344,7 @@ export async function fetchNearbyFlights({
 
   const requestPromise = (async () => {
     try {
-      const response = await fetch(buildFlightRequestUrl(buildFlightBounds(latitude, longitude, radiusKm)))
+      const response = await fetch(buildFlightRequestUrl(latitude, longitude, radiusKm))
       if (response.status === 429) {
         const backoffMs = parseRetryAfterMilliseconds(response.headers.get('retry-after'))
         rateLimitedUntil.set(requestKey, Date.now() + backoffMs)
@@ -291,24 +358,33 @@ export async function fetchNearbyFlights({
         throw new Error('Could not load nearby flights.')
       }
 
-      const payload = (await response.json()) as { time?: unknown; states?: unknown }
+      const payload = (await response.json()) as { time?: unknown; states?: unknown; ac?: unknown }
       const snapshotTime =
         typeof payload.time === 'number' && Number.isFinite(payload.time)
           ? payload.time
           : Math.floor(Date.now() / 1000)
-      const rawStates = Array.isArray(payload.states) ? payload.states : []
 
-      const flights = rawStates
-        .map((rawState) => parseFlight(rawState, snapshotTime, latitude, longitude))
-        .filter((flight): flight is NearbyFlight => flight !== null)
+      let flights: NearbyFlight[]
+      if (Array.isArray(payload.states)) {
+        flights = payload.states
+          .map((rawState) => parseOpenSkyFlight(rawState, snapshotTime, latitude, longitude))
+          .filter((flight): flight is NearbyFlight => flight !== null)
+      } else {
+        const aircraft = Array.isArray(payload.ac) ? payload.ac : []
+        flights = aircraft
+          .map((rawAircraft) => parseAirplanesLiveFlight(rawAircraft, latitude, longitude))
+          .filter((flight): flight is NearbyFlight => flight !== null)
+      }
+
+      const filteredFlights = flights
         .filter((flight) => flight.lastSeenSecondsAgo <= 120)
         .filter((flight) => flight.distanceKm <= radiusKm)
         .filter((flight) => !onlyAirborne || !flight.onGround)
         .sort((left, right) => left.distanceKm - right.distanceKm)
 
-      flightResponseCache.set(requestKey, { flights, fetchedAtMs: Date.now() })
+      flightResponseCache.set(requestKey, { flights: filteredFlights, fetchedAtMs: Date.now() })
       rateLimitedUntil.delete(requestKey)
-      return flights
+      return filteredFlights
     } catch (error: unknown) {
       if (cachedPayload !== undefined) {
         return cachedPayload.flights

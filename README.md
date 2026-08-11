@@ -105,27 +105,14 @@ npm run lint
 The Vite dev server exposes:
 
 - `/api/calendar` for remote iCal feeds
-- `/api/flights` for OpenSky flight state queries
 
 These proxies make remote requests work reliably during development and preview.
 
 ### Flights in production
 
-GitHub Pages is a static host, so it cannot serve the local Vite `/api/flights` proxy in production.
+The Flights widget uses the free public `airplanes.live` API directly from the browser in production. The app requests the nearby-aircraft endpoint under `https://api.airplanes.live/v2/point/...`, which supports browser CORS.
 
-To enable the Flights widget in a deployed build, configure `VITE_FLIGHTS_API_BASE` to the origin (or base path) of a deployed backend that serves `/api/flights`.
-
-Example:
-
-```bash
-VITE_FLIGHTS_API_BASE=https://your-backend.example.com
-```
-
-The app will then request:
-
-```text
-https://your-backend.example.com/api/flights?...query params...
-```
+If you need to override that endpoint, set `VITE_FLIGHTS_API_BASE` to another compatible base URL.
 
 ## Project Structure
 

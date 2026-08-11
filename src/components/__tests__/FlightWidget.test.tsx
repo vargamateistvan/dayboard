@@ -89,7 +89,7 @@ describe('FlightWidget', () => {
 
     await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
 
-    expect(fetchMock.mock.calls[0]?.[0]).toContain('/api/flights?')
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('api.airplanes.live/v2/point/')
     expect(screen.getByText(/2 aircraft/)).toBeInTheDocument()
     expect(screen.getAllByText(/WZZ123/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Device location/)).toBeInTheDocument()
@@ -191,27 +191,22 @@ describe('FlightWidget', () => {
       vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({
-          time: 1_786_362_327,
-          states: [
-            [
-              '49d099',
-              'WZZ123  ',
-              'Hungary',
-              1_786_362_326,
-              1_786_362_320,
-              19.0623,
-              47.5375,
-              5_478.78,
-              false,
-              106.19,
-              49.52,
-              -0.65,
-              null,
-              5_844.54,
-              '1000',
-              false,
-              0,
-            ],
+          ac: [
+            {
+              hex: '49d099',
+              flight: 'WZZ123',
+              r: 'HA-LVE',
+              t: 'A21N',
+              desc: 'AIRBUS A321neo',
+              lat: 47.5375,
+              lon: 19.0623,
+              alt_baro: 17_975,
+              alt_geom: 19_175,
+              gs: 206.3,
+              true_heading: 49.52,
+              geom_rate: -128,
+              seen: 7,
+            },
           ],
         }),
       }),
@@ -224,6 +219,8 @@ describe('FlightWidget', () => {
 
     expect(screen.getByText(/Selected aircraft/i)).toBeInTheDocument()
     expect(screen.getByText(/ICAO24: 49D099/i)).toBeInTheDocument()
-    expect(screen.getByText(/Origin: Hungary/i)).toBeInTheDocument()
+    expect(screen.getByText(/Registration: HA-LVE/i)).toBeInTheDocument()
+    expect(screen.getByText(/Type: A21N/i)).toBeInTheDocument()
+    expect(screen.getByText(/Model: AIRBUS A321neo/i)).toBeInTheDocument()
   })
 })

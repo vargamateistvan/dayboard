@@ -28,6 +28,28 @@ function buildOpenSkyPayload() {
   }
 }
 
+function buildAirplanesLivePayload() {
+  return {
+    ac: [
+      {
+        hex: '49d099',
+        flight: 'WZZ123',
+        r: 'HA-LVE',
+        t: 'A21N',
+        desc: 'AIRBUS A321neo',
+        lat: 47.5375,
+        lon: 19.0623,
+        alt_baro: 17_975,
+        alt_geom: 19_175,
+        gs: 206.3,
+        true_heading: 49.52,
+        geom_rate: -128,
+        seen: 7,
+      },
+    ],
+  }
+}
+
 function createResponse({
   ok,
   status,
@@ -67,7 +89,7 @@ describe('fetchNearbyFlights', () => {
       createResponse({
         ok: true,
         status: 200,
-        payload: buildOpenSkyPayload(),
+        payload: buildAirplanesLivePayload(),
       }),
     )
     vi.stubGlobal('fetch', fetchMock)
@@ -94,7 +116,7 @@ describe('fetchNearbyFlights', () => {
         createResponse({
           ok: true,
           status: 200,
-          payload: buildOpenSkyPayload(),
+          payload: buildAirplanesLivePayload(),
         }),
       )
       .mockResolvedValueOnce(
@@ -125,21 +147,37 @@ describe('fetchNearbyFlights', () => {
     expect(blockedLoad).toEqual(firstLoad)
   })
 
-  it('fails fast outside localhost when no flights backend is configured', async () => {
-    vi.stubGlobal('window', {
-      location: {
-        origin: 'https://vargamateistvan.github.io',
-        hostname: 'vargamateistvan.github.io',
-      },
+  it('supports airplanes.live payloads', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        createResponse({
+          ok: true,
+          status: 200,
+          payload: buildAirplanesLivePayload(),
+        }),
+      ),
+    )
+
+    const flights = await fetchNearbyFlights({
+      latitude: 47.4979,
+      longitude: 19.0402,
+      radiusKm: 50,
+      onlyAirborne: true,
     })
 
-    await expect(
-      fetchNearbyFlights({
-        latitude: 47.4979,
-        longitude: 19.0402,
-        radiusKm: 50,
-        onlyAirborne: true,
+    expect(flights).toHaveLength(1)
+    expect(flights[0]).toEqual(
+      expect.objectContaining({
+        icao24: '49d099',
+        callsign: 'WZZ123',
+        registration: 'HA-LVE',
+        aircraftTypeCode: 'A21N',
+        aircraftDescription: 'AIRBUS A321neo',
+        groundspeedKmh: expect.any(Number),
+        headingDegrees: 50,
+        lastSeenSecondsAgo: 7,
       }),
-    ).rejects.toThrow(/VITE_FLIGHTS_API_BASE/)
+    )
   })
 })
