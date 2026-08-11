@@ -19,6 +19,7 @@ import { AppleMusicWidget } from './components/AppleMusicWidget'
 import { ApplePodcastWidget } from './components/ApplePodcastWidget'
 import { StockWidget } from './components/StockWidget'
 import { CurrencyWidget } from './components/CurrencyWidget'
+import { SportsScoresWidget } from './components/SportsScoresWidget'
 import { QuoteWidget } from './components/QuoteWidget'
 import { DeviceInfoWidget } from './components/DeviceInfoWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
@@ -81,6 +82,8 @@ function renderWidget(widget: Widget, isFullscreen: boolean) {
       return <StockWidget isFullscreen={isFullscreen} />
     case 'currencies':
       return <CurrencyWidget isFullscreen={isFullscreen} />
+    case 'sports':
+      return <SportsScoresWidget isFullscreen={isFullscreen} />
     case 'quote':
       return <QuoteWidget isFullscreen={isFullscreen} />
     case 'deviceInfo':

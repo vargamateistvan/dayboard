@@ -14,6 +14,7 @@ export const WIDGET_IDS = [
   "applePodcast",
   "stocks",
   "currencies",
+  "sports",
   "quote",
   "deviceInfo",
 ] as const;
@@ -65,6 +66,7 @@ const DEFAULT_VISIBILITY: WidgetVisibility = {
   applePodcast: false,
   stocks: false,
   currencies: false,
+  sports: false,
   quote: false,
   deviceInfo: false,
 };
@@ -83,6 +85,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacements = {
   applePodcast: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
   stocks: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   currencies: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
+  sports: { column: 2, row: 5, columnSpan: 1, rowSpan: 1 },
   quote: { column: 2, row: 6, columnSpan: 1, rowSpan: 1 },
   deviceInfo: { column: 2, row: 4, columnSpan: 1, rowSpan: 2 },
 };
@@ -104,6 +107,7 @@ export const MIN_WIDGET_SIZE: Record<
   applePodcast: { columnSpan: 1, rowSpan: 2 },
   stocks: { columnSpan: 1, rowSpan: 1 },
   currencies: { columnSpan: 1, rowSpan: 1 },
+  sports: { columnSpan: 1, rowSpan: 1 },
   quote: { columnSpan: 1, rowSpan: 1 },
   deviceInfo: { columnSpan: 1, rowSpan: 2 },
 };

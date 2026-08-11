@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { SettingsDialog } from '../SettingsDialog'
 import { SettingsProvider } from '../../lib/useSettings'
+import { searchSportsTeams } from '../../lib/sports'
+
+vi.mock('../../lib/sports', () => ({
+  searchSportsTeams: vi.fn(),
+}))
 
 const LAYOUT_STORAGE_KEY = 'dayboard_widget_layout'
 const SETTINGS_STORAGE_KEY = 'dayboard:settings'
@@ -134,6 +139,102 @@ describe('SettingsDialog', () => {
       weatherShowExtraDetails: false,
       weatherRefreshMinutes: 15,
     })
+  })
+
+  it('persists sports widget refresh and league filters', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: { sports: true },
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    fireEvent.change(screen.getByLabelText('Refresh every (minutes)'), { target: { value: '20' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Premier League' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+    expect(saved).toMatchObject({
+      sportsRefreshMinutes: 20,
+    })
+    expect(saved.sportsEnabledLeagues).not.toContain('EPL')
+  })
+
+  it('persists sports favorite team removals immediately without pressing save', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: { sports: true },
+      }),
+    )
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        sportsFavoriteTeams: [
+          {
+            id: '133604',
+            name: 'Arsenal',
+            leagueId: 'EPL',
+            leagueName: 'Premier League',
+            sport: 'soccer',
+          },
+        ],
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Arsenal' }))
+
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+    expect(saved.sportsFavoriteTeams).toEqual([])
+  })
+
+  it('persists sports favorite team additions immediately without pressing save', async () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: { sports: true },
+      }),
+    )
+
+    vi.mocked(searchSportsTeams).mockResolvedValue([
+      {
+        id: '133604',
+        name: 'Arsenal',
+        leagueId: 'EPL',
+        leagueName: 'Premier League',
+        sport: 'soccer',
+        badgeUrl: 'https://images.example.com/arsenal.png',
+      },
+    ])
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.change(screen.getByPlaceholderText('e.g. Arsenal, Real Madrid, Lakers'), {
+      target: { value: 'ars' },
+    })
+
+    await new Promise((resolve) => {
+      window.setTimeout(resolve, 650)
+    })
+    await waitFor(() => {
+      expect(searchSportsTeams).toHaveBeenCalled()
+    })
+    const addButton = await screen.findByRole('button', { name: 'Add' })
+    fireEvent.click(addButton)
+
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
+    expect(saved.sportsFavoriteTeams).toEqual([
+      expect.objectContaining({
+        id: '133604',
+        name: 'Arsenal',
+        leagueId: 'EPL',
+      }),
+    ])
   })
 
   it('persists timezone clock city and timezone settings', () => {

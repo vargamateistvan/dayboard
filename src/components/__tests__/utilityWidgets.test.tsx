@@ -10,6 +10,7 @@ import { NotificationBadge } from '../NotificationBadge'
 import { StockWidget } from '../StockWidget'
 import { CurrencyWidget } from '../CurrencyWidget'
 import { DeviceInfoWidget } from '../DeviceInfoWidget'
+import { SportsScoresWidget } from '../SportsScoresWidget'
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
   saveSettings({ ...DEFAULT_SETTINGS, ...settingsPatch })
@@ -227,5 +228,98 @@ describe('DeviceInfoWidget', () => {
     expect(screen.getAllByText('Memory').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Disk').length).toBeGreaterThan(0)
     expect(screen.getByText('Net throughput')).toBeInTheDocument()
+  })
+})
+
+describe('SportsScoresWidget', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  afterEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('shows an empty state when no favorite teams are configured', () => {
+    renderWithSettings(<SportsScoresWidget />, { sportsFavoriteTeams: [] })
+
+    expect(
+      screen.getByText(/Pick favorite teams in Settings to see each team's latest final score/i),
+    ).toBeInTheDocument()
+  })
+
+  it('renders the latest result for each favorite team', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                idHomeTeam: '133604',
+                idAwayTeam: '133602',
+                strHomeTeam: 'Arsenal',
+                strAwayTeam: 'Chelsea',
+                intHomeScore: '2',
+                intAwayScore: '1',
+                strStatus: 'Match Finished',
+                strTimestamp: '2026-08-10T16:30:00+00:00',
+              },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            teams: [
+              {
+                idTeam: '133604',
+                strBadge: 'https://images.example.com/arsenal.png',
+              },
+            ],
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            teams: [
+              {
+                idTeam: '133602',
+                strBadge: 'https://images.example.com/chelsea.png',
+              },
+            ],
+          }),
+        }),
+    )
+
+    renderWithSettings(<SportsScoresWidget />, {
+      sportsFavoriteTeams: [
+        {
+          id: '133604',
+          name: 'Arsenal',
+          leagueId: 'EPL',
+          leagueName: 'Premier League',
+          sport: 'soccer',
+        },
+      ],
+      sportsRefreshMinutes: 15,
+    })
+
+    expect(await screen.findByText('Arsenal')).toBeInTheDocument()
+    expect(screen.getByText('Chelsea')).toBeInTheDocument()
+    expect(screen.getByText('2 - 1')).toBeInTheDocument()
+    expect(screen.getByText('Win')).toBeInTheDocument()
+    expect(screen.getByText('FT')).toBeInTheDocument()
+    expect(screen.getByText(/Updated just now/i)).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Arsenal logo' })).toHaveAttribute(
+      'src',
+      'https://images.example.com/arsenal.png',
+    )
+    expect(screen.getByRole('img', { name: 'Chelsea logo' })).toHaveAttribute(
+      'src',
+      'https://images.example.com/chelsea.png',
+    )
   })
 })

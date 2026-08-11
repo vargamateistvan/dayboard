@@ -179,6 +179,9 @@ describe('settings persistence', () => {
       stockSymbols: ['AAPL', 'TSLA'],
       currencyPairs: [['USD', 'EUR'], ['GBP', 'JPY']] as [string, string][],
       financeRefreshMinutes: 5,
+      sportsFavoriteTeams: [],
+      sportsEnabledLeagues: [...DEFAULT_SETTINGS.sportsEnabledLeagues],
+      sportsRefreshMinutes: 15,
       worldClockCity: 'Tokyo',
       worldClockTimeZone: 'Asia/Tokyo',
       customColors: {
@@ -225,6 +228,9 @@ describe('settings persistence', () => {
         showBuyMeACoffeeWidget: 'sometimes',
         worldClockCity: 123,
         worldClockTimeZone: 'Mars/Phobos',
+        sportsFavoriteTeams: 'arsenal',
+        sportsEnabledLeagues: [],
+        sportsRefreshMinutes: 0,
       }),
     )
     const loaded = loadSettings()
@@ -246,6 +252,9 @@ describe('settings persistence', () => {
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
     expect(loaded.worldClockCity).toBe(DEFAULT_SETTINGS.worldClockCity)
     expect(loaded.worldClockTimeZone).toBe(DEFAULT_SETTINGS.worldClockTimeZone)
+    expect(loaded.sportsFavoriteTeams).toEqual(DEFAULT_SETTINGS.sportsFavoriteTeams)
+    expect(loaded.sportsEnabledLeagues).toEqual(DEFAULT_SETTINGS.sportsEnabledLeagues)
+    expect(loaded.sportsRefreshMinutes).toBe(1)
   })
 
   it('migrates the legacy 25 km flights radius to the new 50 km default', () => {

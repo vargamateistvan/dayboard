@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type Dispatch,
@@ -40,6 +41,7 @@ import {
   DEFAULT_CALENDAR_COLORS,
   DEFAULT_CUSTOM_COLORS,
   FONT_PRESET_OPTIONS,
+  SPORTS_LEAGUE_OPTIONS,
   applyPreset,
   deletePreset,
   isPresetScheduledNow,
@@ -49,6 +51,8 @@ import {
   type Settings,
   type SettingsPreset,
   type SettingsPresetSchedule,
+  type SportsFavoriteTeam,
+  type SportsLeagueId,
   updatePresetSchedule,
   type CalendarFeed,
   type CalendarExtraInfoPreview,
@@ -58,6 +62,7 @@ import {
   type CustomColors,
   type WeatherUnitSystem,
 } from "../lib/settings";
+import { searchSportsTeams, type SportsTeamSearchResult } from "../lib/sports";
 import {
   Globe,
   Monitor,
@@ -259,7 +264,7 @@ interface WidgetLayoutEditorProps {
 }
 
 const WIDGET_CHIP_GROUPS: ReadonlyArray<{
-  id: "core" | "productivity" | "media" | "finance";
+  id: "core" | "productivity" | "media" | "finance" | "sports";
   label: string;
   widgets: readonly Widget[];
 }> = [
@@ -282,6 +287,11 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
     id: "finance",
     label: "Finance",
     widgets: ["stocks", "currencies"],
+  },
+  {
+    id: "sports",
+    label: "Sports",
+    widgets: ["sports"],
   },
 ] as const;
 
@@ -996,6 +1006,21 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [currencyAddBase, setCurrencyAddBase] = useState("");
   const [currencyAddTarget, setCurrencyAddTarget] = useState("");
   const [financeRefreshMin, setFinanceRefreshMin] = useState(settings.financeRefreshMinutes);
+  const [sportsFavoriteTeams, setSportsFavoriteTeams] = useState<SportsFavoriteTeam[]>(
+    settings.sportsFavoriteTeams,
+  );
+  const sportsFavoriteTeamsRef = useRef<SportsFavoriteTeam[]>(settings.sportsFavoriteTeams);
+  const [sportsEnabledLeagues, setSportsEnabledLeagues] = useState<SportsLeagueId[]>(
+    settings.sportsEnabledLeagues,
+  );
+  const [sportsRefreshMin, setSportsRefreshMin] = useState(settings.sportsRefreshMinutes);
+  const [sportsTeamQuery, setSportsTeamQuery] = useState("");
+  const [debouncedSportsTeamQuery, setDebouncedSportsTeamQuery] = useState("");
+  const [sportsTeamSearchResults, setSportsTeamSearchResults] = useState<SportsTeamSearchResult[]>(
+    [],
+  );
+  const [sportsTeamSearchLoading, setSportsTeamSearchLoading] = useState(false);
+  const [sportsTeamSearchError, setSportsTeamSearchError] = useState<string | null>(null);
   const [showBuyMeACoffeeWidget, setShowBuyMeACoffeeWidget] = useState(
     settings.showBuyMeACoffeeWidget,
   );
@@ -1033,6 +1058,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isFlightsOnLayout = visibility.flights;
   const isTimezoneClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
+  const isSportsOnLayout = visibility.sports;
   const isMusicOnLayout =
     visibility.spotify ||
     visibility.appleMusic ||
@@ -1042,6 +1068,27 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isApplePodcastOnLayout = visibility.applePodcast;
   const isTimerOnLayout = visibility.timer;
   const activePresetName = presets.find((preset) => isPresetScheduledNow(preset.schedule))?.name ?? null;
+  const sportsFavoriteTeamsByLeague = useMemo(() => {
+    const grouped = new Map<string, SportsFavoriteTeam[]>()
+    sportsFavoriteTeams.forEach((team) => {
+      const current = grouped.get(team.leagueName) ?? []
+      current.push(team)
+      grouped.set(team.leagueName, current)
+    })
+
+    return [...grouped.entries()].sort((left, right) =>
+      left[0].localeCompare(right[0]),
+    )
+  }, [sportsFavoriteTeams]);
+  const sortedSportsSearchResults = useMemo(() => {
+    return [...sportsTeamSearchResults].sort((left, right) => {
+      const leagueOrder = left.leagueName.localeCompare(right.leagueName)
+      if (leagueOrder !== 0) {
+        return leagueOrder
+      }
+      return left.name.localeCompare(right.name)
+    })
+  }, [sportsTeamSearchResults]);
 
   const refreshPresets = () => {
     setPresets(listPresets());
@@ -1096,6 +1143,15 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setCurrencyAddBase("");
     setCurrencyAddTarget("");
     setFinanceRefreshMin(nextSettings.financeRefreshMinutes);
+    setSportsFavoriteTeams(nextSettings.sportsFavoriteTeams);
+    sportsFavoriteTeamsRef.current = nextSettings.sportsFavoriteTeams;
+    setSportsEnabledLeagues(nextSettings.sportsEnabledLeagues);
+    setSportsRefreshMin(nextSettings.sportsRefreshMinutes);
+    setSportsTeamQuery("");
+    setDebouncedSportsTeamQuery("");
+    setSportsTeamSearchResults([]);
+    setSportsTeamSearchLoading(false);
+    setSportsTeamSearchError(null);
     setShowBuyMeACoffeeWidget(nextSettings.showBuyMeACoffeeWidget);
     setCalendarHidePastEvents(nextSettings.calendarHidePastEvents);
     setCalendarShowMonthlyOverview(nextSettings.calendarShowMonthlyOverview);
@@ -1142,6 +1198,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     stockSymbols,
     currencyPairs,
     financeRefreshMinutes: financeRefreshMin,
+    sportsFavoriteTeams: sportsFavoriteTeamsRef.current,
+    sportsEnabledLeagues,
+    sportsRefreshMinutes: sportsRefreshMin,
     showBuyMeACoffeeWidget,
     calendarHidePastEvents,
     calendarShowMonthlyOverview,
@@ -1164,6 +1223,90 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       setEditingPresetName(selectedPresetName);
     }
   }, [selectedPresetName]);
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedSportsTeamQuery(sportsTeamQuery);
+    }, 500);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [sportsTeamQuery]);
+
+  useEffect(() => {
+    if (!isSportsOnLayout || activeTab !== "widgets") {
+      setSportsTeamSearchResults([]);
+      setSportsTeamSearchLoading(false);
+      setSportsTeamSearchError(null);
+      return;
+    }
+
+    const query = debouncedSportsTeamQuery.trim();
+    if (query.length < 2) {
+      setSportsTeamSearchResults([]);
+      setSportsTeamSearchLoading(false);
+      setSportsTeamSearchError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setSportsTeamSearchLoading(true);
+    setSportsTeamSearchError(null);
+
+    searchSportsTeams(query, sportsEnabledLeagues)
+      .then((teams) => {
+        if (cancelled) {
+          return;
+        }
+        setSportsTeamSearchResults(teams);
+        setSportsTeamSearchLoading(false);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+        setSportsTeamSearchError(error instanceof Error ? error.message : "Could not load teams.");
+        setSportsTeamSearchLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, debouncedSportsTeamQuery, isSportsOnLayout, sportsEnabledLeagues]);
+
+  const toggleSportsLeague = (leagueId: SportsLeagueId) => {
+    setSportsEnabledLeagues((previous) => {
+      if (previous.includes(leagueId)) {
+        const next = previous.filter((entry) => entry !== leagueId);
+        return next.length > 0 ? next : previous;
+      }
+      return [...previous, leagueId];
+    });
+  };
+
+  const addFavoriteTeam = (team: SportsTeamSearchResult) => {
+    const alreadyExists = sportsFavoriteTeamsRef.current.some(
+      (candidate) => candidate.id === team.id && candidate.leagueId === team.leagueId,
+    );
+    if (alreadyExists) {
+      return;
+    }
+
+    const nextTeams = [...sportsFavoriteTeamsRef.current, team];
+    sportsFavoriteTeamsRef.current = nextTeams;
+    setSportsFavoriteTeams(nextTeams);
+    updateSettings({ sportsFavoriteTeams: nextTeams });
+  };
+
+  const removeFavoriteTeam = (teamToRemove: SportsFavoriteTeam) => {
+    const nextTeams = sportsFavoriteTeamsRef.current.filter(
+      (team) => !(team.id === teamToRemove.id && team.leagueId === teamToRemove.leagueId),
+    );
+    sportsFavoriteTeamsRef.current = nextTeams;
+    setSportsFavoriteTeams(nextTeams);
+    updateSettings({ sportsFavoriteTeams: nextTeams });
+  };
 
   const updateCalendarFeed = (index: number, patch: Partial<CalendarFeed>) => {
     setCalendarFeeds((prev) =>
@@ -1799,6 +1942,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   !isFlightsOnLayout &&
                   !isTimezoneClockOnLayout &&
                   !isFinanceOnLayout &&
+                  !isSportsOnLayout &&
                   !isMusicOnLayout &&
                   !isTimerOnLayout && (
                     <section className={styles.section}>
@@ -2406,6 +2550,151 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
                     <p className={styles.hint}>
                       Data refreshes automatically at the selected interval. You can still refresh manually.
+                    </p>
+                  </section>
+                )}
+
+                {isSportsOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Sports Scores</h3>
+
+                    <div className={styles.intervalRow}>
+                      <label className={styles.intervalLabel}>
+                        <span>Refresh every (minutes)</span>
+                        <input
+                          className={styles.input}
+                          type="number"
+                          min={1}
+                          max={1440}
+                          value={sportsRefreshMin}
+                          onChange={(e) =>
+                            setSportsRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+                          }
+                        />
+                      </label>
+                    </div>
+
+                    <p className={styles.listHeading}>Enabled leagues</p>
+                    <div className={styles.widgetGrid}>
+                      {SPORTS_LEAGUE_OPTIONS.map((league) => {
+                        const enabled = sportsEnabledLeagues.includes(league.id);
+                        return (
+                          <button
+                            key={league.id}
+                            className={[
+                              styles.widgetToggle,
+                              enabled ? styles.widgetVisible : "",
+                            ].join(" ")}
+                            onClick={() => toggleSportsLeague(league.id)}
+                            type="button"
+                            aria-pressed={enabled}
+                          >
+                            {enabled ? <Eye size={14} /> : <EyeOff size={14} />}
+                            <span>{league.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className={styles.listHeading}>Favorite teams</p>
+                    {sportsFavoriteTeams.length === 0 ? (
+                      <p className={styles.hint}>No favorite teams selected yet.</p>
+                    ) : (
+                      sportsFavoriteTeamsByLeague.map(([leagueName, teams]) => (
+                        <div key={leagueName} className={styles.calendarList}>
+                          <p className={styles.listHeading}>{leagueName}</p>
+                          {teams.map((team) => (
+                            <div
+                              key={`${team.leagueId}:${team.id}`}
+                              className={styles.calendarRow}
+                            >
+                              <span
+                                className={[
+                                  styles.input,
+                                  styles.calendarUrlInput,
+                                  styles.readonlyPill,
+                                ].join(" ")}
+                              >
+                                {team.name}
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.removeCalendarBtn}
+                                onClick={() => removeFavoriteTeam(team)}
+                                aria-label={`Remove ${team.name}`}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ))
+                    )}
+
+                    <label className={styles.intervalLabel}>
+                      <span>Search teams</span>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={sportsTeamQuery}
+                        onChange={(e) => setSportsTeamQuery(e.target.value)}
+                        placeholder="e.g. Arsenal, Real Madrid, Lakers"
+                      />
+                    </label>
+
+                    {sportsTeamSearchLoading ? (
+                      <p className={styles.hint}>Searching teams…</p>
+                    ) : null}
+                    {sportsTeamSearchError ? (
+                      <p className={styles.mediaLinkError}>{sportsTeamSearchError}</p>
+                    ) : null}
+                    {!sportsTeamSearchLoading &&
+                    sportsTeamQuery.trim().length >= 2 &&
+                    sportsTeamSearchResults.length === 0 &&
+                    !sportsTeamSearchError ? (
+                      <p className={styles.hint}>
+                        No teams found in selected leagues. Try another query or enable more leagues.
+                      </p>
+                    ) : null}
+                    {!sportsTeamSearchLoading &&
+                    sortedSportsSearchResults.length > 0 ? (
+                      <div className={styles.calendarList}>
+                        {sortedSportsSearchResults.map((team) => {
+                          const alreadyAdded = sportsFavoriteTeams.some(
+                            (favorite) =>
+                              favorite.id === team.id &&
+                              favorite.leagueId === team.leagueId,
+                          );
+                          return (
+                            <div
+                              key={`${team.leagueId}:${team.id}`}
+                              className={styles.calendarRow}
+                            >
+                              <span
+                                className={[
+                                  styles.input,
+                                  styles.calendarUrlInput,
+                                  styles.readonlyPill,
+                                ].join(" ")}
+                              >
+                                {team.name} • {team.leagueName}
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.addCalendarBtn}
+                                disabled={alreadyAdded}
+                                onClick={() => addFavoriteTeam(team)}
+                              >
+                                {alreadyAdded ? "Added" : "Add"}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
+                    <p className={styles.hint}>
+                      Includes European football leagues and major US leagues.
                     </p>
                   </section>
                 )}

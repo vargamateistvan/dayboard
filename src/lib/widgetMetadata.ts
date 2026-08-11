@@ -14,6 +14,7 @@ export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'applePodcast', label: 'Apple Podcast' },
   { id: 'stocks', label: 'Stocks' },
   { id: 'currencies', label: 'Currencies' },
+  { id: 'sports', label: 'Sports Scores' },
   { id: 'quote', label: 'Quote of the Day' },
   { id: 'deviceInfo', label: 'Device Info' },
 ]

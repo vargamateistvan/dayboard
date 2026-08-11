@@ -1,0 +1,252 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  gap: 0.5rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  opacity: 0.55;
+  padding: 0.15rem 0.25rem;
+}
+
+.refresh:hover {
+  opacity: 1;
+}
+
+.refreshGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.refreshHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.emptyState {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  line-height: 1.45;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--color-border, rgba(255, 255, 255, 0.08));
+  padding-bottom: 0.6rem;
+}
+
+.row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.matchupGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.7rem;
+  align-items: center;
+}
+
+.teamBlock {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.teamBlockRight {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.teamHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.badge {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface-alt) 75%, transparent);
+}
+
+.teamMeta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.teamName {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leagueName {
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rowLoading,
+.rowError {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.rowError {
+  color: var(--color-danger);
+}
+
+.rowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.matchup {
+  font-size: 0.64rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--color-surface-alt) 78%, transparent);
+}
+
+.matchupLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.scoreLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.score {
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.resultBadge {
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.win {
+  background: color-mix(in srgb, #22c55e 20%, transparent);
+  color: #22c55e;
+}
+
+.loss {
+  background: color-mix(in srgb, #ef4444 20%, transparent);
+  color: #ef4444;
+}
+
+.draw {
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #f59e0b;
+}
+
+.gameMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.6rem;
+  font-size: 0.66rem;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.fullscreen .title {
+  font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+}
+
+.fullscreen .teamName {
+  font-size: clamp(1rem, 1.8vw, 1.4rem);
+}
+
+.fullscreen .score {
+  font-size: clamp(1.25rem, 2.5vw, 1.9rem);
+}
+
+.fullscreen .matchupGrid {
+  gap: 1rem;
+}

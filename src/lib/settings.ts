@@ -12,6 +12,38 @@ export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pi
 export type WeatherUnitSystem = 'metric' | 'imperial'
 export type CalendarWeekStartsOn = 'sunday' | 'monday'
 export type CalendarExtraInfoPreview = 'monthly' | 'weekly'
+export type SportsSport = 'soccer' | 'basketball' | 'american_football' | 'baseball' | 'hockey'
+export type SportsLeagueId =
+  | 'EPL'
+  | 'LALIGA'
+  | 'SERIE_A'
+  | 'BUNDESLIGA'
+  | 'LIGUE_1'
+  | 'UCL'
+  | 'UEL'
+  | 'UECL'
+  | 'EREDIVISIE'
+  | 'PRIMEIRA_LIGA'
+  | 'NBA'
+  | 'NFL'
+  | 'MLB'
+  | 'NHL'
+
+export interface SportsLeagueOption {
+  id: SportsLeagueId
+  label: string
+  sport: SportsSport
+  providerLeagueName: string
+}
+
+export interface SportsFavoriteTeam {
+  id: string
+  name: string
+  leagueId: SportsLeagueId
+  leagueName: string
+  sport: SportsSport
+  badgeUrl?: string
+}
 
 export interface CalendarFeed {
   url: string
@@ -58,12 +90,34 @@ export interface Settings {
   stockSymbols: string[]
   currencyPairs: [string, string][]
   financeRefreshMinutes: number
+  sportsFavoriteTeams: SportsFavoriteTeam[]
+  sportsEnabledLeagues: SportsLeagueId[]
+  sportsRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
   worldClockCity: string
   worldClockTimeZone: string
   customColors?: CustomColors
 }
+
+export const SPORTS_LEAGUE_OPTIONS: ReadonlyArray<SportsLeagueOption> = [
+  { id: 'EPL', label: 'Premier League', sport: 'soccer', providerLeagueName: 'English Premier League' },
+  { id: 'LALIGA', label: 'La Liga', sport: 'soccer', providerLeagueName: 'Spanish La Liga' },
+  { id: 'SERIE_A', label: 'Serie A', sport: 'soccer', providerLeagueName: 'Italian Serie A' },
+  { id: 'BUNDESLIGA', label: 'Bundesliga', sport: 'soccer', providerLeagueName: 'German Bundesliga' },
+  { id: 'LIGUE_1', label: 'Ligue 1', sport: 'soccer', providerLeagueName: 'French Ligue 1' },
+  { id: 'UCL', label: 'Champions League', sport: 'soccer', providerLeagueName: 'UEFA Champions League' },
+  { id: 'UEL', label: 'Europa League', sport: 'soccer', providerLeagueName: 'UEFA Europa League' },
+  { id: 'UECL', label: 'Conference League', sport: 'soccer', providerLeagueName: 'UEFA Europa Conference League' },
+  { id: 'EREDIVISIE', label: 'Eredivisie', sport: 'soccer', providerLeagueName: 'Dutch Eredivisie' },
+  { id: 'PRIMEIRA_LIGA', label: 'Primeira Liga', sport: 'soccer', providerLeagueName: 'Portuguese Primeira Liga' },
+  { id: 'NBA', label: 'NBA', sport: 'basketball', providerLeagueName: 'NBA' },
+  { id: 'NFL', label: 'NFL', sport: 'american_football', providerLeagueName: 'NFL' },
+  { id: 'MLB', label: 'MLB', sport: 'baseball', providerLeagueName: 'MLB' },
+  { id: 'NHL', label: 'NHL', sport: 'hockey', providerLeagueName: 'NHL' },
+] as const
+
+const DEFAULT_SPORTS_ENABLED_LEAGUES: SportsLeagueId[] = SPORTS_LEAGUE_OPTIONS.map((league) => league.id)
 
 export const DEFAULT_CUSTOM_COLORS: CustomColors = {
   primary: '#4f46e5',
@@ -166,6 +220,9 @@ export const DEFAULT_SETTINGS: Settings = {
   stockSymbols: ['AAPL'],
   currencyPairs: [['USD', 'EUR']],
   financeRefreshMinutes: 10,
+  sportsFavoriteTeams: [],
+  sportsEnabledLeagues: DEFAULT_SPORTS_ENABLED_LEAGUES,
+  sportsRefreshMinutes: 15,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
   worldClockCity: 'New York',
@@ -433,6 +490,93 @@ function normalizeFinanceRefreshMinutes(value: unknown): number {
   return Math.max(1, Math.round(value))
 }
 
+function normalizeSportsSport(value: unknown): SportsSport {
+  switch (value) {
+    case 'soccer':
+    case 'basketball':
+    case 'american_football':
+    case 'baseball':
+    case 'hockey':
+      return value
+    default:
+      return 'soccer'
+  }
+}
+
+function isSportsLeagueId(value: unknown): value is SportsLeagueId {
+  return typeof value === 'string' && SPORTS_LEAGUE_OPTIONS.some((league) => league.id === value)
+}
+
+function normalizeSportsEnabledLeagues(value: unknown): SportsLeagueId[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    return DEFAULT_SETTINGS.sportsEnabledLeagues
+  }
+
+  const seen = new Set<SportsLeagueId>()
+  const normalized: SportsLeagueId[] = []
+  for (const entry of value) {
+    if (isSportsLeagueId(entry) && !seen.has(entry)) {
+      seen.add(entry)
+      normalized.push(entry)
+    }
+  }
+
+  return normalized.length > 0 ? normalized : DEFAULT_SETTINGS.sportsEnabledLeagues
+}
+
+function normalizeSportsFavoriteTeams(value: unknown): SportsFavoriteTeam[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  const seen = new Set<string>()
+  const normalized: SportsFavoriteTeam[] = []
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') {
+      continue
+    }
+
+    const team = entry as Partial<SportsFavoriteTeam>
+    if (!team.id || typeof team.id !== 'string') {
+      continue
+    }
+    if (!team.name || typeof team.name !== 'string') {
+      continue
+    }
+    if (!isSportsLeagueId(team.leagueId)) {
+      continue
+    }
+
+    const key = `${team.leagueId}:${team.id.trim()}`
+    if (seen.has(key)) {
+      continue
+    }
+
+    seen.add(key)
+    normalized.push({
+      id: team.id.trim(),
+      name: team.name.trim(),
+      leagueId: team.leagueId,
+      leagueName: typeof team.leagueName === 'string' && team.leagueName.trim().length > 0
+        ? team.leagueName.trim()
+        : SPORTS_LEAGUE_OPTIONS.find((league) => league.id === team.leagueId)?.label ?? team.leagueId,
+      sport: normalizeSportsSport(team.sport),
+      badgeUrl: typeof team.badgeUrl === 'string' && team.badgeUrl.trim().length > 0 ? team.badgeUrl.trim() : undefined,
+    })
+  }
+
+  return normalized
+}
+
+function normalizeSportsRefreshMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.sportsRefreshMinutes
+  }
+
+  return Math.min(1_440, Math.max(1, Math.round(value)))
+}
+
 function normalizeBoolean(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback
 }
@@ -577,6 +721,15 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     financeRefreshMinutes: normalizeFinanceRefreshMinutes(
       (rest as { financeRefreshMinutes?: unknown }).financeRefreshMinutes,
     ),
+    sportsFavoriteTeams: normalizeSportsFavoriteTeams(
+      (rest as { sportsFavoriteTeams?: unknown }).sportsFavoriteTeams,
+    ),
+    sportsEnabledLeagues: normalizeSportsEnabledLeagues(
+      (rest as { sportsEnabledLeagues?: unknown }).sportsEnabledLeagues,
+    ),
+    sportsRefreshMinutes: normalizeSportsRefreshMinutes(
+      (rest as { sportsRefreshMinutes?: unknown }).sportsRefreshMinutes,
+    ),
     pomodoroWorkMinutes: normalizePomodoroWorkMinutes(
       (rest as { pomodoroWorkMinutes?: unknown }).pomodoroWorkMinutes,
     ),
@@ -643,6 +796,9 @@ export function saveSettings(settings: Settings): void {
       stockSymbols: normalizeStockSymbols(settings.stockSymbols),
       currencyPairs: normalizeCurrencyPairs(settings.currencyPairs),
       financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
+      sportsFavoriteTeams: normalizeSportsFavoriteTeams(settings.sportsFavoriteTeams),
+      sportsEnabledLeagues: normalizeSportsEnabledLeagues(settings.sportsEnabledLeagues),
+      sportsRefreshMinutes: normalizeSportsRefreshMinutes(settings.sportsRefreshMinutes),
       pomodoroWorkMinutes: normalizePomodoroWorkMinutes(settings.pomodoroWorkMinutes),
       pomodoroBreakMinutes: normalizePomodoroBreakMinutes(settings.pomodoroBreakMinutes),
       worldClockCity: normalizeWorldClockCity(settings.worldClockCity),
@@ -773,6 +929,18 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (settings.financeRefreshMinutes < 1 || settings.financeRefreshMinutes > 1440) {
     errors.push('financeRefreshMinutes must be between 1 and 1440')
+  }
+
+  if (!Array.isArray(settings.sportsFavoriteTeams)) {
+    errors.push('sportsFavoriteTeams must be an array')
+  }
+
+  if (!Array.isArray(settings.sportsEnabledLeagues) || settings.sportsEnabledLeagues.length === 0) {
+    errors.push('sportsEnabledLeagues must be a non-empty array')
+  }
+
+  if (settings.sportsRefreshMinutes < 1 || settings.sportsRefreshMinutes > 1440) {
+    errors.push('sportsRefreshMinutes must be between 1 and 1440')
   }
 
   if (typeof settings.worldClockCity !== 'string' || settings.worldClockCity.trim().length === 0) {
@@ -909,6 +1077,9 @@ export function isValidSettings(value: unknown): value is Settings {
     typeof s.pomodoroBreakMinutes === 'number' &&
     Array.isArray(s.stockSymbols) &&
     Array.isArray(s.currencyPairs) &&
+    Array.isArray(s.sportsFavoriteTeams) &&
+    Array.isArray(s.sportsEnabledLeagues) &&
+    typeof s.sportsRefreshMinutes === 'number' &&
     typeof s.worldClockCity === 'string' &&
     typeof s.worldClockTimeZone === 'string'
   )
