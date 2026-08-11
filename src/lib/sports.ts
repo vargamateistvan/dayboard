@@ -51,7 +51,9 @@ export interface SportsLeagueScore {
   leagueId: SportsLeagueId
   leagueName: string
   homeTeamName: string
+  homeTeamBadgeUrl?: string
   awayTeamName: string
+  awayTeamBadgeUrl?: string
   homeScore: number
   awayScore: number
   playedAt: string
@@ -538,12 +540,26 @@ export async function fetchRecentLeagueScores(
           continue
         }
 
+        const homeTeamId = event.idHomeTeam
+        const awayTeamId = event.idAwayTeam
+        const homeBadgePromise = homeTeamId ? fetchTeamBadgeUrl(homeTeamId) : Promise.resolve(undefined)
+        const awayBadgePromise = awayTeamId ? fetchTeamBadgeUrl(awayTeamId) : Promise.resolve(undefined)
+        const [homeBadgeResult, awayBadgeResult] = await Promise.allSettled([
+          homeBadgePromise,
+          awayBadgePromise,
+        ])
+
+        const homeTeamBadgeUrl = homeBadgeResult.status === 'fulfilled' ? homeBadgeResult.value : undefined
+        const awayTeamBadgeUrl = awayBadgeResult.status === 'fulfilled' ? awayBadgeResult.value : undefined
+
         allScores.push({
           id: event.idEvent ?? `${league.id}:${event.dateEvent ?? 'unknown'}:${event.strHomeTeam ?? 'home'}:${event.strAwayTeam ?? 'away'}`,
           leagueId: league.id,
           leagueName: league.label,
           homeTeamName: event.strHomeTeam?.trim() || 'Home',
+          homeTeamBadgeUrl,
           awayTeamName: event.strAwayTeam?.trim() || 'Away',
+          awayTeamBadgeUrl,
           homeScore,
           awayScore,
           playedAt: toEventTimestamp(event),

@@ -277,6 +277,14 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
                   <div className={styles.rowBody}>
                     <div className={styles.matchupGrid}>
                       <div className={styles.teamBlock}>
+                        {score.homeTeamBadgeUrl ? (
+                          <img
+                            src={score.homeTeamBadgeUrl}
+                            alt={`${score.homeTeamName} logo`}
+                            className={styles.badge}
+                            loading="lazy"
+                          />
+                        ) : null}
                         <span className={styles.teamName}>{score.homeTeamName}</span>
                       </div>
                       <div className={styles.scoreBlock}>
@@ -286,6 +294,14 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
                         <span className={styles.matchup}>Final</span>
                       </div>
                       <div className={[styles.teamBlock, styles.teamBlockRight].join(' ')}>
+                        {score.awayTeamBadgeUrl ? (
+                          <img
+                            src={score.awayTeamBadgeUrl}
+                            alt={`${score.awayTeamName} logo`}
+                            className={styles.badge}
+                            loading="lazy"
+                          />
+                        ) : null}
                         <span className={styles.teamName}>{score.awayTeamName}</span>
                       </div>
                     </div>

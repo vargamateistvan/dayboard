@@ -106,29 +106,59 @@ describe('fetchRecentLeagueScores', () => {
   it('maps completed league events into score rows', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          events: [
-            {
-              idEvent: 'e1',
-              strHomeTeam: 'Arsenal',
-              strAwayTeam: 'Chelsea',
-              intHomeScore: '2',
-              intAwayScore: '1',
-              strStatus: 'Match Finished',
-              strTimestamp: '2026-08-10T16:30:00+00:00',
-            },
-            {
-              idEvent: 'e2',
-              strHomeTeam: 'Team A',
-              strAwayTeam: 'Team B',
-              intHomeScore: null,
-              intAwayScore: null,
-            },
-          ],
+      vi.fn()
+        // eventspastleague.php
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            events: [
+              {
+                idEvent: 'e1',
+                idHomeTeam: '133602',
+                idAwayTeam: '133606',
+                strHomeTeam: 'Arsenal',
+                strAwayTeam: 'Chelsea',
+                intHomeScore: '2',
+                intAwayScore: '1',
+                strStatus: 'Match Finished',
+                strTimestamp: '2026-08-10T16:30:00+00:00',
+              },
+              {
+                idEvent: 'e2',
+                strHomeTeam: 'Team A',
+                strAwayTeam: 'Team B',
+                intHomeScore: null,
+                intAwayScore: null,
+              },
+            ],
+          }),
+        })
+        // lookupteam.php for home team (Arsenal)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            teams: [
+              {
+                idTeam: '133602',
+                strTeam: 'Arsenal',
+                strBadge: 'https://images.example.com/arsenal.png',
+              },
+            ],
+          }),
+        })
+        // lookupteam.php for away team (Chelsea)
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            teams: [
+              {
+                idTeam: '133606',
+                strTeam: 'Chelsea',
+                strBadge: 'https://images.example.com/chelsea.png',
+              },
+            ],
+          }),
         }),
-      }),
     )
 
     const results = await fetchRecentLeagueScores(['EPL'])
@@ -138,7 +168,9 @@ describe('fetchRecentLeagueScores', () => {
         leagueId: 'EPL',
         leagueName: 'Premier League',
         homeTeamName: 'Arsenal',
+        homeTeamBadgeUrl: 'https://images.example.com/arsenal.png',
         awayTeamName: 'Chelsea',
+        awayTeamBadgeUrl: 'https://images.example.com/chelsea.png',
         homeScore: 2,
         awayScore: 1,
         status: 'FT',
@@ -147,27 +179,57 @@ describe('fetchRecentLeagueScores', () => {
   })
 
   it('reuses cached league scores within ttl', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        events: [
-          {
-            idEvent: 'e1',
-            strHomeTeam: 'Arsenal',
-            strAwayTeam: 'Chelsea',
-            intHomeScore: '2',
-            intAwayScore: '1',
-            strStatus: 'Match Finished',
-            strTimestamp: '2026-08-10T16:30:00+00:00',
-          },
-        ],
-      }),
-    })
+    const fetchMock = vi.fn()
+      // eventspastleague.php
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          events: [
+            {
+              idEvent: 'e1',
+              idHomeTeam: '133602',
+              idAwayTeam: '133606',
+              strHomeTeam: 'Arsenal',
+              strAwayTeam: 'Chelsea',
+              intHomeScore: '2',
+              intAwayScore: '1',
+              strStatus: 'Match Finished',
+              strTimestamp: '2026-08-10T16:30:00+00:00',
+            },
+          ],
+        }),
+      })
+      // lookupteam.php for home team (Arsenal)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          teams: [
+            {
+              idTeam: '133602',
+              strTeam: 'Arsenal',
+              strBadge: 'https://images.example.com/arsenal.png',
+            },
+          ],
+        }),
+      })
+      // lookupteam.php for away team (Chelsea)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          teams: [
+            {
+              idTeam: '133606',
+              strTeam: 'Chelsea',
+              strBadge: 'https://images.example.com/chelsea.png',
+            },
+          ],
+        }),
+      })
     vi.stubGlobal('fetch', fetchMock)
 
     await fetchRecentLeagueScores(['EPL'])
     await fetchRecentLeagueScores(['EPL'])
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
 
