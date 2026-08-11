@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { FlightWidget } from '../FlightWidget'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
@@ -179,5 +179,51 @@ describe('FlightWidget', () => {
     await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
 
     expect(screen.getByText(/Add valid manual coordinates/)).toBeInTheDocument()
+  })
+
+  it('shows selected aircraft details when selecting a plane on radar', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.4979, longitude: 19.0402 } } as GeolocationPosition)
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          time: 1_786_362_327,
+          states: [
+            [
+              '49d099',
+              'WZZ123  ',
+              'Hungary',
+              1_786_362_326,
+              1_786_362_320,
+              19.0623,
+              47.5375,
+              5_478.78,
+              false,
+              106.19,
+              49.52,
+              -0.65,
+              null,
+              5_844.54,
+              '1000',
+              false,
+              0,
+            ],
+          ],
+        }),
+      }),
+    )
+
+    renderWithSettings({ flightsRadiusKm: 50 })
+    await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /Select WZZ123 on radar/i }))
+
+    expect(screen.getByText(/Selected aircraft/i)).toBeInTheDocument()
+    expect(screen.getByText(/ICAO24: 49D099/i)).toBeInTheDocument()
+    expect(screen.getByText(/Origin: Hungary/i)).toBeInTheDocument()
   })
 })

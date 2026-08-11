@@ -79,6 +79,19 @@ function formatHeading(headingDegrees: number | null): string {
   return headingDegrees === null ? 'Heading unavailable' : `${headingDegrees}°`
 }
 
+function formatVerticalRate(verticalRateMetersPerMinute: number | null): string {
+  if (verticalRateMetersPerMinute === null) {
+    return 'Vertical rate unavailable'
+  }
+
+  if (verticalRateMetersPerMinute === 0) {
+    return 'Level flight'
+  }
+
+  const direction = verticalRateMetersPerMinute > 0 ? 'Climbing' : 'Descending'
+  return `${direction} ${Math.abs(verticalRateMetersPerMinute)} m/min`
+}
+
 function getFlightName(flight: NearbyFlight): string {
   return flight.callsign ?? flight.icao24.toUpperCase()
 }
@@ -108,11 +121,15 @@ function RadarPlot({
   maxRadiusKm,
   showLabels,
   isFullscreen,
+  selectedFlightIcao,
+  onSelectFlight,
 }: {
   flights: NearbyFlight[]
   maxRadiusKm: number
   showLabels: boolean
   isFullscreen: boolean
+  selectedFlightIcao: string | null
+  onSelectFlight: (flight: NearbyFlight) => void
 }) {
   const labelLimit = isFullscreen ? 8 : 3
   const rangeStepKm = Math.max(1, Math.round(maxRadiusKm / 3))
@@ -161,9 +178,29 @@ function RadarPlot({
           const x = 50 + Math.sin(angle) * ratio * 42
           const y = 50 - Math.cos(angle) * ratio * 42
           const planeRotation = flight.headingDegrees ?? flight.bearingDegrees
+          const isSelected = selectedFlightIcao === flight.icao24
 
           return (
-            <g key={flight.icao24} transform={`translate(${x.toFixed(2)} ${y.toFixed(2)})`}>
+            <g
+              key={flight.icao24}
+              transform={`translate(${x.toFixed(2)} ${y.toFixed(2)})`}
+              className={[
+                styles.planeMarker,
+                isSelected ? styles.planeMarkerSelected : '',
+              ].join(' ')}
+              role="button"
+              tabIndex={0}
+              aria-label={`Select ${getFlightName(flight)} on radar`}
+              onClick={() => onSelectFlight(flight)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onSelectFlight(flight)
+                }
+              }}
+            >
+              <circle className={styles.planeHitArea} cx="0" cy="0" r="3.8" />
+              {isSelected ? <circle className={styles.planeSelectionRing} cx="0" cy="0" r="3.3" /> : null}
               <RadarPlaneIcon rotationDegrees={planeRotation} />
               {showLabels && index < labelLimit ? (
                 <text className={styles.planeLabel} x="3.8" y="-3.1">
@@ -187,6 +224,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
   const [now, setNow] = useState(() => Date.now())
   const [locationSource, setLocationSource] = useState('Device location')
   const [hasInitialized, setHasInitialized] = useState(false)
+  const [selectedFlightIcao, setSelectedFlightIcao] = useState<string | null>(null)
 
   const load = useCallback(() => {
     const manualCoordinates = getManualCoordinates(
@@ -305,6 +343,10 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
   }, [])
 
   const nearestFlight = flights[0] ?? null
+  const selectedFlight = useMemo(
+    () => flights.find((flight) => flight.icao24 === selectedFlightIcao) ?? null,
+    [flights, selectedFlightIcao],
+  )
   const highestFlight = useMemo(
     () =>
       flights.reduce<NearbyFlight | null>((currentHighest, flight) => {
@@ -391,6 +433,8 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                   maxRadiusKm={settings.flightsRadarRadiusKm}
                   showLabels={settings.flightsShowLabels}
                   isFullscreen={isFullscreen}
+                  selectedFlightIcao={selectedFlightIcao}
+                  onSelectFlight={(flight) => setSelectedFlightIcao(flight.icao24)}
                 />
                 <div className={styles.radarCaption}>
                 Centered on {locationSource.toLowerCase()} · outer ring {settings.flightsRadarRadiusKm} km
@@ -398,6 +442,26 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
               </div>
 
               <div className={styles.flightList}>
+                {selectedFlight ? (
+                  <div className={styles.selectedFlightCard} role="status" aria-live="polite">
+                    <div className={styles.selectedFlightHeader}>
+                      <span className={styles.highlightLabel}>Selected aircraft</span>
+                      <span className={styles.selectedFlightName}>{getFlightName(selectedFlight)}</span>
+                    </div>
+                    <div className={styles.selectedFlightGrid}>
+                      <span>ICAO24: {selectedFlight.icao24.toUpperCase()}</span>
+                      <span>Origin: {selectedFlight.originCountry ?? 'Unknown'}</span>
+                      <span>Distance: {selectedFlight.distanceKm.toFixed(1)} km</span>
+                      <span>Altitude: {formatAltitude(selectedFlight.altitudeMeters)}</span>
+                      <span>Speed: {formatGroundSpeed(selectedFlight.groundspeedKmh)}</span>
+                      <span>Heading: {formatHeading(selectedFlight.headingDegrees)}</span>
+                      <span>{formatVerticalRate(selectedFlight.verticalRateMetersPerMinute)}</span>
+                      <span>Seen {selectedFlight.lastSeenSecondsAgo}s ago</span>
+                    </div>
+                  </div>
+                ) : flights.length > 0 ? (
+                  <div className={styles.selectedFlightHint}>Select an aircraft on the radar to inspect details.</div>
+                ) : null}
                 <div className={styles.flightHighlights}>
                   {nearestFlight ? (
                     <div className={styles.highlight}>

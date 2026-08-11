@@ -249,6 +249,34 @@
   letter-spacing: 0.04em;
 }
 
+.planeMarker {
+  cursor: pointer;
+  outline: none;
+}
+
+.planeMarker:focus-visible .planeSelectionRing {
+  opacity: 1;
+}
+
+.planeHitArea {
+  fill: transparent;
+}
+
+.planeSelectionRing {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-accent) 88%, white);
+  stroke-width: 0.5;
+  opacity: 0.88;
+}
+
+.planeMarkerSelected .planeMarkerFill {
+  fill: color-mix(in srgb, var(--color-accent) 92%, white);
+}
+
+.planeMarkerSelected .planeMarkerOutline {
+  stroke: color-mix(in srgb, white 60%, var(--color-accent));
+}
+
 .radarLabel,
 .radarRangeLabel {
   fill: var(--color-text-muted);
@@ -301,6 +329,41 @@
   font-size: 0.8rem;
   color: var(--color-text);
   font-weight: 600;
+}
+
+.selectedFlightCard {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 38%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.selectedFlightHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.selectedFlightName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.selectedFlightGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem 0.5rem;
+  font-size: 0.69rem;
+  color: var(--color-text-muted);
+}
+
+.selectedFlightHint {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
 }
 
 .rows {
