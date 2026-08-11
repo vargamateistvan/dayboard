@@ -30,6 +30,7 @@ import {
   isEncrypted,
   saveEncryptedSettings,
   loadEncryptedSettings,
+  type Settings,
 } from '../settings'
 import { SettingsProvider, useSettings } from '../useSettings'
 import { loadWidgetLayoutState } from '../useWidgetVisibility'
@@ -123,7 +124,7 @@ describe('settings persistence', () => {
   })
 
   it('round-trips all fields correctly', () => {
-    const custom = {
+    const custom: Settings = {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
