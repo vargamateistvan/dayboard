@@ -178,7 +178,6 @@
   gap: 0.1rem;
   padding: 0.15rem 0.45rem;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--color-surface-alt) 78%, transparent);
 }
 
 .matchupLine {
