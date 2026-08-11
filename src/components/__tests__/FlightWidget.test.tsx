@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { FlightWidget } from '../FlightWidget'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
+import { resetFlightRequestCache } from '../../lib/flights'
 
 const mockGeolocation = {
   getCurrentPosition: vi.fn(),
@@ -21,6 +22,7 @@ describe('FlightWidget', () => {
   beforeEach(() => {
     vi.stubGlobal('navigator', { geolocation: mockGeolocation })
     localStorage.clear()
+    resetFlightRequestCache()
   })
 
   afterEach(() => {

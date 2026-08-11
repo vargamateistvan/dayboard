@@ -1,5 +1,23 @@
 const FLIGHTS_PROXY_PATH = '/api/flights'
 const EARTH_RADIUS_KM = 6371
+const MIN_FETCH_INTERVAL_MS = 10_000
+const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000
+const MAX_RATE_LIMIT_BACKOFF_MS = 300_000
+
+interface CachedFlightPayload {
+  readonly flights: NearbyFlight[]
+  readonly fetchedAtMs: number
+}
+
+const flightResponseCache = new Map<string, CachedFlightPayload>()
+const inFlightRequests = new Map<string, Promise<NearbyFlight[]>>()
+const rateLimitedUntil = new Map<string, number>()
+
+export function resetFlightRequestCache(): void {
+  flightResponseCache.clear()
+  inFlightRequests.clear()
+  rateLimitedUntil.clear()
+}
 
 export interface NearbyFlight {
   icao24: string
@@ -154,6 +172,52 @@ function buildFlightRequestUrl(bounds: FlightBounds): string {
   return `${FLIGHTS_PROXY_PATH}?${params.toString()}`
 }
 
+function buildRequestKey({
+  latitude,
+  longitude,
+  radiusKm,
+  onlyAirborne,
+}: {
+  latitude: number
+  longitude: number
+  radiusKm: number
+  onlyAirborne: boolean
+}): string {
+  // Quantize coordinates so tiny GPS drift does not create fresh API keys on every refresh.
+  return [
+    latitude.toFixed(2),
+    longitude.toFixed(2),
+    radiusKm.toFixed(1),
+    onlyAirborne ? 'airborne' : 'all',
+  ].join(':')
+}
+
+function parseRetryAfterMilliseconds(rawValue: string | null): number {
+  if (rawValue === null) {
+    return DEFAULT_RATE_LIMIT_BACKOFF_MS
+  }
+
+  const trimmedValue = rawValue.trim()
+  if (trimmedValue.length === 0) {
+    return DEFAULT_RATE_LIMIT_BACKOFF_MS
+  }
+
+  const numericSeconds = Number(trimmedValue)
+  if (Number.isFinite(numericSeconds) && numericSeconds >= 0) {
+    return Math.min(Math.round(numericSeconds * 1000), MAX_RATE_LIMIT_BACKOFF_MS)
+  }
+
+  const retryAtMs = Date.parse(trimmedValue)
+  if (Number.isNaN(retryAtMs)) {
+    return DEFAULT_RATE_LIMIT_BACKOFF_MS
+  }
+
+  return Math.min(
+    Math.max(0, retryAtMs - Date.now()),
+    MAX_RATE_LIMIT_BACKOFF_MS,
+  )
+}
+
 export async function fetchNearbyFlights({
   latitude,
   longitude,
@@ -165,23 +229,72 @@ export async function fetchNearbyFlights({
   radiusKm: number
   onlyAirborne: boolean
 }): Promise<NearbyFlight[]> {
-  const response = await fetch(buildFlightRequestUrl(buildFlightBounds(latitude, longitude, radiusKm)))
-  if (!response.ok) {
-    throw new Error('Could not load nearby flights.')
+  const requestArgs = { latitude, longitude, radiusKm, onlyAirborne }
+  const requestKey = buildRequestKey(requestArgs)
+  const nowMs = Date.now()
+  const cachedPayload = flightResponseCache.get(requestKey)
+  const cachedAgeMs = cachedPayload === undefined ? Infinity : nowMs - cachedPayload.fetchedAtMs
+  const blockedUntilMs = rateLimitedUntil.get(requestKey) ?? 0
+
+  if (cachedPayload !== undefined) {
+    if (cachedAgeMs < MIN_FETCH_INTERVAL_MS) {
+      return cachedPayload.flights
+    }
+
+    if (blockedUntilMs > nowMs) {
+      return cachedPayload.flights
+    }
   }
 
-  const payload = (await response.json()) as { time?: unknown; states?: unknown }
-  const snapshotTime =
-    typeof payload.time === 'number' && Number.isFinite(payload.time)
-      ? payload.time
-      : Math.floor(Date.now() / 1000)
-  const rawStates = Array.isArray(payload.states) ? payload.states : []
+  const existingRequest = inFlightRequests.get(requestKey)
+  if (existingRequest !== undefined) {
+    return existingRequest
+  }
 
-  return rawStates
-    .map((rawState) => parseFlight(rawState, snapshotTime, latitude, longitude))
-    .filter((flight): flight is NearbyFlight => flight !== null)
-    .filter((flight) => flight.lastSeenSecondsAgo <= 120)
-    .filter((flight) => flight.distanceKm <= radiusKm)
-    .filter((flight) => !onlyAirborne || !flight.onGround)
-    .sort((left, right) => left.distanceKm - right.distanceKm)
+  const requestPromise = (async () => {
+    try {
+      const response = await fetch(buildFlightRequestUrl(buildFlightBounds(latitude, longitude, radiusKm)))
+      if (response.status === 429) {
+        const backoffMs = parseRetryAfterMilliseconds(response.headers.get('retry-after'))
+        rateLimitedUntil.set(requestKey, Date.now() + backoffMs)
+        if (cachedPayload !== undefined) {
+          return cachedPayload.flights
+        }
+        throw new Error('Flight data is temporarily rate-limited. Please try again soon.')
+      }
+
+      if (!response.ok) {
+        throw new Error('Could not load nearby flights.')
+      }
+
+      const payload = (await response.json()) as { time?: unknown; states?: unknown }
+      const snapshotTime =
+        typeof payload.time === 'number' && Number.isFinite(payload.time)
+          ? payload.time
+          : Math.floor(Date.now() / 1000)
+      const rawStates = Array.isArray(payload.states) ? payload.states : []
+
+      const flights = rawStates
+        .map((rawState) => parseFlight(rawState, snapshotTime, latitude, longitude))
+        .filter((flight): flight is NearbyFlight => flight !== null)
+        .filter((flight) => flight.lastSeenSecondsAgo <= 120)
+        .filter((flight) => flight.distanceKm <= radiusKm)
+        .filter((flight) => !onlyAirborne || !flight.onGround)
+        .sort((left, right) => left.distanceKm - right.distanceKm)
+
+      flightResponseCache.set(requestKey, { flights, fetchedAtMs: Date.now() })
+      rateLimitedUntil.delete(requestKey)
+      return flights
+    } catch (error: unknown) {
+      if (cachedPayload !== undefined) {
+        return cachedPayload.flights
+      }
+      throw error
+    } finally {
+      inFlightRequests.delete(requestKey)
+    }
+  })()
+
+  inFlightRequests.set(requestKey, requestPromise)
+  return requestPromise
 }
