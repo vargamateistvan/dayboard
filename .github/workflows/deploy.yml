@@ -39,6 +39,8 @@ jobs:
         run: yarn test
 
       - name: Build
+        env:
+          VITE_FLIGHTS_API_BASE: ${{ vars.VITE_FLIGHTS_API_BASE }}
         run: yarn build
 
       - name: Upload artifact

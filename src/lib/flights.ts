@@ -3,6 +3,7 @@ const EARTH_RADIUS_KM = 6371
 const MIN_FETCH_INTERVAL_MS = 10_000
 const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000
 const MAX_RATE_LIMIT_BACKOFF_MS = 300_000
+const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() ?? ''
 
 interface CachedFlightPayload {
   readonly flights: NearbyFlight[]
@@ -169,7 +170,30 @@ function buildFlightRequestUrl(bounds: FlightBounds): string {
     lomax: bounds.lomax.toFixed(4),
   })
 
-  return `${FLIGHTS_PROXY_PATH}?${params.toString()}`
+  const runtimeOrigin = typeof window === 'undefined' ? 'http://localhost' : window.location.origin
+  const runtimeHost = typeof window === 'undefined' ? 'localhost' : window.location.hostname
+
+  if (FLIGHTS_API_BASE.length > 0) {
+    const configuredBase = new URL(FLIGHTS_API_BASE, runtimeOrigin)
+    const configuredPath = configuredBase.pathname.replace(/\/$/, '')
+    configuredBase.pathname = configuredPath.endsWith('/api/flights')
+      ? configuredPath
+      : `${configuredPath}/api/flights`
+    configuredBase.search = params.toString()
+    return configuredBase.toString()
+  }
+
+  if (
+    runtimeHost === 'localhost' ||
+    runtimeHost === '127.0.0.1' ||
+    runtimeHost === '[::1]'
+  ) {
+    return `${FLIGHTS_PROXY_PATH}?${params.toString()}`
+  }
+
+  throw new Error(
+    'Flight data is unavailable in this deployment. Configure VITE_FLIGHTS_API_BASE to a deployed backend that serves /api/flights.',
+  )
 }
 
 function buildRequestKey({

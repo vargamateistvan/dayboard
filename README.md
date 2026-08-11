@@ -109,6 +109,24 @@ The Vite dev server exposes:
 
 These proxies make remote requests work reliably during development and preview.
 
+### Flights in production
+
+GitHub Pages is a static host, so it cannot serve the local Vite `/api/flights` proxy in production.
+
+To enable the Flights widget in a deployed build, configure `VITE_FLIGHTS_API_BASE` to the origin (or base path) of a deployed backend that serves `/api/flights`.
+
+Example:
+
+```bash
+VITE_FLIGHTS_API_BASE=https://your-backend.example.com
+```
+
+The app will then request:
+
+```text
+https://your-backend.example.com/api/flights?...query params...
+```
+
 ## Project Structure
 
 ```text

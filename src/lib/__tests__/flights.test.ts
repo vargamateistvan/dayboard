@@ -124,4 +124,22 @@ describe('fetchNearbyFlights', () => {
     expect(rateLimitedLoad).toEqual(firstLoad)
     expect(blockedLoad).toEqual(firstLoad)
   })
+
+  it('fails fast outside localhost when no flights backend is configured', async () => {
+    vi.stubGlobal('window', {
+      location: {
+        origin: 'https://vargamateistvan.github.io',
+        hostname: 'vargamateistvan.github.io',
+      },
+    })
+
+    await expect(
+      fetchNearbyFlights({
+        latitude: 47.4979,
+        longitude: 19.0402,
+        radiusKm: 50,
+        onlyAirborne: true,
+      }),
+    ).rejects.toThrow(/VITE_FLIGHTS_API_BASE/)
+  })
 })
