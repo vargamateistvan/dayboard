@@ -310,35 +310,28 @@ function usePresetSelection(
   return { visiblePresetName, handlePresetChange }
 }
 
-function Dashboard() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [infoOpen, setInfoOpen] = useState(false)
+function useVisibleWidgets(
+  order: Widget[],
+  visibility: ReturnType<typeof useWidgetVisibility>['visibility'],
+  focusMode: boolean,
+) {
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
-  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
-  const { notifications, dismissNotification } = useEventNotifications()
-  const { focusMode } = useFocusMode()
-  const { settings, updateSettings } = useSettings()
-  const { visibility, order, placements, rowCount } = useWidgetVisibility()
-  const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
-  const { visiblePresetName, handlePresetChange } = usePresetSelection(
-    presets,
-    settings,
-    rowCount,
-    visibility,
-    placements,
-    updateSettings,
+
+  const orderedVisibleWidgets = useMemo(
+    () =>
+      order.filter((widget) => {
+        if (!visibility[widget]) {
+          return false
+        }
+
+        if (focusMode && (widget === 'weather' || widget === 'calendar')) {
+          return false
+        }
+
+        return true
+      }),
+    [order, visibility, focusMode],
   )
-  const orderedVisibleWidgets = order.filter((widget) => {
-    if (!visibility[widget]) {
-      return false
-    }
-
-    if (focusMode && (widget === 'weather' || widget === 'calendar')) {
-      return false
-    }
-
-    return true
-  })
 
   useEffect(() => {
     if (fullscreenWidget && !orderedVisibleWidgets.includes(fullscreenWidget)) {
@@ -361,6 +354,36 @@ function Dashboard() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [fullscreenWidget])
 
+  const handleToggleFullscreen = (widget: Widget) => {
+    setFullscreenWidget((current) => (current === widget ? null : widget))
+  }
+
+  return { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen }
+}
+
+function Dashboard() {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [infoOpen, setInfoOpen] = useState(false)
+  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
+  const { notifications, dismissNotification } = useEventNotifications()
+  const { focusMode } = useFocusMode()
+  const { settings, updateSettings } = useSettings()
+  const { visibility, order, placements, rowCount } = useWidgetVisibility()
+  const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
+  const { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen } = useVisibleWidgets(
+    order,
+    visibility,
+    focusMode,
+  )
+  const { visiblePresetName, handlePresetChange } = usePresetSelection(
+    presets,
+    settings,
+    rowCount,
+    visibility,
+    placements,
+    updateSettings,
+  )
+
   useEffect(() => {
     const refreshPresets = () => {
       setPresets(listPresets())
@@ -369,10 +392,6 @@ function Dashboard() {
     window.addEventListener('settingsPresetsChanged', refreshPresets)
     return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
   }, [])
-
-  const handleToggleFullscreen = (widget: Widget) => {
-    setFullscreenWidget((current) => (current === widget ? null : widget))
-  }
 
   return (
     <div
