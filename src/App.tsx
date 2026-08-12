@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo, type ComponentProps } from 'react'
 import { Check, ChevronDown, Info, Maximize2, Minimize2, Settings } from 'lucide-react'
 import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
 import { SettingsProvider, useSettings } from './lib/useSettings'
@@ -309,8 +309,8 @@ interface ShellPanelsProps {
   readonly visiblePresetName: string
   readonly onCloseInfo: () => void
   readonly onCloseSettings: () => void
-  readonly notifications: Parameters<typeof NotificationBadge>[0]['notifications']
-  readonly onDismissNotification: Parameters<typeof NotificationBadge>[0]['onDismiss']
+  readonly notifications: ComponentProps<typeof NotificationBadge>['notifications']
+  readonly onDismissNotification: ComponentProps<typeof NotificationBadge>['onDismiss']
 }
 
 function ShellPanels({
@@ -342,7 +342,7 @@ interface DashboardLayoutProps {
   readonly visiblePresetName: string
   readonly orderedVisibleWidgets: Widget[]
   readonly placements: ReturnType<typeof useWidgetVisibility>['placements']
-  readonly notifications: ReturnType<typeof useEventNotifications>['notifications']
+  readonly notifications: ComponentProps<typeof NotificationBadge>['notifications']
   readonly infoOpen: boolean
   readonly settingsOpen: boolean
   readonly onOpenInfo: () => void
@@ -352,7 +352,7 @@ interface DashboardLayoutProps {
   readonly onCloseInfo: () => void
   readonly onCloseSettings: () => void
   readonly onSelectPreset: (presetName: string) => void
-  readonly onDismissNotification: ReturnType<typeof useEventNotifications>['dismissNotification']
+  readonly onDismissNotification: ComponentProps<typeof NotificationBadge>['onDismiss']
 }
 
 function DashboardLayout({
@@ -439,7 +439,8 @@ function useAppFullscreen() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
 
-  const toggleAppFullscreen = async () => {
+  const toggleAppFullscreen = useCallback(() => {
+    void (async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen()
       return
@@ -450,7 +451,8 @@ function useAppFullscreen() {
     } catch (error) {
       console.error('Fullscreen request failed:', error)
     }
-  }
+    })()
+  }, [])
 
   return { appFullscreen, toggleAppFullscreen }
 }
@@ -488,7 +490,7 @@ function usePresetSelection(
     }
   }, [currentPresetName, selectedPresetName, selectedPresetExists])
 
-  const handlePresetChange = (presetName: string) => {
+  const handlePresetChange = useCallback((presetName: string) => {
     const preset = presets.find((candidate) => candidate.name === presetName)
     if (!preset) {
       return
@@ -497,7 +499,7 @@ function usePresetSelection(
     applyPreset(preset.name)
     updateSettings(preset.settings)
     setSelectedPresetName(preset.name)
-  }
+  }, [presets, updateSettings])
 
   return { visiblePresetName, handlePresetChange }
 }
@@ -535,9 +537,9 @@ function useVisibleWidgets(
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [fullscreenWidget])
 
-  const handleToggleFullscreen = (widget: Widget) => {
+  const handleToggleFullscreen = useCallback((widget: Widget) => {
     setFullscreenWidget((current) => (current === widget ? null : widget))
-  }
+  }, [])
 
   return { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen }
 }
@@ -561,13 +563,18 @@ function useShellPanels() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
 
+  const openSettings = useCallback(() => setSettingsOpen(true), [])
+  const closeSettings = useCallback(() => setSettingsOpen(false), [])
+  const openInfo = useCallback(() => setInfoOpen(true), [])
+  const closeInfo = useCallback(() => setInfoOpen(false), [])
+
   return {
     settingsOpen,
     infoOpen,
-    openSettings: () => setSettingsOpen(true),
-    closeSettings: () => setSettingsOpen(false),
-    openInfo: () => setInfoOpen(true),
-    closeInfo: () => setInfoOpen(false),
+    openSettings,
+    closeSettings,
+    openInfo,
+    closeInfo,
   }
 }
 
@@ -609,9 +616,7 @@ function Dashboard() {
       settingsOpen={settingsOpen}
       onOpenInfo={openInfo}
       onOpenSettings={openSettings}
-      onToggleAppFullscreen={() => {
-        void toggleAppFullscreen()
-      }}
+      onToggleAppFullscreen={toggleAppFullscreen}
       onToggleWidgetFullscreen={handleToggleFullscreen}
       onCloseInfo={closeInfo}
       onCloseSettings={closeSettings}
