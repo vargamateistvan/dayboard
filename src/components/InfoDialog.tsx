@@ -1,5 +1,5 @@
 import { X } from 'lucide-react'
-import styles from './SettingsDialog.module.css'
+import styles from './InfoDialog.module.css'
 
 interface InfoDialogProps {
   readonly onClose: () => void
@@ -24,7 +24,7 @@ export function InfoDialog({ onClose }: InfoDialogProps) {
         <div className={styles.body}>
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>How it works</h3>
-            <ul className={styles.infoList}>
+            <ul className={styles.list}>
               <li>Use the settings button to control widget visibility, layout, themes, and preferences.</li>
               <li>Click the fullscreen button on any widget to focus on just that panel.</li>
               <li>Calendar widgets can use iCal feeds and will trigger upcoming event notifications.</li>
@@ -35,11 +35,11 @@ export function InfoDialog({ onClose }: InfoDialogProps) {
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>Need help?</h3>
             <p className={styles.hint}>
-              If something looks wrong or stops working, report it here:
+              If something looks wrong or stops working, report it on GitHub:
             </p>
-            <p className={styles.infoLinkRow}>
+            <p className={styles.linkRow}>
               <a
-                className={styles.infoLink}
+                className={styles.link}
                 href="https://github.com/vargamateistvan/dayboard/issues"
                 target="_blank"
                 rel="noreferrer"
@@ -48,8 +48,32 @@ export function InfoDialog({ onClose }: InfoDialogProps) {
               </a>
             </p>
           </section>
+
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>Legal</h3>
+            <p className={styles.linkRow}>
+              <a
+                className={styles.link}
+                href="/dayboard/privacy.html"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Privacy Policy
+              </a>
+              <span className={styles.sep}>·</span>
+              <a
+                className={styles.link}
+                href="/dayboard/terms.html"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Terms of Service
+              </a>
+            </p>
+          </section>
         </div>
       </dialog>
     </div>
   )
 }
+

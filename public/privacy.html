@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – Dayboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 2rem 1rem;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 0.9375rem;
+      line-height: 1.7;
+      background: #0f0f11;
+      color: #c8c8d0;
+      max-width: 720px;
+      margin-inline: auto;
+    }
+
+    a { color: #7c6af7; text-decoration: none; }
+    a:hover { color: #a390ff; text-decoration: underline; }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e8e8f0;
+      margin: 0 0 0.25rem;
+    }
+
+    .meta {
+      font-size: 0.8125rem;
+      color: #666680;
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e8e8f0;
+      margin: 2rem 0 0.5rem;
+    }
+
+    p, li { color: #c8c8d0; margin: 0 0 0.75rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin-bottom: 0.35rem; }
+
+    nav {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #2a2a35;
+      font-size: 0.875rem;
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .back { color: #666680; }
+    .back:hover { color: #c8c8d0; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Last updated: August 2026</p>
+
+  <p>
+    Dayboard is a client-side dashboard application. This policy explains what data
+    is collected, how it is used, and your rights.
+  </p>
+
+  <h2>1. Data we do not collect</h2>
+  <p>
+    Dayboard has no backend server and does not transmit any personal data to its
+    developers. There are no analytics, crash-reporting trackers, or advertising
+    networks embedded in the application.
+  </p>
+
+  <h2>2. Data stored locally</h2>
+  <p>
+    All your preferences, widget settings, and API tokens are stored exclusively in
+    your browser's <code>localStorage</code>. This data never leaves your device
+    unless you explicitly export it.
+  </p>
+
+  <h2>3. Third-party services</h2>
+  <p>When you connect an optional integration, your browser communicates directly with
+  that service's API. Dayboard itself never sees or stores your credentials:</p>
+  <ul>
+    <li><strong>Google Calendar</strong> – OAuth tokens are stored in your browser's
+      localStorage. Dayboard requests read-only access (<code>calendar.readonly</code>)
+      only. Google's privacy policy applies:
+      <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">
+        policies.google.com/privacy</a>.</li>
+    <li><strong>Spotify</strong> – OAuth tokens are stored locally. Spotify's privacy
+      policy applies:
+      <a href="https://www.spotify.com/legal/privacy-policy/" target="_blank" rel="noreferrer">
+        spotify.com/legal/privacy-policy</a>.</li>
+    <li><strong>OpenWeatherMap</strong> – Your API key is stored locally. Weather
+      requests include your configured city name or coordinates.</li>
+    <li><strong>Calendar feeds (ICS/webcal)</strong> – Feed URLs you add are fetched
+      via a CORS proxy bundled with the app. The proxy does not log requests.</li>
+  </ul>
+
+  <h2>4. Cookies</h2>
+  <p>Dayboard does not use cookies.</p>
+
+  <h2>5. Children's privacy</h2>
+  <p>Dayboard is not directed at children under 13 and does not knowingly collect
+  information from them.</p>
+
+  <h2>6. Changes to this policy</h2>
+  <p>Any changes will be reflected by an updated date at the top of this page.</p>
+
+  <h2>7. Contact</h2>
+  <p>
+    Questions? Open an issue at
+    <a href="https://github.com/vargamateistvan/dayboard/issues" target="_blank" rel="noreferrer">
+      github.com/vargamateistvan/dayboard/issues</a>.
+  </p>
+
+  <nav>
+    <a class="back" href="/dayboard/">← Back to Dayboard</a>
+    <a href="/dayboard/terms.html">Terms of Service</a>
+  </nav>
+</body>
+</html>
