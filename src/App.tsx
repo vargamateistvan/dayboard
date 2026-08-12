@@ -361,15 +361,30 @@ function useVisibleWidgets(
   return { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen }
 }
 
+function usePresets() {
+  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
+
+  useEffect(() => {
+    const refreshPresets = () => {
+      setPresets(listPresets())
+    }
+
+    window.addEventListener('settingsPresetsChanged', refreshPresets)
+    return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
+  }, [])
+
+  return presets
+}
+
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
+  const presets = usePresets()
   const { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen } = useVisibleWidgets(
     order,
     visibility,
@@ -383,15 +398,6 @@ function Dashboard() {
     placements,
     updateSettings,
   )
-
-  useEffect(() => {
-    const refreshPresets = () => {
-      setPresets(listPresets())
-    }
-
-    window.addEventListener('settingsPresetsChanged', refreshPresets)
-    return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
-  }, [])
 
   return (
     <div
