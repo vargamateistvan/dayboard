@@ -26,7 +26,37 @@ const widgetVisibility: Record<Widget, boolean> = {
   deviceInfo: false,
 }
 
-const widgetOrder: Widget[] = ['clock', 'weather']
+const DEFAULT_WIDGET_VISIBILITY: Record<Widget, boolean> = {
+  clock: true,
+  timezoneClock: false,
+  weather: true,
+  flights: false,
+  calendar: false,
+  timer: false,
+  tasks: false,
+  notes: false,
+  spotify: false,
+  appleMusic: false,
+  applePodcast: false,
+  stocks: false,
+  sports: false,
+  currencies: false,
+  quote: false,
+  deviceInfo: false,
+}
+
+const DEFAULT_WIDGET_ORDER: Widget[] = ['clock', 'weather']
+
+const widgetOrder: Widget[] = [...DEFAULT_WIDGET_ORDER]
+
+type TestPreset = {
+  name: string
+  settings: {
+    colorScheme: 'light' | 'dark'
+  }
+  createdAt: number
+  updatedAt: number
+}
 
 const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
@@ -157,25 +187,33 @@ vi.mock('./components/NotificationBadge', () => ({
   NotificationBadge: () => null,
 }))
 
+function setWidgetState(
+  overrides: Partial<Record<Widget, boolean>> = {},
+  order: Widget[] = DEFAULT_WIDGET_ORDER,
+) {
+  Object.assign(widgetVisibility, DEFAULT_WIDGET_VISIBILITY, overrides)
+  widgetOrder.splice(0, widgetOrder.length, ...order)
+}
+
+function createPreset(name: string, colorScheme: 'light' | 'dark', timestamp: number): TestPreset {
+  return {
+    name,
+    settings: { colorScheme },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
+
+function seedPresets(...presets: TestPreset[]) {
+  localStorage.setItem(
+    PRESET_STORAGE_KEY,
+    JSON.stringify(Object.fromEntries(presets.map((preset) => [preset.name, preset]))),
+  )
+}
+
 beforeEach(() => {
   localStorage.clear()
-  widgetVisibility.clock = true
-  widgetVisibility.timezoneClock = false
-  widgetVisibility.weather = true
-  widgetVisibility.flights = false
-  widgetVisibility.calendar = false
-  widgetVisibility.timer = false
-  widgetVisibility.tasks = false
-  widgetVisibility.notes = false
-  widgetVisibility.spotify = false
-  widgetVisibility.appleMusic = false
-  widgetVisibility.applePodcast = false
-  widgetVisibility.stocks = false
-  widgetVisibility.sports = false
-  widgetVisibility.currencies = false
-  widgetVisibility.quote = false
-  widgetVisibility.deviceInfo = false
-  widgetOrder.splice(0, widgetOrder.length, 'clock', 'weather')
+  setWidgetState()
 })
 
 describe('App fullscreen widgets', () => {
@@ -203,10 +241,7 @@ describe('App fullscreen widgets', () => {
   })
 
   it('supports fullscreen mode for the flights radar widget', () => {
-    widgetVisibility.clock = false
-    widgetVisibility.weather = false
-    widgetVisibility.flights = true
-    widgetOrder.splice(0, widgetOrder.length, 'flights')
+    setWidgetState({ clock: false, weather: false, flights: true }, ['flights'])
 
     render(<App />)
 
@@ -219,10 +254,7 @@ describe('App fullscreen widgets', () => {
     expect(flightsCell).toHaveClass(styles.widgetCellFullscreen)
     expect(screen.getByRole('button', { name: 'Exit fullscreen for Flights Radar' })).toBeInTheDocument()
 
-    widgetOrder.splice(0, widgetOrder.length, 'clock', 'weather')
-    widgetVisibility.clock = true
-    widgetVisibility.weather = true
-    widgetVisibility.flights = false
+    setWidgetState()
   })
 
   it('opens the info dialog with usage guidance and the issue tracker link', () => {
@@ -239,56 +271,37 @@ describe('App fullscreen widgets', () => {
   })
 
   it('shows a preset selector when more than one preset exists', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: { colorScheme: 'light' },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-        Focus: {
-          name: 'Focus',
-          settings: { colorScheme: 'dark' },
-          createdAt: 2,
-          updatedAt: 2,
-        },
-      }),
-    )
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
 
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
 
-    expect(screen.getByRole('listbox', { name: 'Preset options' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Work' })).toBeInTheDocument()
-    expect(screen.getByRole('option', { name: 'Focus' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Preset options')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Work' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Focus' })).toBeInTheDocument()
+  })
+
+  it('closes the preset menu when Escape is pressed', () => {
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+    expect(screen.getByLabelText('Preset options')).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+
+    expect(screen.queryByLabelText('Preset options')).not.toBeInTheDocument()
   })
 
   it('applies a selected preset from the preset menu', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: { colorScheme: 'light' },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-        Focus: {
-          name: 'Focus',
-          settings: { colorScheme: 'dark' },
-          createdAt: 2,
-          updatedAt: 2,
-        },
-      }),
-    )
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
 
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
-    fireEvent.click(screen.getByRole('option', { name: 'Focus' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }))
 
     expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Focus')
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
@@ -297,28 +310,12 @@ describe('App fullscreen widgets', () => {
   })
 
   it('keeps showing the selected preset while editing even when settings diverge', () => {
-    localStorage.setItem(
-      PRESET_STORAGE_KEY,
-      JSON.stringify({
-        Work: {
-          name: 'Work',
-          settings: { colorScheme: 'light' },
-          createdAt: 1,
-          updatedAt: 1,
-        },
-        Focus: {
-          name: 'Focus',
-          settings: { colorScheme: 'dark' },
-          createdAt: 2,
-          updatedAt: 2,
-        },
-      }),
-    )
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
 
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
-    fireEvent.click(screen.getByRole('option', { name: 'Work' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Work' }))
     expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Work')
 
     fireEvent.click(screen.getByRole('button', { name: 'Open settings' }))

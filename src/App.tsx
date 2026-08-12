@@ -54,46 +54,6 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return true
 }
 
-function renderWidget(widget: Widget, isFullscreen: boolean) {
-  switch (widget) {
-    case 'clock':
-      return <ClockWidget isFullscreen={isFullscreen} />
-    case 'timezoneClock':
-      return <TimezoneClockWidget isFullscreen={isFullscreen} />
-    case 'weather':
-      return <WeatherWidget isFullscreen={isFullscreen} />
-    case 'flights':
-      return <FlightWidget isFullscreen={isFullscreen} />
-    case 'calendar':
-      return <CalendarWidget isFullscreen={isFullscreen} />
-    case 'timer':
-      return <TimerPanel isFullscreen={isFullscreen} />
-    case 'tasks':
-      return <TaskWidget isFullscreen={isFullscreen} />
-    case 'notes':
-      return <NotesWidget isFullscreen={isFullscreen} />
-    case 'spotify':
-      return <SpotifyWidget isFullscreen={isFullscreen} />
-    case 'appleMusic':
-      return <AppleMusicWidget isFullscreen={isFullscreen} />
-    case 'applePodcast':
-      return <ApplePodcastWidget isFullscreen={isFullscreen} />
-    case 'stocks':
-      return <StockWidget isFullscreen={isFullscreen} />
-    case 'currencies':
-      return <CurrencyWidget isFullscreen={isFullscreen} />
-    case 'sports':
-      return <SportsScoresWidget isFullscreen={isFullscreen} />
-    case 'quote':
-      return <QuoteWidget isFullscreen={isFullscreen} />
-    case 'deviceInfo':
-      return <DeviceInfoWidget isFullscreen={isFullscreen} />
-    default:
-      console.error(`Unknown widget type: ${widget}`)
-      return null
-  }
-}
-
 function getWidgetTypeClass(widget: Widget) {
   if (widget === 'clock' || widget === 'timezoneClock') {
     return styles.widgetClock
@@ -105,6 +65,25 @@ function getWidgetTypeClass(widget: Widget) {
 
   return ''
 }
+
+const WIDGET_RENDERERS = {
+  clock: (isFullscreen: boolean) => <ClockWidget isFullscreen={isFullscreen} />,
+  timezoneClock: (isFullscreen: boolean) => <TimezoneClockWidget isFullscreen={isFullscreen} />,
+  weather: (isFullscreen: boolean) => <WeatherWidget isFullscreen={isFullscreen} />,
+  flights: (isFullscreen: boolean) => <FlightWidget isFullscreen={isFullscreen} />,
+  calendar: (isFullscreen: boolean) => <CalendarWidget isFullscreen={isFullscreen} />,
+  timer: (isFullscreen: boolean) => <TimerPanel isFullscreen={isFullscreen} />,
+  tasks: (isFullscreen: boolean) => <TaskWidget isFullscreen={isFullscreen} />,
+  notes: (isFullscreen: boolean) => <NotesWidget isFullscreen={isFullscreen} />,
+  spotify: (isFullscreen: boolean) => <SpotifyWidget isFullscreen={isFullscreen} />,
+  appleMusic: (isFullscreen: boolean) => <AppleMusicWidget isFullscreen={isFullscreen} />,
+  applePodcast: (isFullscreen: boolean) => <ApplePodcastWidget isFullscreen={isFullscreen} />,
+  stocks: (isFullscreen: boolean) => <StockWidget isFullscreen={isFullscreen} />,
+  currencies: (isFullscreen: boolean) => <CurrencyWidget isFullscreen={isFullscreen} />,
+  sports: (isFullscreen: boolean) => <SportsScoresWidget isFullscreen={isFullscreen} />,
+  quote: (isFullscreen: boolean) => <QuoteWidget isFullscreen={isFullscreen} />,
+  deviceInfo: (isFullscreen: boolean) => <DeviceInfoWidget isFullscreen={isFullscreen} />,
+} satisfies Record<Widget, (isFullscreen: boolean) => JSX.Element | null>
 
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -276,7 +255,7 @@ function Dashboard() {
           <button
             className={styles.presetSelectorTrigger}
             aria-label="Select preset"
-            aria-haspopup="listbox"
+            aria-haspopup="menu"
             aria-expanded={presetMenuOpen}
             type="button"
             onClick={() => setPresetMenuOpen((current) => !current)}
@@ -289,7 +268,7 @@ function Dashboard() {
             />
           </button>
           {presetMenuOpen ? (
-            <div className={styles.presetMenu} role="listbox" aria-label="Preset options">
+            <div className={styles.presetMenu} aria-label="Preset options">
               {presets.map((preset) => {
                 const isSelected = preset.name === visiblePresetName
 
@@ -297,8 +276,6 @@ function Dashboard() {
                   <button
                     key={preset.name}
                     className={[styles.presetMenuItem, isSelected ? styles.presetMenuItemSelected : ''].join(' ')}
-                    role="option"
-                    aria-selected={isSelected}
                     type="button"
                     onClick={() => handlePresetChange(preset.name)}
                   >
@@ -374,7 +351,9 @@ function Dashboard() {
             >
               {fullscreenWidget === widget ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             </button>
-            <div className={styles.widgetContentFrame}>{renderWidget(widget, fullscreenWidget === widget)}</div>
+            <div className={styles.widgetContentFrame}>
+              {WIDGET_RENDERERS[widget](fullscreenWidget === widget)}
+            </div>
           </div>
         ))}
       </main>
