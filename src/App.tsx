@@ -258,6 +258,128 @@ function Toolbar({ appFullscreen, onOpenInfo, onOpenSettings, onToggleAppFullscr
   )
 }
 
+interface ShellPanelsProps {
+  readonly infoOpen: boolean
+  readonly settingsOpen: boolean
+  readonly visiblePresetName: string
+  readonly onCloseInfo: () => void
+  readonly onCloseSettings: () => void
+  readonly notifications: Parameters<typeof NotificationBadge>[0]['notifications']
+  readonly onDismissNotification: Parameters<typeof NotificationBadge>[0]['onDismiss']
+}
+
+function ShellPanels({
+  infoOpen,
+  settingsOpen,
+  visiblePresetName,
+  onCloseInfo,
+  onCloseSettings,
+  notifications,
+  onDismissNotification,
+}: ShellPanelsProps) {
+  return (
+    <>
+      <NotificationBadge notifications={notifications} onDismiss={onDismissNotification} />
+      {/* BuyMeCoffeeWidget is intentionally rendered outside the widget grid as a fixed UI element, not managed by the widget visibility system */}
+      <BuyMeCoffeeWidget />
+      {infoOpen && <InfoDialog onClose={onCloseInfo} />}
+      {settingsOpen && <SettingsDialog onClose={onCloseSettings} selectedPresetName={visiblePresetName} />}
+    </>
+  )
+}
+
+interface DashboardLayoutProps {
+  readonly focusMode: boolean
+  readonly fullscreenWidget: Widget | null
+  readonly appFullscreen: boolean
+  readonly rowCount: number
+  readonly presets: SettingsPreset[]
+  readonly visiblePresetName: string
+  readonly orderedVisibleWidgets: Widget[]
+  readonly placements: ReturnType<typeof useWidgetVisibility>['placements']
+  readonly notifications: ReturnType<typeof useEventNotifications>['notifications']
+  readonly infoOpen: boolean
+  readonly settingsOpen: boolean
+  readonly onOpenInfo: () => void
+  readonly onOpenSettings: () => void
+  readonly onToggleAppFullscreen: () => void
+  readonly onToggleWidgetFullscreen: (widget: Widget) => void
+  readonly onCloseInfo: () => void
+  readonly onCloseSettings: () => void
+  readonly onSelectPreset: (presetName: string) => void
+  readonly onDismissNotification: ReturnType<typeof useEventNotifications>['dismissNotification']
+}
+
+function DashboardLayout({
+  focusMode,
+  fullscreenWidget,
+  appFullscreen,
+  rowCount,
+  presets,
+  visiblePresetName,
+  orderedVisibleWidgets,
+  placements,
+  notifications,
+  infoOpen,
+  settingsOpen,
+  onOpenInfo,
+  onOpenSettings,
+  onToggleAppFullscreen,
+  onToggleWidgetFullscreen,
+  onCloseInfo,
+  onCloseSettings,
+  onSelectPreset,
+  onDismissNotification,
+}: DashboardLayoutProps) {
+  return (
+    <div
+      className={[
+        styles.app,
+        focusMode ? styles.focusMode : '',
+        fullscreenWidget ? styles.fullscreenMode : '',
+      ].join(' ')}
+    >
+      {presets.length > 1 ? (
+        <PresetSelector
+          presets={presets}
+          visiblePresetName={visiblePresetName}
+          onSelectPreset={onSelectPreset}
+        />
+      ) : null}
+      <Toolbar
+        appFullscreen={appFullscreen}
+        onOpenInfo={onOpenInfo}
+        onOpenSettings={onOpenSettings}
+        onToggleAppFullscreen={onToggleAppFullscreen}
+      />
+
+      <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
+        {orderedVisibleWidgets.map((widget) => (
+          <WidgetCell
+            key={widget}
+            widget={widget}
+            isFullscreen={fullscreenWidget === widget}
+            isHidden={Boolean(fullscreenWidget && fullscreenWidget !== widget)}
+            focusMode={focusMode}
+            placement={placements[widget]}
+            onToggleFullscreen={onToggleWidgetFullscreen}
+          />
+        ))}
+      </main>
+
+      <ShellPanels
+        infoOpen={infoOpen}
+        settingsOpen={settingsOpen}
+        visiblePresetName={visiblePresetName}
+        onCloseInfo={onCloseInfo}
+        onCloseSettings={onCloseSettings}
+        notifications={notifications}
+        onDismissNotification={onDismissNotification}
+      />
+    </div>
+  )
+}
+
 function useAppFullscreen() {
   const [appFullscreen, setAppFullscreen] = useState(false)
 
@@ -455,54 +577,29 @@ function Dashboard() {
   )
 
   return (
-    <div
-      className={[
-        styles.app,
-        focusMode ? styles.focusMode : '',
-        fullscreenWidget ? styles.fullscreenMode : '',
-      ].join(' ')}
-    >
-      {presets.length > 1 ? (
-        <PresetSelector
-          presets={presets}
-          visiblePresetName={visiblePresetName}
-          onSelectPreset={handlePresetChange}
-        />
-      ) : null}
-      <Toolbar
-        appFullscreen={appFullscreen}
-        onOpenInfo={() => openInfo()}
-        onOpenSettings={() => openSettings()}
-        onToggleAppFullscreen={() => {
-          void toggleAppFullscreen()
-        }}
-      />
-
-      <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
-        {orderedVisibleWidgets.map((widget) => (
-          <WidgetCell
-            key={widget}
-            widget={widget}
-            isFullscreen={fullscreenWidget === widget}
-            isHidden={Boolean(fullscreenWidget && fullscreenWidget !== widget)}
-            focusMode={focusMode}
-            placement={placements[widget]}
-            onToggleFullscreen={handleToggleFullscreen}
-          />
-        ))}
-      </main>
-
-      <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
-      {/* BuyMeCoffeeWidget is intentionally rendered outside the widget grid as a fixed UI element, not managed by the widget visibility system */}
-      <BuyMeCoffeeWidget />
-      {infoOpen && <InfoDialog onClose={closeInfo} />}
-      {settingsOpen && (
-        <SettingsDialog
-          onClose={closeSettings}
-          selectedPresetName={visiblePresetName}
-        />
-      )}
-    </div>
+    <DashboardLayout
+      focusMode={focusMode}
+      fullscreenWidget={fullscreenWidget}
+      appFullscreen={appFullscreen}
+      rowCount={rowCount}
+      presets={presets}
+      visiblePresetName={visiblePresetName}
+      orderedVisibleWidgets={orderedVisibleWidgets}
+      placements={placements}
+      notifications={notifications}
+      infoOpen={infoOpen}
+      settingsOpen={settingsOpen}
+      onOpenInfo={openInfo}
+      onOpenSettings={openSettings}
+      onToggleAppFullscreen={() => {
+        void toggleAppFullscreen()
+      }}
+      onToggleWidgetFullscreen={handleToggleFullscreen}
+      onCloseInfo={closeInfo}
+      onCloseSettings={closeSettings}
+      onSelectPreset={handlePresetChange}
+      onDismissNotification={dismissNotification}
+    />
   )
 }
 
