@@ -7,7 +7,7 @@ import type { Widget } from './lib/useWidgetVisibility'
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
 const SETTINGS_STORAGE_KEY = 'dayboard:settings'
 
-const widgetVisibility = {
+const widgetVisibility: Record<Widget, boolean> = {
   clock: true,
   timezoneClock: false,
   weather: true,
@@ -24,9 +24,9 @@ const widgetVisibility = {
   currencies: false,
   quote: false,
   deviceInfo: false,
-} satisfies Record<Widget, boolean>
+}
 
-const widgetOrder = ['clock', 'weather']
+const widgetOrder: Widget[] = ['clock', 'weather']
 
 const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
