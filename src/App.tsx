@@ -217,17 +217,117 @@ function WidgetCell({
   )
 }
 
+function useAppFullscreen() {
+  const [appFullscreen, setAppFullscreen] = useState(false)
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setAppFullscreen(Boolean(document.fullscreenElement))
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    handleFullscreenChange()
+
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
+
+  const toggleAppFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen()
+      return
+    }
+
+    try {
+      await document.documentElement.requestFullscreen()
+    } catch (error) {
+      console.error('Fullscreen request failed:', error)
+    }
+  }
+
+  return { appFullscreen, toggleAppFullscreen }
+}
+
+function usePresetSelection(
+  presets: SettingsPreset[],
+  settings: ReturnType<typeof useSettings>['settings'],
+  rowCount: number,
+  visibility: ReturnType<typeof useWidgetVisibility>['visibility'],
+  placements: ReturnType<typeof useWidgetVisibility>['placements'],
+  updateSettings: ReturnType<typeof useSettings>['updateSettings'],
+) {
+  const [selectedPresetName, setSelectedPresetName] = useState('')
+
+  const currentPresetName = useMemo(
+    () =>
+      presets.find((preset) => {
+        const settingsMatch = deepEqual(preset.settings, settings)
+        if (!settingsMatch) {
+          return false
+        }
+
+        if (!preset.layout) {
+          return true
+        }
+
+        return deepEqual(preset.layout, {
+          rowCount,
+          visibility,
+          placements,
+        })
+      })?.name ?? '',
+    [presets, settings, rowCount, visibility, placements]
+  )
+
+  const selectedPresetExists = Boolean(
+    selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
+  )
+  const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
+
+  useEffect(() => {
+    // Sync selected preset with current preset when current changes
+    if (currentPresetName && currentPresetName !== selectedPresetName) {
+      setSelectedPresetName(currentPresetName)
+      return
+    }
+
+    // Clear selected preset if it no longer exists
+    if (selectedPresetName && !selectedPresetExists) {
+      setSelectedPresetName('')
+    }
+  }, [currentPresetName, selectedPresetName, selectedPresetExists])
+
+  const handlePresetChange = (presetName: string) => {
+    const preset = presets.find((candidate) => candidate.name === presetName)
+    if (!preset) {
+      return
+    }
+
+    applyPreset(preset.name)
+    updateSettings(preset.settings)
+    setSelectedPresetName(preset.name)
+  }
+
+  return { visiblePresetName, handlePresetChange }
+}
+
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
-  const [appFullscreen, setAppFullscreen] = useState(false)
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
-  const [selectedPresetName, setSelectedPresetName] = useState('')
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
+  const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
+  const { visiblePresetName, handlePresetChange } = usePresetSelection(
+    presets,
+    settings,
+    rowCount,
+    visibility,
+    placements,
+    updateSettings,
+  )
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
       return false
@@ -262,17 +362,6 @@ function Dashboard() {
   }, [fullscreenWidget])
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setAppFullscreen(Boolean(document.fullscreenElement))
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange)
-    handleFullscreenChange()
-
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
-  }, [])
-
-  useEffect(() => {
     const refreshPresets = () => {
       setPresets(listPresets())
     }
@@ -280,68 +369,6 @@ function Dashboard() {
     window.addEventListener('settingsPresetsChanged', refreshPresets)
     return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
   }, [])
-
-  const toggleAppFullscreen = async () => {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-      return
-    }
-
-    try {
-      await document.documentElement.requestFullscreen()
-    } catch (error) {
-      console.error('Fullscreen request failed:', error)
-    }
-  }
-
-  const currentPresetName = useMemo(
-    () =>
-      presets.find((preset) => {
-        const settingsMatch = deepEqual(preset.settings, settings)
-        if (!settingsMatch) {
-          return false
-        }
-
-        if (!preset.layout) {
-          return true
-        }
-
-        return deepEqual(preset.layout, {
-          rowCount,
-          visibility,
-          placements,
-        })
-      })?.name ?? '',
-    [presets, settings, rowCount, visibility, placements]
-  )
-  const selectedPresetExists = Boolean(
-    selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
-  )
-  const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
-
-  useEffect(() => {
-    // Sync selected preset with current preset when current changes
-    if (currentPresetName && currentPresetName !== selectedPresetName) {
-      setSelectedPresetName(currentPresetName)
-      return
-    }
-
-    // Clear selected preset if it no longer exists
-    if (selectedPresetName && !selectedPresetExists) {
-      setSelectedPresetName('')
-    }
-  }, [currentPresetName, selectedPresetName, selectedPresetExists])
-
-  const handlePresetChange = (presetName: string) => {
-    const preset = presets.find((candidate) => candidate.name === presetName)
-    if (!preset) {
-      return
-    }
-
-    applyPreset(preset.name)
-    updateSettings(preset.settings)
-    setSelectedPresetName(preset.name)
-  }
 
   const handleToggleFullscreen = (widget: Widget) => {
     setFullscreenWidget((current) => (current === widget ? null : widget))
