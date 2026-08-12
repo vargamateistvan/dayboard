@@ -140,14 +140,13 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
   }
 
   const updateCard = (id: string, patch: Partial<Pick<KanbanCard, 'title' | 'column'>>) => {
-    const now = Date.now()
     setCards((current) =>
       current.map((card) =>
         card.id === id
           ? {
               ...card,
               ...patch,
-              updatedAt: now,
+              updatedAt: card.updatedAt + 1,
             }
           : card,
       ),
@@ -171,7 +170,7 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
         return {
           ...card,
           column: nextColumn,
-          updatedAt: Date.now(),
+          updatedAt: card.updatedAt + 1,
         }
       }),
     )
@@ -184,7 +183,7 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
           ? {
               ...card,
               column: nextColumn,
-              updatedAt: Date.now(),
+              updatedAt: card.updatedAt + 1,
             }
           : card,
       ),
