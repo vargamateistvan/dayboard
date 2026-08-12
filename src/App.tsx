@@ -168,6 +168,55 @@ function PresetSelector({ presets, visiblePresetName, onSelectPreset }: PresetSe
   )
 }
 
+interface WidgetCellProps {
+  readonly widget: Widget
+  readonly isFullscreen: boolean
+  readonly isHidden: boolean
+  readonly focusMode: boolean
+  readonly placement: { column: number; row: number; columnSpan: number; rowSpan: number }
+  readonly onToggleFullscreen: (widget: Widget) => void
+}
+
+function WidgetCell({
+  widget,
+  isFullscreen,
+  isHidden,
+  focusMode,
+  placement,
+  onToggleFullscreen,
+}: WidgetCellProps) {
+  return (
+    <div
+      className={[
+        styles.widgetCell,
+        getWidgetTypeClass(widget),
+        isFullscreen ? styles.widgetCellFullscreen : '',
+        isHidden ? styles.widgetCellHidden : '',
+      ].join(' ')}
+      data-widget-id={widget}
+      style={
+        focusMode
+          ? undefined
+          : {
+              gridColumn: `${placement.column} / span ${placement.columnSpan}`,
+              gridRow: `${placement.row} / span ${placement.rowSpan}`,
+            }
+      }
+    >
+      <button
+        className={styles.widgetFullscreenBtn}
+        onClick={() => onToggleFullscreen(widget)}
+        aria-label={`${isFullscreen ? 'Exit' : 'Enter'} fullscreen for ${getWidgetLabel(widget)}`}
+        title={`${isFullscreen ? 'Exit' : 'Enter'} fullscreen`}
+        type="button"
+      >
+        {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+      </button>
+      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen)}</div>
+    </div>
+  )
+}
+
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
@@ -294,6 +343,10 @@ function Dashboard() {
     setSelectedPresetName(preset.name)
   }
 
+  const handleToggleFullscreen = (widget: Widget) => {
+    setFullscreenWidget((current) => (current === widget ? null : widget))
+  }
+
   return (
     <div
       className={[
@@ -343,37 +396,15 @@ function Dashboard() {
 
       <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
         {orderedVisibleWidgets.map((widget) => (
-          <div
+          <WidgetCell
             key={widget}
-            className={[
-              styles.widgetCell,
-              getWidgetTypeClass(widget),
-              fullscreenWidget === widget ? styles.widgetCellFullscreen : '',
-              fullscreenWidget && fullscreenWidget !== widget ? styles.widgetCellHidden : '',
-            ].join(' ')}
-            data-widget-id={widget}
-            style={
-              focusMode
-                ? undefined
-                : {
-                    gridColumn: `${placements[widget].column} / span ${placements[widget].columnSpan}`,
-                    gridRow: `${placements[widget].row} / span ${placements[widget].rowSpan}`,
-                  }
-            }
-          >
-            <button
-              className={styles.widgetFullscreenBtn}
-              onClick={() => setFullscreenWidget(fullscreenWidget === widget ? null : widget)}
-              aria-label={`${fullscreenWidget === widget ? 'Exit' : 'Enter'} fullscreen for ${getWidgetLabel(widget)}`}
-              title={`${fullscreenWidget === widget ? 'Exit' : 'Enter'} fullscreen`}
-              type="button"
-            >
-              {fullscreenWidget === widget ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-            <div className={styles.widgetContentFrame}>
-              {WIDGET_RENDERERS[widget](fullscreenWidget === widget)}
-            </div>
-          </div>
+            widget={widget}
+            isFullscreen={fullscreenWidget === widget}
+            isHidden={Boolean(fullscreenWidget && fullscreenWidget !== widget)}
+            focusMode={focusMode}
+            placement={placements[widget]}
+            onToggleFullscreen={handleToggleFullscreen}
+          />
         ))}
       </main>
 
