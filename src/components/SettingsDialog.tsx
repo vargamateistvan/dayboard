@@ -64,6 +64,16 @@ import {
 } from "../lib/settings";
 import { searchSportsTeams, type SportsTeamSearchResult } from "../lib/sports";
 import {
+  buildGoogleCalendarFeedUrl,
+  clearStoredGoogleAuth,
+  fetchGoogleCalendarList,
+  getStoredGoogleAuth,
+  parseGoogleCalendarFeedUrl,
+  startGoogleLogin,
+  type GoogleAuthSession,
+  type GoogleCalendarListEntry,
+} from "../lib/googleAuth";
+import {
   Globe,
   Monitor,
   Zap,
@@ -944,6 +954,58 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       ? settings.globalCalendarFeeds
       : [{ url: "", color: DEFAULT_CALENDAR_COLORS[0] }],
   );
+
+  // Google Calendar auth state
+  const [googleAuth, setGoogleAuth] = useState<GoogleAuthSession | null>(() => getStoredGoogleAuth())
+  const [googleCalendars, setGoogleCalendars] = useState<GoogleCalendarListEntry[]>([])
+  const [googleCalendarsLoading, setGoogleCalendarsLoading] = useState(false)
+  const [googleCalendarsError, setGoogleCalendarsError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!googleAuth) {
+      setGoogleCalendars([])
+      return
+    }
+
+    setGoogleCalendarsLoading(true)
+    setGoogleCalendarsError(null)
+
+    void fetchGoogleCalendarList(googleAuth).then((calendars) => {
+      setGoogleCalendars(calendars)
+      setGoogleCalendarsLoading(false)
+    }).catch((error: unknown) => {
+      setGoogleCalendarsError(error instanceof Error ? error.message : 'Failed to load calendars.')
+      setGoogleCalendarsLoading(false)
+    })
+  }, [googleAuth])
+
+  function isGoogleCalendarAdded(calendarId: string, feeds: CalendarFeed[]): boolean {
+    const url = buildGoogleCalendarFeedUrl(calendarId)
+    return feeds.some((feed) => feed.url === url)
+  }
+
+  function addGoogleCalendar(calendar: GoogleCalendarListEntry) {
+    const url = buildGoogleCalendarFeedUrl(calendar.id)
+    const color = calendar.backgroundColor
+    setGlobalCalendarFeeds((prev) => {
+      if (prev.some((feed) => feed.url === url)) return prev
+      return [...prev.filter((feed) => feed.url !== ''), { url, color }]
+    })
+  }
+
+  function removeGoogleCalendar(calendarId: string) {
+    const url = buildGoogleCalendarFeedUrl(calendarId)
+    setGlobalCalendarFeeds((prev) => prev.filter((feed) => feed.url !== url))
+    setCalendarFeeds((prev) => prev.filter((feed) => feed.url !== url))
+  }
+
+  function handleDisconnectGoogle() {
+    clearStoredGoogleAuth()
+    setGoogleAuth(null)
+    // Remove all Google Calendar feeds
+    setGlobalCalendarFeeds((prev) => prev.filter((feed) => parseGoogleCalendarFeedUrl(feed.url) === null))
+    setCalendarFeeds((prev) => prev.filter((feed) => parseGoogleCalendarFeedUrl(feed.url) === null))
+  }
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(
     settings.weatherRefreshMinutes,
   );
@@ -1976,6 +2038,97 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
                 {isCalendarOnLayout && (
                   <>
+                    <section className={styles.section}>
+                      <div className={styles.sectionHeader}>
+                        <h3 className={styles.sectionTitle}>Google Calendar</h3>
+                        {googleAuth ? (
+                          <button
+                            className={styles.removeCalendarBtn}
+                            onClick={handleDisconnectGoogle}
+                            type="button"
+                          >
+                            Disconnect
+                          </button>
+                        ) : (
+                          <button
+                            className={styles.googleConnectBtn}
+                            onClick={() => {
+                              void startGoogleLogin().then((auth) => {
+                                setGoogleAuth(auth)
+                              }).catch((error: unknown) => {
+                                console.error('Google login failed:', error)
+                              })
+                            }}
+                            type="button"
+                          >
+                            <svg className={styles.googleLogo} viewBox="0 0 24 24" aria-hidden="true">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Sign in with Google
+                          </button>
+                        )}
+                      </div>
+                      {!googleAuth && (
+                        <p className={styles.hint}>
+                          Connect your Google account to import calendars directly from Google Calendar.
+                          You can also add ICS/webcal links manually below.
+                        </p>
+                      )}
+                      {googleAuth && googleCalendarsLoading && (
+                        <p className={styles.hint}>Loading your calendars…</p>
+                      )}
+                      {googleAuth && googleCalendarsError && (
+                        <p className={styles.hint} style={{ color: 'var(--color-error, #ef4444)' }}>
+                          {googleCalendarsError}
+                        </p>
+                      )}
+                      {googleAuth && !googleCalendarsLoading && googleCalendars.length > 0 && (
+                        <div className={styles.googleCalendarList}>
+                          {googleCalendars.map((calendar) => {
+                            const added = isGoogleCalendarAdded(calendar.id, globalCalendarFeeds) ||
+                              isGoogleCalendarAdded(calendar.id, calendarFeeds)
+                            return (
+                              <div key={calendar.id} className={styles.googleCalendarRow}>
+                                <span
+                                  className={styles.googleCalendarDot}
+                                  style={{ background: calendar.backgroundColor }}
+                                />
+                                <span className={styles.googleCalendarName}>
+                                  {calendar.summary}
+                                  {calendar.primary && (
+                                    <span className={styles.googleCalendarBadge}>primary</span>
+                                  )}
+                                </span>
+                                {added ? (
+                                  <button
+                                    className={styles.removeCalendarBtn}
+                                    onClick={() => removeGoogleCalendar(calendar.id)}
+                                    type="button"
+                                    aria-label={`Remove ${calendar.summary}`}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                ) : (
+                                  <button
+                                    className={styles.addCalendarBtn}
+                                    onClick={() => addGoogleCalendar(calendar)}
+                                    type="button"
+                                    aria-label={`Add ${calendar.summary}`}
+                                  >
+                                    <Plus size={14} />
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </section>
+
                     <section className={styles.section}>
                       <div className={styles.sectionHeader}>
                         <h3 className={styles.sectionTitle}>Global Calendar Feeds</h3>

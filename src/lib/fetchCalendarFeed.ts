@@ -1,5 +1,11 @@
 import { normalizeCalendarUrl } from './calendarUrl'
 import type { CalendarFeed } from './settings'
+import {
+  fetchGoogleCalendarEvents,
+  getStoredGoogleAuth,
+  getValidGoogleAuth,
+  parseGoogleCalendarFeedUrl,
+} from './googleAuth'
 
 const LOCAL_PROXY_PATH = '/api/calendar'
 const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
@@ -63,6 +69,17 @@ function normalizeCalendarFeedText(text: string): string {
 }
 
 export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string> {
+  // Google Calendar API feeds use a special scheme
+  const googleCalendarId = parseGoogleCalendarFeedUrl(rawCalendarUrl)
+  if (googleCalendarId !== null) {
+    const auth = getStoredGoogleAuth()
+    if (!auth) {
+      throw new Error('Google Calendar is not connected. Please sign in to Google in settings.')
+    }
+    const validAuth = await getValidGoogleAuth(auth)
+    return fetchGoogleCalendarEvents(googleCalendarId, validAuth)
+  }
+
   const requestUrls = getCalendarFeedRequestUrls(rawCalendarUrl)
   if (requestUrls.length === 0) {
     throw new Error(MISSING_CALENDAR_LINK_ERROR)
