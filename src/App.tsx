@@ -441,16 +441,16 @@ function useAppFullscreen() {
 
   const toggleAppFullscreen = useCallback(() => {
     void (async () => {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-      return
-    }
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+        return
+      }
 
-    try {
-      await document.documentElement.requestFullscreen()
-    } catch (error) {
-      console.error('Fullscreen request failed:', error)
-    }
+      try {
+        await document.documentElement.requestFullscreen()
+      } catch (error) {
+        console.error('Fullscreen request failed:', error)
+      }
     })()
   }, [])
 
@@ -601,28 +601,30 @@ function Dashboard() {
     updateSettings,
   )
 
+  const dashboardLayoutProps = {
+    focusMode,
+    fullscreenWidget,
+    appFullscreen,
+    rowCount,
+    presets,
+    visiblePresetName,
+    orderedVisibleWidgets,
+    placements,
+    notifications,
+    infoOpen,
+    settingsOpen,
+    onOpenInfo: openInfo,
+    onOpenSettings: openSettings,
+    onToggleAppFullscreen: toggleAppFullscreen,
+    onToggleWidgetFullscreen: handleToggleFullscreen,
+    onCloseInfo: closeInfo,
+    onCloseSettings: closeSettings,
+    onSelectPreset: handlePresetChange,
+    onDismissNotification: dismissNotification,
+  } satisfies DashboardLayoutProps
+
   return (
-    <DashboardLayout
-      focusMode={focusMode}
-      fullscreenWidget={fullscreenWidget}
-      appFullscreen={appFullscreen}
-      rowCount={rowCount}
-      presets={presets}
-      visiblePresetName={visiblePresetName}
-      orderedVisibleWidgets={orderedVisibleWidgets}
-      placements={placements}
-      notifications={notifications}
-      infoOpen={infoOpen}
-      settingsOpen={settingsOpen}
-      onOpenInfo={openInfo}
-      onOpenSettings={openSettings}
-      onToggleAppFullscreen={toggleAppFullscreen}
-      onToggleWidgetFullscreen={handleToggleFullscreen}
-      onCloseInfo={closeInfo}
-      onCloseSettings={closeSettings}
-      onSelectPreset={handlePresetChange}
-      onDismissNotification={dismissNotification}
-    />
+    <DashboardLayout {...dashboardLayoutProps} />
   )
 }
 
