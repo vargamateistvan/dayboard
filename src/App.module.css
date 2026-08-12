@@ -353,6 +353,11 @@
   justify-content: center;
 }
 
+.widgetCellFullscreen[data-widget-id='flights'] .widgetContentFrame > * {
+  width: min(100%, 1200px);
+  height: min(100%, 900px);
+}
+
 .widgetCellFullscreen[data-widget-id='weather'] .widgetContentFrame > *,
 .widgetCellFullscreen[data-widget-id='calendar'] .widgetContentFrame > *,
 .widgetCellFullscreen[data-widget-id='tasks'] .widgetContentFrame > *,

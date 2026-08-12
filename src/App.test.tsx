@@ -26,6 +26,8 @@ const widgetVisibility = {
   deviceInfo: false,
 } satisfies Record<Widget, boolean>
 
+const widgetOrder = ['clock', 'weather']
+
 const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
   timezoneClock: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
@@ -62,7 +64,7 @@ vi.mock('./lib/useFocusMode', () => ({
 vi.mock('./lib/useWidgetVisibility', () => ({
   useWidgetVisibility: () => ({
     visibility: widgetVisibility,
-    order: ['clock', 'weather'],
+    order: widgetOrder,
     placements: widgetPlacements,
     rowCount: 2,
   }),
@@ -157,6 +159,23 @@ vi.mock('./components/NotificationBadge', () => ({
 
 beforeEach(() => {
   localStorage.clear()
+  widgetVisibility.clock = true
+  widgetVisibility.timezoneClock = false
+  widgetVisibility.weather = true
+  widgetVisibility.flights = false
+  widgetVisibility.calendar = false
+  widgetVisibility.timer = false
+  widgetVisibility.tasks = false
+  widgetVisibility.notes = false
+  widgetVisibility.spotify = false
+  widgetVisibility.appleMusic = false
+  widgetVisibility.applePodcast = false
+  widgetVisibility.stocks = false
+  widgetVisibility.sports = false
+  widgetVisibility.currencies = false
+  widgetVisibility.quote = false
+  widgetVisibility.deviceInfo = false
+  widgetOrder.splice(0, widgetOrder.length, 'clock', 'weather')
 })
 
 describe('App fullscreen widgets', () => {
@@ -181,6 +200,29 @@ describe('App fullscreen widgets', () => {
 
     expect(weatherCell).not.toHaveClass(styles.widgetCellFullscreen)
     expect(clockCell).not.toHaveClass(styles.widgetCellHidden)
+  })
+
+  it('supports fullscreen mode for the flights radar widget', () => {
+    widgetVisibility.clock = false
+    widgetVisibility.weather = false
+    widgetVisibility.flights = true
+    widgetOrder.splice(0, widgetOrder.length, 'flights')
+
+    render(<App />)
+
+    const flightsCell = document.querySelector('[data-widget-id="flights"]')
+    expect(flightsCell).not.toBeNull()
+    expect(flightsCell).not.toHaveClass(styles.widgetCellFullscreen)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enter fullscreen for Flights Radar' }))
+
+    expect(flightsCell).toHaveClass(styles.widgetCellFullscreen)
+    expect(screen.getByRole('button', { name: 'Exit fullscreen for Flights Radar' })).toBeInTheDocument()
+
+    widgetOrder.splice(0, widgetOrder.length, 'clock', 'weather')
+    widgetVisibility.clock = true
+    widgetVisibility.weather = true
+    widgetVisibility.flights = false
   })
 
   it('opens the info dialog with usage guidance and the issue tracker link', () => {
