@@ -1,0 +1,6 @@
+<svg width="860" height="260" viewBox="0 0 860 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="30" y="30" width="200" height="200" rx="52" fill="#0F172A"/>
+  <path d="M88 68H122C162 68 192 97 192 130C192 163 162 192 122 192H88V68ZM118 94V166H122C145 166 162 149 162 130C162 111 145 94 122 94H118Z" fill="#F8FAFC"/>
+
+  <text x="270" y="150" fill="#0F172A" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="-4">dayboard</text>
+</svg>
