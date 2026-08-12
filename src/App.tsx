@@ -13,6 +13,7 @@ import { FlightWidget } from './components/FlightWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
 import { TaskWidget } from './components/TaskWidget'
+import { MiniKanbanWidget } from './components/MiniKanbanWidget'
 import { NotesWidget } from './components/NotesWidget'
 import { SpotifyWidget } from './components/SpotifyWidget'
 import { AppleMusicWidget } from './components/AppleMusicWidget'
@@ -119,6 +120,7 @@ const WIDGET_RENDERERS = {
   calendar: (isFullscreen: boolean) => <CalendarWidget isFullscreen={isFullscreen} />,
   timer: (isFullscreen: boolean) => <TimerPanel isFullscreen={isFullscreen} />,
   tasks: (isFullscreen: boolean) => <TaskWidget isFullscreen={isFullscreen} />,
+  kanban: (isFullscreen: boolean) => <MiniKanbanWidget isFullscreen={isFullscreen} />,
   notes: (isFullscreen: boolean) => <NotesWidget isFullscreen={isFullscreen} />,
   spotify: (isFullscreen: boolean) => <SpotifyWidget isFullscreen={isFullscreen} />,
   appleMusic: (isFullscreen: boolean) => <AppleMusicWidget isFullscreen={isFullscreen} />,

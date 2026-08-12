@@ -15,6 +15,7 @@ const widgetVisibility: Record<Widget, boolean> = {
   calendar: false,
   timer: false,
   tasks: false,
+  kanban: false,
   notes: false,
   spotify: false,
   appleMusic: false,
@@ -34,6 +35,7 @@ const DEFAULT_WIDGET_VISIBILITY: Record<Widget, boolean> = {
   calendar: false,
   timer: false,
   tasks: false,
+  kanban: false,
   notes: false,
   spotify: false,
   appleMusic: false,
@@ -66,6 +68,7 @@ const widgetPlacements = {
   calendar: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   timer: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
   tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+  kanban: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
   notes: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
   spotify: { column: 1, row: 4, columnSpan: 1, rowSpan: 1 },
   appleMusic: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
@@ -126,6 +129,10 @@ vi.mock('./components/TimerPanel', () => ({
 
 vi.mock('./components/TaskWidget', () => ({
   TaskWidget: () => <div>Task widget</div>,
+}))
+
+vi.mock('./components/MiniKanbanWidget', () => ({
+  MiniKanbanWidget: () => <div>Mini kanban widget</div>,
 }))
 
 vi.mock('./components/NotesWidget', () => ({

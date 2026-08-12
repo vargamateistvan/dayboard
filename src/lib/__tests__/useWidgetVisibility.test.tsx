@@ -8,7 +8,7 @@ const LEGACY_VISIBILITY_STORAGE_KEY = 'dayboard_widget_visibility'
 // Default placements (2 cols x 3 rows):
 // clock(1,1,2,1)    – full width row 1
 // weather(1,2,1,1)  calendar(2,2,1,2)  – col 2 spans rows 2-3
-// timer(1,3,1,1)                        – col 1 row 3
+// timer(1,3,1,1) kanban(2,3,1,1)        – row 3
 // tasks hidden by default
 
 function Probe({ label }: { label: string }) {
@@ -128,9 +128,9 @@ describe('useWidgetVisibility', () => {
   it('orders widgets by their grid placement', () => {
     render(<Probe label="grid" />)
 
-    // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer(1,3); tasks hidden but placement ties at (1,3)
+    // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer/tasks/notes/spotify/kanban on row 3
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,flights,applePodcast,deviceInfo,stocks,timezoneClock,sports,currencies,quote',
+      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,kanban,flights,applePodcast,deviceInfo,stocks,timezoneClock,sports,currencies,quote',
     )
   })
 
@@ -150,7 +150,7 @@ describe('useWidgetVisibility', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({
-        visibility: { clock: true, weather: true, calendar: true, timer: true, tasks: true },
+        visibility: { clock: true, weather: true, calendar: true, timer: true, tasks: true, kanban: true },
         order: ['weather', 'clock', 'calendar', 'timer', 'tasks', 'notes', 'spotify', 'appleMusic'],
         columnSpans: { weather: 2, clock: 1 },
       }),

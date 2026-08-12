@@ -439,6 +439,7 @@ describe('settings profiles', () => {
         visibility: {
           ...loadWidgetLayoutState().visibility,
           tasks: true,
+          kanban: true,
         },
         placements: loadWidgetLayoutState().placements,
       },
@@ -451,6 +452,7 @@ describe('settings profiles', () => {
       rowCount: 4,
       visibility: {
         tasks: true,
+        kanban: true,
       },
     })
   })

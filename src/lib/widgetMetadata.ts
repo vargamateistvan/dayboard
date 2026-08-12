@@ -8,6 +8,7 @@ export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'calendar', label: 'Calendar' },
   { id: 'timer', label: 'Timer' },
   { id: 'tasks', label: 'Tasks' },
+  { id: 'kanban', label: 'Mini Kanban' },
   { id: 'notes', label: 'Sticky Notes' },
   { id: 'spotify', label: 'Spotify Player' },
   { id: 'appleMusic', label: 'Apple Music Player' },

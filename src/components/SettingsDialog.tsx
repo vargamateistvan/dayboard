@@ -276,7 +276,7 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
   {
     id: "productivity",
     label: "Productivity",
-    widgets: ["timer", "tasks", "notes", "quote"],
+    widgets: ["timer", "tasks", "kanban", "notes", "quote"],
   },
   {
     id: "media",

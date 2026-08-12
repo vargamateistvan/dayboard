@@ -35,6 +35,7 @@ describe('SettingsDialog', () => {
           calendar: true,
           timer: true,
           tasks: true,
+          kanban: false,
         },
         placements: {
           clock:    { column: 1, row: 1, columnSpan: 2, rowSpan: 1 },
@@ -42,6 +43,7 @@ describe('SettingsDialog', () => {
           calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
           timer:    { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           tasks:    { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
+          kanban:   { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
         },
       }),
     )
@@ -61,6 +63,7 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
 
     // 4 widgets are visible by default (tasks is hidden)
+    // 4 widgets are visible by default (tasks and kanban are hidden)
     expect(screen.getByTestId('layout-widget-weather')).toBeInTheDocument()
 
     // Click the × button to remove weather from the dashboard
@@ -274,6 +277,7 @@ describe('SettingsDialog', () => {
           calendar: false,
           timer: false,
           tasks: false,
+          kanban: false,
           notes: false,
           spotify: false,
           appleMusic: false,
@@ -287,6 +291,7 @@ describe('SettingsDialog', () => {
           calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
           timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          kanban: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
           notes: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           spotify: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
@@ -317,6 +322,7 @@ describe('SettingsDialog', () => {
           calendar: false,
           timer: false,
           tasks: false,
+          kanban: false,
           notes: false,
           spotify: false,
           appleMusic: true,
@@ -330,6 +336,7 @@ describe('SettingsDialog', () => {
           calendar: { column: 2, row: 2, columnSpan: 1, rowSpan: 2 },
           timer: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           tasks: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
+          kanban: { column: 2, row: 3, columnSpan: 1, rowSpan: 1 },
           notes: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           spotify: { column: 1, row: 3, columnSpan: 1, rowSpan: 1 },
           appleMusic: { column: 1, row: 2, columnSpan: 1, rowSpan: 2 },
