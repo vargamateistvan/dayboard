@@ -318,6 +318,49 @@ function sortWidgetsByPlacement(placements: WidgetPlacements): Widget[] {
   });
 }
 
+function findAvailablePlacement(
+  widget: Widget,
+  currentLayout: WidgetLayoutState,
+): WidgetPlacement | null {
+  const preferredPlacement = currentLayout.placements[widget];
+  const candidateSizes = Array.from(
+    new Map(
+      [
+        { columnSpan: preferredPlacement.columnSpan, rowSpan: preferredPlacement.rowSpan },
+        { columnSpan: DEFAULT_PLACEMENTS[widget].columnSpan, rowSpan: DEFAULT_PLACEMENTS[widget].rowSpan },
+        { columnSpan: MIN_WIDGET_SIZE[widget].columnSpan, rowSpan: MIN_WIDGET_SIZE[widget].rowSpan },
+      ].map((size) => [`${size.columnSpan}:${size.rowSpan}`, size]),
+    ).values(),
+  );
+
+  for (const size of candidateSizes) {
+    for (let row = 1; row <= currentLayout.rowCount; row += 1) {
+      for (let column = 1; column <= WIDGET_GRID_COLUMNS; column += 1) {
+        const nextPlacement = normalizePlacementForWidget(
+          widget,
+          { column, row, ...size },
+          preferredPlacement,
+          currentLayout.rowCount,
+        );
+
+        if (
+          canPlaceWidget(
+            currentLayout.placements,
+            currentLayout.visibility,
+            widget,
+            nextPlacement,
+            currentLayout.rowCount,
+          )
+        ) {
+          return nextPlacement;
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function normalizeLayout(value: unknown): WidgetLayoutState {
   if (!value || typeof value !== "object") {
     return cloneDefaultLayout();
@@ -551,11 +594,33 @@ export function useWidgetVisibility() {
 
   const toggleWidget = useCallback((widget: Widget, visible?: boolean) => {
     const currentLayout = readLayout();
+    const nextVisible = visible ?? !currentLayout.visibility[widget];
+
+    if (!nextVisible) {
+      writeLayout({
+        ...currentLayout,
+        visibility: {
+          ...currentLayout.visibility,
+          [widget]: false,
+        },
+      });
+      return;
+    }
+
+    const nextPlacement = findAvailablePlacement(widget, currentLayout);
+    if (!nextPlacement) {
+      return;
+    }
+
     writeLayout({
       ...currentLayout,
       visibility: {
         ...currentLayout.visibility,
-        [widget]: visible ?? !currentLayout.visibility[widget],
+        [widget]: true,
+      },
+      placements: {
+        ...currentLayout.placements,
+        [widget]: nextPlacement,
       },
     });
   }, []);

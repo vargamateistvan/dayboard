@@ -18,6 +18,7 @@ function Probe({ label }: { label: string }) {
   return (
     <div>
       <span data-testid={`weather-${label}`}>{String(visibility.weather)}</span>
+      <span data-testid={`tasks-${label}`}>{String(visibility.tasks)}</span>
       <span data-testid={`order-${label}`}>{order.join(',')}</span>
       <span data-testid={`weather-placement-${label}`}>
         {[
@@ -111,9 +112,15 @@ describe('useWidgetVisibility', () => {
       </div>,
     )
 
-    expect(screen.getAllByText('true')).toHaveLength(2)
+    expect(screen.getByTestId('weather-left').textContent).toBe('true')
+    expect(screen.getByTestId('weather-right').textContent).toBe('true')
+
     fireEvent.click(screen.getByRole('button', { name: 'toggle-left' }))
-    expect(screen.getAllByText('false')).toHaveLength(2)
+
+    expect(screen.getByTestId('weather-left').textContent).toBe('false')
+    expect(screen.getByTestId('weather-right').textContent).toBe('false')
+    expect(screen.getByTestId('tasks-left').textContent).toBe('false')
+    expect(screen.getByTestId('tasks-right').textContent).toBe('false')
     expect(JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}').visibility.weather).toBe(false)
     expect(JSON.parse(localStorage.getItem(LEGACY_VISIBILITY_STORAGE_KEY) ?? '{}').weather).toBe(false)
   })
@@ -153,6 +160,15 @@ describe('useWidgetVisibility', () => {
     // weather first with span=2 → (1,1,2,1); clock (falls back to default span=2) → (1,2,2,1)
     expect(screen.getByTestId('weather-placement-migrate').textContent).toBe('1,1,2,1')
     expect(screen.getByTestId('clock-placement-migrate').textContent).toBe('1,2,2,1')
+  })
+
+  it('keeps tasks hidden when no valid cell is available for it', () => {
+    render(<Probe label="no-space" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-tasks-no-space' }))
+
+    expect(screen.getByTestId('tasks-no-space').textContent).toBe('false')
+    expect(JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? '{}')?.visibility?.tasks ?? false).toBe(false)
   })
 
   it('supports making a widget two rows tall when space is available', () => {
