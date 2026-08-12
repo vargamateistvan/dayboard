@@ -295,6 +295,19 @@ describe('App fullscreen widgets', () => {
     expect(screen.queryByLabelText('Preset options')).not.toBeInTheDocument()
   })
 
+  it('closes the preset menu when clicking outside', () => {
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+    expect(screen.getByLabelText('Preset options')).toBeInTheDocument()
+
+    fireEvent.mouseDown(document.body)
+
+    expect(screen.queryByLabelText('Preset options')).not.toBeInTheDocument()
+  })
+
   it('applies a selected preset from the preset menu', () => {
     seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
 

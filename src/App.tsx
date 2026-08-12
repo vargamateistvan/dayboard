@@ -85,19 +85,100 @@ const WIDGET_RENDERERS = {
   deviceInfo: (isFullscreen: boolean) => <DeviceInfoWidget isFullscreen={isFullscreen} />,
 } satisfies Record<Widget, (isFullscreen: boolean) => JSX.Element | null>
 
+interface PresetSelectorProps {
+  readonly presets: SettingsPreset[]
+  readonly visiblePresetName: string
+  readonly onSelectPreset: (presetName: string) => void
+}
+
+function PresetSelector({ presets, visiblePresetName, onSelectPreset }: PresetSelectorProps) {
+  const [presetMenuOpen, setPresetMenuOpen] = useState(false)
+  const presetMenuRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!presetMenuOpen) {
+      return undefined
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (presetMenuRef.current?.contains(event.target as Node)) {
+        return
+      }
+
+      setPresetMenuOpen(false)
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPresetMenuOpen(false)
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown)
+    window.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown)
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [presetMenuOpen])
+
+  return (
+    <div className={styles.presetSelectorWrap} ref={presetMenuRef}>
+      <button
+        className={styles.presetSelectorTrigger}
+        aria-label="Select preset"
+        aria-haspopup="menu"
+        aria-expanded={presetMenuOpen}
+        type="button"
+        onClick={() => setPresetMenuOpen((current) => !current)}
+      >
+        <span className={styles.presetSelectorLabel}>Preset</span>
+        <span className={styles.presetSelectorValue}>{visiblePresetName || 'Custom'}</span>
+        <ChevronDown
+          size={16}
+          className={[styles.presetSelectorChevron, presetMenuOpen ? styles.presetSelectorChevronOpen : ''].join(' ')}
+        />
+      </button>
+      {presetMenuOpen ? (
+        <div className={styles.presetMenu} aria-label="Preset options">
+          {presets.map((preset) => {
+            const isSelected = preset.name === visiblePresetName
+
+            return (
+              <button
+                key={preset.name}
+                className={[styles.presetMenuItem, isSelected ? styles.presetMenuItemSelected : ''].join(' ')}
+                type="button"
+                onClick={() => {
+                  onSelectPreset(preset.name)
+                  setPresetMenuOpen(false)
+                }}
+              >
+                <span className={styles.presetMenuItemCheck}>
+                  {isSelected ? <Check size={14} /> : null}
+                </span>
+                <span className={styles.presetMenuItemLabel}>{preset.name}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function Dashboard() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
   const [appFullscreen, setAppFullscreen] = useState(false)
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
   const [presets, setPresets] = useState<SettingsPreset[]>(() => listPresets())
-  const [presetMenuOpen, setPresetMenuOpen] = useState(false)
   const [selectedPresetName, setSelectedPresetName] = useState('')
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
-  const presetMenuRef = useRef<HTMLDivElement | null>(null)
   const orderedVisibleWidgets = order.filter((widget) => {
     if (!visibility[widget]) {
       return false
@@ -150,34 +231,6 @@ function Dashboard() {
     window.addEventListener('settingsPresetsChanged', refreshPresets)
     return () => window.removeEventListener('settingsPresetsChanged', refreshPresets)
   }, [])
-
-  useEffect(() => {
-    if (!presetMenuOpen) {
-      return undefined
-    }
-
-    const handlePointerDown = (event: Event) => {
-      if (presetMenuRef.current?.contains(event.target as Node)) {
-        return
-      }
-
-      setPresetMenuOpen(false)
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setPresetMenuOpen(false)
-      }
-    }
-
-    window.addEventListener('mousedown', handlePointerDown)
-    window.addEventListener('keydown', handleKeyDown)
-
-    return () => {
-      window.removeEventListener('mousedown', handlePointerDown)
-      window.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [presetMenuOpen])
 
   const toggleAppFullscreen = async () => {
     if (document.fullscreenElement) {
@@ -239,7 +292,6 @@ function Dashboard() {
     applyPreset(preset.name)
     updateSettings(preset.settings)
     setSelectedPresetName(preset.name)
-    setPresetMenuOpen(false)
   }
 
   return (
@@ -251,44 +303,11 @@ function Dashboard() {
       ].join(' ')}
     >
       {presets.length > 1 ? (
-        <div className={styles.presetSelectorWrap} ref={presetMenuRef}>
-          <button
-            className={styles.presetSelectorTrigger}
-            aria-label="Select preset"
-            aria-haspopup="menu"
-            aria-expanded={presetMenuOpen}
-            type="button"
-            onClick={() => setPresetMenuOpen((current) => !current)}
-          >
-            <span className={styles.presetSelectorLabel}>Preset</span>
-            <span className={styles.presetSelectorValue}>{visiblePresetName || 'Custom'}</span>
-            <ChevronDown
-              size={16}
-              className={[styles.presetSelectorChevron, presetMenuOpen ? styles.presetSelectorChevronOpen : ''].join(' ')}
-            />
-          </button>
-          {presetMenuOpen ? (
-            <div className={styles.presetMenu} aria-label="Preset options">
-              {presets.map((preset) => {
-                const isSelected = preset.name === visiblePresetName
-
-                return (
-                  <button
-                    key={preset.name}
-                    className={[styles.presetMenuItem, isSelected ? styles.presetMenuItemSelected : ''].join(' ')}
-                    type="button"
-                    onClick={() => handlePresetChange(preset.name)}
-                  >
-                    <span className={styles.presetMenuItemCheck}>
-                      {isSelected ? <Check size={14} /> : null}
-                    </span>
-                    <span className={styles.presetMenuItemLabel}>{preset.name}</span>
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
-        </div>
+        <PresetSelector
+          presets={presets}
+          visiblePresetName={visiblePresetName}
+          onSelectPreset={handlePresetChange}
+        />
       ) : null}
       <div className={styles.toolbarButtons}>
         <button
