@@ -66,6 +66,51 @@ function getWidgetTypeClass(widget: Widget) {
   return ''
 }
 
+function getVisibleWidgetOrder(
+  order: Widget[],
+  visibility: ReturnType<typeof useWidgetVisibility>['visibility'],
+  focusMode: boolean,
+) {
+  return order.filter((widget) => {
+    if (!visibility[widget]) {
+      return false
+    }
+
+    if (focusMode && (widget === 'weather' || widget === 'calendar')) {
+      return false
+    }
+
+    return true
+  })
+}
+
+function presetMatchesLayout(
+  preset: SettingsPreset,
+  rowCount: number,
+  visibility: ReturnType<typeof useWidgetVisibility>['visibility'],
+  placements: ReturnType<typeof useWidgetVisibility>['placements'],
+) {
+  if (!preset.layout) {
+    return true
+  }
+
+  return deepEqual(preset.layout, {
+    rowCount,
+    visibility,
+    placements,
+  })
+}
+
+function presetMatchesSettings(
+  preset: SettingsPreset,
+  settings: ReturnType<typeof useSettings>['settings'],
+  rowCount: number,
+  visibility: ReturnType<typeof useWidgetVisibility>['visibility'],
+  placements: ReturnType<typeof useWidgetVisibility>['placements'],
+) {
+  return deepEqual(preset.settings, settings) && presetMatchesLayout(preset, rowCount, visibility, placements)
+}
+
 const WIDGET_RENDERERS = {
   clock: (isFullscreen: boolean) => <ClockWidget isFullscreen={isFullscreen} />,
   timezoneClock: (isFullscreen: boolean) => <TimezoneClockWidget isFullscreen={isFullscreen} />,
@@ -421,24 +466,8 @@ function usePresetSelection(
   const [selectedPresetName, setSelectedPresetName] = useState('')
 
   const currentPresetName = useMemo(
-    () =>
-      presets.find((preset) => {
-        const settingsMatch = deepEqual(preset.settings, settings)
-        if (!settingsMatch) {
-          return false
-        }
-
-        if (!preset.layout) {
-          return true
-        }
-
-        return deepEqual(preset.layout, {
-          rowCount,
-          visibility,
-          placements,
-        })
-      })?.name ?? '',
-    [presets, settings, rowCount, visibility, placements]
+    () => presets.find((preset) => presetMatchesSettings(preset, settings, rowCount, visibility, placements))?.name ?? '',
+    [presets, settings, rowCount, visibility, placements],
   )
 
   const selectedPresetExists = Boolean(
@@ -481,18 +510,7 @@ function useVisibleWidgets(
   const [fullscreenWidget, setFullscreenWidget] = useState<Widget | null>(null)
 
   const orderedVisibleWidgets = useMemo(
-    () =>
-      order.filter((widget) => {
-        if (!visibility[widget]) {
-          return false
-        }
-
-        if (focusMode && (widget === 'weather' || widget === 'calendar')) {
-          return false
-        }
-
-        return true
-      }),
+    () => getVisibleWidgetOrder(order, visibility, focusMode),
     [order, visibility, focusMode],
   )
 
