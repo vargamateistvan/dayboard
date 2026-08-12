@@ -217,6 +217,47 @@ function WidgetCell({
   )
 }
 
+interface ToolbarProps {
+  readonly appFullscreen: boolean
+  readonly onOpenInfo: () => void
+  readonly onOpenSettings: () => void
+  readonly onToggleAppFullscreen: () => void
+}
+
+function Toolbar({ appFullscreen, onOpenInfo, onOpenSettings, onToggleAppFullscreen }: ToolbarProps) {
+  return (
+    <div className={styles.toolbarButtons}>
+      <button
+        className={styles.toolbarButton}
+        onClick={onOpenInfo}
+        aria-label="Open app info"
+        title="About Dayboard"
+        type="button"
+      >
+        <Info size={18} />
+      </button>
+      <button
+        className={styles.toolbarButton}
+        onClick={onOpenSettings}
+        aria-label="Open settings"
+        title="Settings"
+        type="button"
+      >
+        <Settings size={18} />
+      </button>
+      <button
+        className={styles.toolbarButton}
+        onClick={onToggleAppFullscreen}
+        aria-label={appFullscreen ? 'Exit app fullscreen' : 'Enter app fullscreen'}
+        title={appFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        type="button"
+      >
+        {appFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+      </button>
+    </div>
+  )
+}
+
 function useAppFullscreen() {
   const [appFullscreen, setAppFullscreen] = useState(false)
 
@@ -376,15 +417,29 @@ function usePresets() {
   return presets
 }
 
-function Dashboard() {
+function useShellPanels() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [infoOpen, setInfoOpen] = useState(false)
+
+  return {
+    settingsOpen,
+    infoOpen,
+    openSettings: () => setSettingsOpen(true),
+    closeSettings: () => setSettingsOpen(false),
+    openInfo: () => setInfoOpen(true),
+    closeInfo: () => setInfoOpen(false),
+  }
+}
+
+function Dashboard() {
   const { notifications, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
   const presets = usePresets()
+  const { settingsOpen, infoOpen, openSettings, closeSettings, openInfo, closeInfo } =
+    useShellPanels()
   const { orderedVisibleWidgets, fullscreenWidget, handleToggleFullscreen } = useVisibleWidgets(
     order,
     visibility,
@@ -414,37 +469,14 @@ function Dashboard() {
           onSelectPreset={handlePresetChange}
         />
       ) : null}
-      <div className={styles.toolbarButtons}>
-        <button
-          className={styles.toolbarButton}
-          onClick={() => setInfoOpen(true)}
-          aria-label="Open app info"
-          title="About Dayboard"
-          type="button"
-        >
-          <Info size={18} />
-        </button>
-        <button
-          className={styles.toolbarButton}
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Open settings"
-          title="Settings"
-          type="button"
-        >
-          <Settings size={18} />
-        </button>
-        <button
-          className={styles.toolbarButton}
-          onClick={() => {
-            void toggleAppFullscreen()
-          }}
-          aria-label={appFullscreen ? 'Exit app fullscreen' : 'Enter app fullscreen'}
-          title={appFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-          type="button"
-        >
-          {appFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-        </button>
-      </div>
+      <Toolbar
+        appFullscreen={appFullscreen}
+        onOpenInfo={() => openInfo()}
+        onOpenSettings={() => openSettings()}
+        onToggleAppFullscreen={() => {
+          void toggleAppFullscreen()
+        }}
+      />
 
       <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
         {orderedVisibleWidgets.map((widget) => (
@@ -463,10 +495,10 @@ function Dashboard() {
       <NotificationBadge notifications={notifications} onDismiss={dismissNotification} />
       {/* BuyMeCoffeeWidget is intentionally rendered outside the widget grid as a fixed UI element, not managed by the widget visibility system */}
       <BuyMeCoffeeWidget />
-      {infoOpen && <InfoDialog onClose={() => setInfoOpen(false)} />}
+      {infoOpen && <InfoDialog onClose={closeInfo} />}
       {settingsOpen && (
         <SettingsDialog
-          onClose={() => setSettingsOpen(false)}
+          onClose={closeSettings}
           selectedPresetName={visiblePresetName}
         />
       )}
