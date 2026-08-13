@@ -21,6 +21,7 @@ export function SpotifyIframePlayer({
 }: SpotifyIframePlayerProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<SpotifyIframeController | null>(null)
+  const loadedSourceUrlRef = useRef<string | null>(null)
   const [isApiReady, setIsApiReady] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
@@ -68,16 +69,11 @@ export function SpotifyIframePlayer({
               }
 
               controllerRef.current = controller
+              loadedSourceUrlRef.current = sourceUrl
               controller.addListener('ready', () => {
                 if (!cancelled) {
                   setIsApiReady(true)
                 }
-              })
-              controller.addListener('playback_update', (event) => {
-                void event
-              })
-              controller.addListener('playback_started', (event) => {
-                void event
               })
             },
           )
@@ -87,19 +83,27 @@ export function SpotifyIframePlayer({
             setApiError(error instanceof Error ? error.message : 'Failed to load Spotify player.')
           }
         })
-    } else if (isApiReady) {
-      controllerRef.current.loadEntity(sourceUrl)
     }
 
     return () => {
       cancelled = true
     }
-  }, [embedHeight, isApiReady, sourceUrl])
+  }, [embedHeight, sourceUrl])
+
+  useEffect(() => {
+    if (!isApiReady || !controllerRef.current || loadedSourceUrlRef.current === sourceUrl) {
+      return
+    }
+
+    controllerRef.current.loadEntity(sourceUrl)
+    loadedSourceUrlRef.current = sourceUrl
+  }, [isApiReady, sourceUrl])
 
   useEffect(() => {
     return () => {
       controllerRef.current?.destroy()
       controllerRef.current = null
+      loadedSourceUrlRef.current = null
     }
   }, [])
 
