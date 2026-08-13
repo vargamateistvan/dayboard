@@ -4,12 +4,18 @@ export interface SpotifyAuthSession {
   expiresAt: number
 }
 
-const SPOTIFY_CLIENT_ID = '92b0f8d856674821befd3034103290d2'
+export interface SpotifyAuthNotice {
+  type: 'success' | 'error'
+  message: string
+}
+
 const SPOTIFY_SCOPES = [
   'user-read-email',
   'user-read-private',
 ]
 const AUTH_STORAGE_KEY = 'dayboard_spotify_auth'
+const AUTH_NOTICE_KEY = 'dayboard_spotify_auth_notice'
+const AUTH_CHANGED_EVENT = 'dayboard_spotify_auth_changed'
 const AUTH_STATE_KEY = 'dayboard_spotify_auth_state'
 const AUTH_VERIFIER_KEY = 'dayboard_spotify_auth_verifier'
 const EXPIRY_BUFFER_MS = 60_000
@@ -24,6 +30,15 @@ function randomString(length: number): string {
   const values = new Uint8Array(length)
   crypto.getRandomValues(values)
   return Array.from(values, (value) => (value % 36).toString(36)).join('')
+}
+
+function getSpotifyClientId(): string {
+  const configured = import.meta.env.VITE_SPOTIFY_CLIENT_ID
+  if (typeof configured === 'string' && configured.trim().length > 0) {
+    return configured.trim()
+  }
+
+  throw new Error('Spotify Client ID is not configured. Set VITE_SPOTIFY_CLIENT_ID in your .env file.')
 }
 
 function getRedirectUri(): string {
@@ -69,6 +84,46 @@ function readStoredAuth(): SpotifyAuthSession | null {
 
 function persistAuth(auth: SpotifyAuthSession) {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth))
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
+}
+
+function clearPendingAuthState() {
+  sessionStorage.removeItem(AUTH_STATE_KEY)
+  sessionStorage.removeItem(AUTH_VERIFIER_KEY)
+}
+
+function clearAuthNotice() {
+  sessionStorage.removeItem(AUTH_NOTICE_KEY)
+}
+
+export function setSpotifyAuthNotice(notice: SpotifyAuthNotice) {
+  sessionStorage.setItem(AUTH_NOTICE_KEY, JSON.stringify(notice))
+}
+
+export function consumeSpotifyAuthNotice(): SpotifyAuthNotice | null {
+  const raw = sessionStorage.getItem(AUTH_NOTICE_KEY)
+  clearAuthNotice()
+  if (!raw) {
+    return null
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<SpotifyAuthNotice>
+    if (
+      (parsed.type !== 'success' && parsed.type !== 'error') ||
+      typeof parsed.message !== 'string' ||
+      parsed.message.trim().length === 0
+    ) {
+      return null
+    }
+
+    return {
+      type: parsed.type,
+      message: parsed.message,
+    }
+  } catch {
+    return null
+  }
 }
 
 function clearUrlAuthParams() {
@@ -86,15 +141,17 @@ export function getStoredSpotifyAuth(): SpotifyAuthSession | null {
 
 export function clearStoredSpotifyAuth() {
   localStorage.removeItem(AUTH_STORAGE_KEY)
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
 export async function startSpotifyLogin() {
+  const clientId = getSpotifyClientId()
   const state = randomString(24)
   const verifier = randomString(96)
   const challenge = await createCodeChallenge(verifier)
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: SPOTIFY_CLIENT_ID,
+    client_id: clientId,
     scope: SPOTIFY_SCOPES.join(' '),
     redirect_uri: getRedirectUri(),
     state,
@@ -108,11 +165,12 @@ export async function startSpotifyLogin() {
 }
 
 async function exchangeAuthCode(code: string, verifier: string): Promise<SpotifyAuthSession> {
+  const clientId = getSpotifyClientId()
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
     redirect_uri: getRedirectUri(),
-    client_id: SPOTIFY_CLIENT_ID,
+    client_id: clientId,
     code_verifier: verifier,
   })
 
@@ -158,10 +216,12 @@ export async function completeSpotifyLoginFromUrl(): Promise<SpotifyAuthSession 
   }
 
   if (error) {
+    clearPendingAuthState()
     clearUrlAuthParams()
     throw new Error(`Spotify login failed: ${error}`)
   }
   if (!code) {
+    clearPendingAuthState()
     clearUrlAuthParams()
     throw new Error('Spotify login response is missing an authorization code.')
   }
@@ -169,23 +229,27 @@ export async function completeSpotifyLoginFromUrl(): Promise<SpotifyAuthSession 
   const expectedState = sessionStorage.getItem(AUTH_STATE_KEY)
   const verifier = sessionStorage.getItem(AUTH_VERIFIER_KEY)
   if (!state || !expectedState || state !== expectedState || !verifier) {
+    clearPendingAuthState()
     clearUrlAuthParams()
     throw new Error('Spotify login could not be verified. Please try again.')
   }
 
-  const auth = await exchangeAuthCode(code, verifier)
-  persistAuth(auth)
-  sessionStorage.removeItem(AUTH_STATE_KEY)
-  sessionStorage.removeItem(AUTH_VERIFIER_KEY)
-  clearUrlAuthParams()
-  return auth
+  try {
+    const auth = await exchangeAuthCode(code, verifier)
+    persistAuth(auth)
+    return auth
+  } finally {
+    clearPendingAuthState()
+    clearUrlAuthParams()
+  }
 }
 
 async function refreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
+  const clientId = getSpotifyClientId()
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
     refresh_token: auth.refreshToken,
-    client_id: SPOTIFY_CLIENT_ID,
+    client_id: clientId,
   })
 
   const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -226,4 +290,9 @@ export async function getValidSpotifyAuth(auth: SpotifyAuthSession): Promise<Spo
 
 export function getSpotifyRedirectUriForSetup(): string {
   return getRedirectUri()
+}
+
+export function onSpotifyAuthChanged(listener: () => void): () => void {
+  window.addEventListener(AUTH_CHANGED_EVENT, listener)
+  return () => window.removeEventListener(AUTH_CHANGED_EVENT, listener)
 }

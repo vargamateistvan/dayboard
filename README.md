@@ -62,6 +62,23 @@ yarn preview:https
 npm run preview:https
 ```
 
+### Spotify setup
+
+If you want to connect a Spotify account from the Dayboard settings:
+
+1. Create an app in the Spotify Developer Dashboard.
+2. Add your app URLs to the Spotify app's redirect URI list.
+3. Set `VITE_SPOTIFY_CLIENT_ID` in your local `.env`.
+4. Optionally set `VITE_SPOTIFY_REDIRECT_URI` if the redirect should differ from the current page URL.
+
+```bash
+VITE_SPOTIFY_CLIENT_ID=your-spotify-client-id
+# Optional:
+# VITE_SPOTIFY_REDIRECT_URI=http://localhost:5173/dayboard/
+```
+
+Dayboard uses Spotify Authorization Code with PKCE in the browser, so the Spotify client secret must not be added to frontend environment variables.
+
 ### Build
 
 ```bash

@@ -74,6 +74,14 @@ import {
   type GoogleCalendarListEntry,
 } from "../lib/googleAuth";
 import {
+  clearStoredSpotifyAuth,
+  consumeSpotifyAuthNotice,
+  getStoredSpotifyAuth,
+  startSpotifyLogin,
+  type SpotifyAuthNotice,
+  type SpotifyAuthSession,
+} from "../lib/spotifyAuth";
+import {
   Globe,
   Monitor,
   Zap,
@@ -960,6 +968,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [googleCalendars, setGoogleCalendars] = useState<GoogleCalendarListEntry[]>([])
   const [googleCalendarsLoading, setGoogleCalendarsLoading] = useState(false)
   const [googleCalendarsError, setGoogleCalendarsError] = useState<string | null>(null)
+  const [spotifyAuth, setSpotifyAuth] = useState<SpotifyAuthSession | null>(() => getStoredSpotifyAuth())
+  const [spotifyAuthNotice, setSpotifyAuthNotice] = useState<SpotifyAuthNotice | null>(() =>
+    consumeSpotifyAuthNotice(),
+  )
+  const [spotifyAuthLoading, setSpotifyAuthLoading] = useState(false)
 
   useEffect(() => {
     if (!googleAuth) {
@@ -1005,6 +1018,27 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     // Remove all Google Calendar feeds
     setGlobalCalendarFeeds((prev) => prev.filter((feed) => parseGoogleCalendarFeedUrl(feed.url) === null))
     setCalendarFeeds((prev) => prev.filter((feed) => parseGoogleCalendarFeedUrl(feed.url) === null))
+  }
+
+  function handleConnectSpotify() {
+    setSpotifyAuthNotice(null)
+    setSpotifyAuthLoading(true)
+
+    void startSpotifyLogin().catch((error: unknown) => {
+      setSpotifyAuthLoading(false)
+      setSpotifyAuthNotice({
+        type: "error",
+        message: error instanceof Error ? error.message : "Spotify login failed.",
+      })
+      console.error("Spotify login failed:", error)
+    })
+  }
+
+  function handleDisconnectSpotify() {
+    clearStoredSpotifyAuth()
+    setSpotifyAuth(null)
+    setSpotifyAuthLoading(false)
+    setSpotifyAuthNotice(null)
   }
   const [weatherRefreshMin, setWeatherRefreshMin] = useState(
     settings.weatherRefreshMinutes,
@@ -2899,40 +2933,81 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Music Embeds</h3>
                     {isSpotifyOnLayout && (
-                      <MediaLinkEditor
-                        title="Spotify"
-                        brand="spotify"
-                        activeUrl={spotifyEmbedUrl}
-                        savedLinks={spotifyEmbedLinks}
-                        addUrl={spotifyAddUrl}
-                        addPlaceholder="https://open.spotify.com/track/..."
-                        onSelectUrl={(url) => {
-                          setSpotifyEmbedUrl(url);
-                          setSpotifyLinkError(null);
-                        }}
-                        onRemoveSelected={() =>
-                          removeMediaLink(
-                            spotifyEmbedLinks,
-                            spotifyEmbedUrl,
-                            setSpotifyEmbedLinks,
-                            setSpotifyEmbedUrl,
-                          )
-                        }
-                        onAddUrlChange={setSpotifyAddUrl}
-                        onAddLink={() =>
-                          void addMediaLink({
-                            value: spotifyAddUrl,
-                            setValue: setSpotifyAddUrl,
-                            links: spotifyEmbedLinks,
-                            setLinks: setSpotifyEmbedLinks,
-                            validate: normalizeSpotifyEmbedUrl,
-                            setActiveUrl: setSpotifyEmbedUrl,
-                            setError: setSpotifyLinkError,
-                            errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
-                          })
-                        }
-                        error={spotifyLinkError}
-                      />
+                      <>
+                        <div className={styles.sectionHeader}>
+                          <span className={styles.sectionTitle}>Spotify account</span>
+                          {spotifyAuth ? (
+                            <button
+                              className={styles.removeCalendarBtn}
+                              onClick={handleDisconnectSpotify}
+                              type="button"
+                            >
+                              Disconnect Spotify
+                            </button>
+                          ) : (
+                            <button
+                              className={styles.googleConnectBtn}
+                              onClick={handleConnectSpotify}
+                              type="button"
+                              disabled={spotifyAuthLoading}
+                            >
+                              {spotifyAuthLoading ? "Connecting…" : "Connect Spotify"}
+                            </button>
+                          )}
+                        </div>
+                        <p className={styles.hint}>
+                          {spotifyAuth
+                            ? "Spotify is connected in this browser. Your saved Spotify links still work as before."
+                            : "Connecting Spotify is optional. You can keep using pasted Spotify links without signing in."}
+                        </p>
+                        {spotifyAuthNotice && (
+                          <p
+                            className={styles.hint}
+                            style={{
+                              color:
+                                spotifyAuthNotice.type === "error"
+                                  ? "var(--color-error, #ef4444)"
+                                  : undefined,
+                            }}
+                          >
+                            {spotifyAuthNotice.message}
+                          </p>
+                        )}
+                        <MediaLinkEditor
+                          title="Spotify"
+                          brand="spotify"
+                          activeUrl={spotifyEmbedUrl}
+                          savedLinks={spotifyEmbedLinks}
+                          addUrl={spotifyAddUrl}
+                          addPlaceholder="https://open.spotify.com/track/..."
+                          onSelectUrl={(url) => {
+                            setSpotifyEmbedUrl(url);
+                            setSpotifyLinkError(null);
+                          }}
+                          onRemoveSelected={() =>
+                            removeMediaLink(
+                              spotifyEmbedLinks,
+                              spotifyEmbedUrl,
+                              setSpotifyEmbedLinks,
+                              setSpotifyEmbedUrl,
+                            )
+                          }
+                          onAddUrlChange={setSpotifyAddUrl}
+                          onAddLink={() =>
+                            void addMediaLink({
+                              value: spotifyAddUrl,
+                              setValue: setSpotifyAddUrl,
+                              links: spotifyEmbedLinks,
+                              setLinks: setSpotifyEmbedLinks,
+                              validate: normalizeSpotifyEmbedUrl,
+                              setActiveUrl: setSpotifyEmbedUrl,
+                              setError: setSpotifyLinkError,
+                              errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
+                            })
+                          }
+                          error={spotifyLinkError}
+                        />
+                      </>
                     )}
                     {isAppleMusicOnLayout && (
                       <MediaLinkEditor

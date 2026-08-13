@@ -8,6 +8,17 @@ import { PodcastEmbedWidget } from '../PodcastEmbedWidget'
 import { SpotifyWidget } from '../SpotifyWidget'
 import { AppleMusicWidget } from '../AppleMusicWidget'
 import { ApplePodcastWidget } from '../ApplePodcastWidget'
+import * as spotifyAuth from '../../lib/spotifyAuth'
+import * as spotifyApi from '../../lib/spotifyApi'
+
+vi.mock('../../lib/spotifyAuth', () => ({
+  getStoredSpotifyAuth: vi.fn(() => null),
+  onSpotifyAuthChanged: vi.fn(() => () => {}),
+}))
+
+vi.mock('../../lib/spotifyApi', () => ({
+  fetchSpotifyAccountSnapshot: vi.fn(),
+}))
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
   saveSettings({ ...DEFAULT_SETTINGS, ...settingsPatch })
@@ -83,6 +94,7 @@ describe('PodcastEmbedWidget', () => {
 describe('SpotifyWidget', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.clearAllMocks()
   })
 
   afterEach(() => {
@@ -113,6 +125,58 @@ describe('SpotifyWidget', () => {
     }).finally(() => {
       vi.unstubAllGlobals()
     })
+  })
+
+  it('shows connected Spotify playback details when an account is linked', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    })
+    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
+      profile: {
+        id: 'dayboard',
+        display_name: 'Dayboard',
+        images: [],
+      },
+      playback: {
+        device: {
+          id: 'device',
+          is_active: true,
+          is_private_session: false,
+          is_restricted: false,
+          name: 'Browser',
+          type: 'computer',
+          volume_percent: 75,
+        },
+        is_playing: true,
+        progress_ms: 90_000,
+        item: {
+          type: 'track',
+          name: 'Dreams',
+          artists: [{ name: 'Fleetwood Mac' }],
+          album: {
+            name: 'Rumours',
+            images: [],
+          },
+          external_urls: {
+            spotify: 'https://open.spotify.com/track/example',
+          },
+          duration_ms: 257_000,
+        },
+      },
+    })
+
+    renderWithSettings(<SpotifyWidget />)
+
+    expect(await screen.findByText('Connected Spotify')).toBeInTheDocument()
+    expect(screen.getByText('Dayboard')).toBeInTheDocument()
+    expect(screen.getByText('Dreams')).toBeInTheDocument()
+    expect(screen.getByText(/Fleetwood Mac/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open in Spotify/i })).toHaveAttribute(
+      'href',
+      'https://open.spotify.com/track/example',
+    )
   })
 })
 
