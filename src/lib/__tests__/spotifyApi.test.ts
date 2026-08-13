@@ -61,6 +61,34 @@ describe('fetchSpotifyAccountSnapshot', () => {
           ],
         }),
       })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [],
+        }),
+      })
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -78,7 +106,13 @@ describe('fetchSpotifyAccountSnapshot', () => {
       item: null,
     })
     expect(snapshot.recentlyPlayed).toHaveLength(1)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(snapshot.library).toEqual({
+      topArtists: [],
+      topTracks: [],
+      savedAlbums: [],
+      playlists: [],
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(7)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me')
     expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player')
     expect(fetchMock.mock.calls[2]?.[0]).toContain('/me/player/recently-played?limit=3')

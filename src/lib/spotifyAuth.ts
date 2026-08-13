@@ -15,6 +15,10 @@ const SPOTIFY_SCOPES = [
   'user-read-playback-state',
   'user-read-currently-playing',
   'user-read-recently-played',
+  'user-top-read',
+  'user-library-read',
+  'playlist-read-private',
+  'playlist-read-collaborative',
 ]
 const AUTH_STORAGE_KEY = 'dayboard_spotify_auth'
 const AUTH_NOTICE_KEY = 'dayboard_spotify_auth_notice'

@@ -8,6 +8,9 @@ import {
   fetchSpotifyAccountSnapshot,
   searchSpotifyCatalog,
   type SpotifyAccountSnapshot,
+  type SpotifySavedAlbumItem,
+  type SpotifyTopArtistItem,
+  type SpotifyTopTrackItem,
   type SpotifyRecentPlayedItem,
   type SpotifySearchAlbumItem,
   type SpotifySearchPlaylistItem,
@@ -82,6 +85,30 @@ function formatSearchPlaylist(item: SpotifySearchPlaylistItem): SpotifySelection
   }
 }
 
+function formatTopArtist(item: SpotifyTopArtistItem): SpotifySelection {
+  return {
+    url: item.external_urls.spotify,
+    title: item.name,
+    subtitle: 'Top artist',
+  }
+}
+
+function formatTopTrack(item: SpotifyTopTrackItem): SpotifySelection {
+  return {
+    url: item.external_urls.spotify,
+    title: item.name,
+    subtitle: item.artists.map((artist) => artist.name).join(' · '),
+  }
+}
+
+function formatSavedAlbum(item: SpotifySavedAlbumItem): SpotifySelection {
+  return {
+    url: item.album.external_urls.spotify,
+    title: item.album.name,
+    subtitle: item.album.artists.map((artist) => artist.name).join(' · '),
+  }
+}
+
 function formatRelativeTime(iso: string): string {
   const deltaMinutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
   if (deltaMinutes <= 1) {
@@ -107,6 +134,10 @@ function getPlaylistCountLabel(results: SpotifySearchResults): string {
     : 'No results yet'
 }
 
+function getCountLabel(count: number, emptyLabel: string): string {
+  return count > 0 ? `${count}` : emptyLabel
+}
+
 export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const { settings } = useSettings()
   const { placements } = useWidgetVisibility()
@@ -120,7 +151,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   const isLargeEmbed = placements.spotify.rowSpan >= 2
-  const resolvedColorScheme = resolveColorScheme(settings.colorScheme)
 
   useEffect(() => {
     let cancelled = false
@@ -184,6 +214,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const activePlayerUrl = activeSelection?.url ?? ''
   const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
   const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
+  const library = spotifyState?.library
 
   const handleConnectSpotify = () => {
     setConnectError(null)
@@ -274,9 +305,9 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
               {!spotifyStateLoading && !spotifyStateError && activePlayerUrl ? (
                 <SpotifyIframePlayer
                   sourceUrl={activePlayerUrl}
-                  title={selectedSelection?.title ?? 'Spotify player'}
+                  title={activeSelection?.title ?? 'Spotify player'}
                   subtitle={
-                    selectedSelection?.subtitle ??
+                    activeSelection?.subtitle ??
                     'Open Spotify and start playing to show the player.'
                   }
                   embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
@@ -292,7 +323,9 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
               <form className={styles.searchPanel} onSubmit={handleSearch}>
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>Search Spotify</span>
-                  <span className={styles.spotifyPill}>{getPlaylistCountLabel(searchResults ?? { tracks: [], albums: [], playlists: [] })}</span>
+                  <span className={styles.spotifyPill}>
+                    {getPlaylistCountLabel(searchResults ?? { tracks: [], albums: [], playlists: [] })}
+                  </span>
                 </div>
                 <div className={styles.searchRow}>
                   <input
@@ -308,6 +341,52 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                 </div>
                 {searchError && <div className={styles.error}>{searchError}</div>}
               </form>
+
+              {library ? (
+                <div className={styles.librarySection}>
+                  <div className={styles.sectionHeader}>
+                    <span className={styles.sectionTitle}>Your Spotify library</span>
+                  </div>
+                  <div className={styles.libraryGrid}>
+                    <LibraryGroup
+                      title="Top tracks"
+                      countLabel={getCountLabel(library.topTracks.length, 'No tracks')}
+                      items={library.topTracks.map((item) => ({
+                        label: formatTopTrack(item),
+                        artworkUrl: item.album.images[0]?.url,
+                      }))}
+                      onSelect={handleUseSelection}
+                    />
+                    <LibraryGroup
+                      title="Top artists"
+                      countLabel={getCountLabel(library.topArtists.length, 'No artists')}
+                      items={library.topArtists.map((item) => ({
+                        label: formatTopArtist(item),
+                        artworkUrl: item.images[0]?.url,
+                      }))}
+                      onSelect={handleUseSelection}
+                    />
+                    <LibraryGroup
+                      title="Playlists"
+                      countLabel={getCountLabel(library.playlists.length, 'No playlists')}
+                      items={library.playlists.map((item) => ({
+                        label: formatSearchPlaylist(item),
+                        artworkUrl: item.images[0]?.url,
+                      }))}
+                      onSelect={handleUseSelection}
+                    />
+                    <LibraryGroup
+                      title="Saved albums"
+                      countLabel={getCountLabel(library.savedAlbums.length, 'No albums')}
+                      items={library.savedAlbums.map((item) => ({
+                        label: formatSavedAlbum(item),
+                        artworkUrl: item.album.images[0]?.url,
+                      }))}
+                      onSelect={handleUseSelection}
+                    />
+                  </div>
+                </div>
+              ) : null}
 
               <div className={styles.librarySection}>
                 <div className={styles.sectionHeader}>
@@ -430,5 +509,37 @@ function SearchResultButton({ label, artworkUrl, fallbackBrand, onSelect }: Sear
         <div className={styles.resultSubtitle}>{label.subtitle}</div>
       </div>
     </button>
+  )
+}
+
+interface LibraryGroupProps {
+  readonly title: string
+  readonly countLabel: string
+  readonly items: Array<{
+    label: SpotifySelection
+    artworkUrl?: string
+  }>
+  readonly onSelect: (selection: SpotifySelection) => void
+}
+
+function LibraryGroup({ title, countLabel, items, onSelect }: LibraryGroupProps) {
+  return (
+    <section className={styles.libraryGroup}>
+      <div className={styles.sectionHeader}>
+        <span className={styles.resultGroupTitle}>{title}</span>
+        <span className={styles.spotifyPill}>{countLabel}</span>
+      </div>
+      <div className={styles.resultList}>
+        {items.slice(0, 5).map((item) => (
+          <SearchResultButton
+            key={item.label.url}
+            label={item.label}
+            artworkUrl={item.artworkUrl}
+            fallbackBrand="spotify"
+            onSelect={onSelect}
+          />
+        ))}
+      </div>
+    </section>
   )
 }

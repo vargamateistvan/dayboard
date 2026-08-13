@@ -179,6 +179,18 @@
   background: var(--bg-surface);
 }
 
+.libraryGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.libraryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -477,6 +489,10 @@
   }
 
   .spotifyLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .libraryGrid {
     grid-template-columns: 1fr;
   }
 

@@ -112,6 +112,44 @@ export interface SpotifySearchPlaylistItem {
   }
 }
 
+export interface SpotifyTopArtistItem {
+  name: string
+  images: Array<{ url: string; width?: number; height?: number }>
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifyTopTrackItem {
+  name: string
+  artists: SpotifyPlaybackArtist[]
+  album: {
+    name: string
+    images: Array<{ url: string; width?: number; height?: number }>
+  }
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifySavedAlbumItem {
+  album: {
+    name: string
+    artists: SpotifyPlaybackArtist[]
+    images: Array<{ url: string; width?: number; height?: number }>
+    external_urls: {
+      spotify: string
+    }
+  }
+}
+
+export interface SpotifyLibrarySnapshot {
+  topArtists: SpotifyTopArtistItem[]
+  topTracks: SpotifyTopTrackItem[]
+  savedAlbums: SpotifySavedAlbumItem[]
+  playlists: SpotifySearchPlaylistItem[]
+}
+
 export interface SpotifySearchResults {
   tracks: SpotifySearchTrackItem[]
   albums: SpotifySearchAlbumItem[]
@@ -122,6 +160,7 @@ export interface SpotifyAccountSnapshot {
   profile: SpotifyProfile
   playback: SpotifyPlaybackState | null
   recentlyPlayed: SpotifyRecentPlayedItem[] | null
+  library: SpotifyLibrarySnapshot | null
 }
 
 async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T> {
@@ -162,16 +201,46 @@ async function fetchSpotifyOptionalJson<T>(accessToken: string, path: string): P
 
 export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Promise<SpotifyAccountSnapshot> {
   const validAuth = await getValidSpotifyAuth(auth)
-  const [profile, playback, recentlyPlayed] = await Promise.all([
+  const [profile, playback, recentlyPlayed, library] = await Promise.all([
     fetchSpotifyJson<SpotifyProfile>(validAuth.accessToken, '/me'),
     fetchSpotifyOptionalJson<SpotifyPlaybackState>(validAuth.accessToken, '/me/player'),
     fetchSpotifyOptionalJson<{ items?: SpotifyRecentPlayedItem[] }>(
       validAuth.accessToken,
       '/me/player/recently-played?limit=3',
     ),
+    Promise.all([
+      fetchSpotifyOptionalJson<{ items?: SpotifyTopArtistItem[] }>(
+        validAuth.accessToken,
+        '/me/top/artists?limit=5',
+      ),
+      fetchSpotifyOptionalJson<{ items?: SpotifyTopTrackItem[] }>(
+        validAuth.accessToken,
+        '/me/top/tracks?limit=5',
+      ),
+      fetchSpotifyOptionalJson<{ items?: SpotifySavedAlbumItem[] }>(
+        validAuth.accessToken,
+        '/me/albums?limit=5',
+      ),
+      fetchSpotifyOptionalJson<{ items?: SpotifySearchPlaylistItem[] }>(
+        validAuth.accessToken,
+        '/me/playlists?limit=5',
+      ),
+    ]),
   ])
 
-  return { profile, playback, recentlyPlayed: recentlyPlayed?.items ?? null }
+  const [topArtists, topTracks, savedAlbums, playlists] = library
+
+  return {
+    profile,
+    playback,
+    recentlyPlayed: recentlyPlayed?.items ?? null,
+    library: {
+      topArtists: topArtists?.items ?? [],
+      topTracks: topTracks?.items ?? [],
+      savedAlbums: savedAlbums?.items ?? [],
+      playlists: playlists?.items ?? [],
+    },
+  }
 }
 
 export async function searchSpotifyCatalog(

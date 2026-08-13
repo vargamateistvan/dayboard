@@ -164,6 +164,32 @@ describe('SpotifyWidget', () => {
           },
         },
       ],
+      library: {
+        topArtists: [
+          {
+            name: 'Fleetwood Mac',
+            images: [],
+            external_urls: {
+              spotify: 'https://open.spotify.com/artist/example',
+            },
+          },
+        ],
+        topTracks: [
+          {
+            name: 'Dreams',
+            artists: [{ name: 'Fleetwood Mac' }],
+            album: {
+              name: 'Rumours',
+              images: [],
+            },
+            external_urls: {
+              spotify: 'https://open.spotify.com/track/example',
+            },
+          },
+        ],
+        savedAlbums: [],
+        playlists: [],
+      },
     })
 
     renderWithSettings(<SpotifyWidget />)
@@ -172,6 +198,7 @@ describe('SpotifyWidget', () => {
       'src',
       expect.stringContaining('https://open.spotify.com/embed/track/example'),
     )
+    expect(screen.getByText('Your Spotify library')).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Connect Spotify/i })).not.toBeInTheDocument()
   })
