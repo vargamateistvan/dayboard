@@ -303,12 +303,14 @@
 .spotifyFallbackLayer {
   position: absolute;
   inset: 0;
+  background: var(--bg-surface);
 }
 
 .spotifyIframeHost {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  background: var(--bg-surface);
 }
 
 .resultGroup,

@@ -9,9 +9,41 @@ interface SpotifyIframePlayerProps {
   readonly embedSize: 'normal' | 'large' | 'fullscreen'
 }
 
-function getSpotifyEntityType(sourceUrl: string): 'track' | 'episode' | 'playlist' | 'album' | 'artist' | 'show' | null {
-  const match = sourceUrl.match(/open\.spotify\.com\/(track|episode|playlist|album|artist|show)\//)
-  return (match?.[1] as ReturnType<typeof getSpotifyEntityType>) ?? null
+type SpotifyEntityType = 'track' | 'episode' | 'playlist' | 'album' | 'artist' | 'show'
+const SPOTIFY_ENTITY_TYPES: Set<SpotifyEntityType> = new Set([
+  'track',
+  'episode',
+  'playlist',
+  'album',
+  'artist',
+  'show',
+])
+
+function getSpotifyEntityType(sourceUrl: string): SpotifyEntityType | null {
+  try {
+    const parsed = new URL(sourceUrl)
+    if (parsed.hostname !== 'open.spotify.com') {
+      return null
+    }
+
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    if (segments.length < 2) {
+      return null
+    }
+
+    const normalizedSegments =
+      segments[0]?.startsWith('intl-') ? segments.slice(1) : segments
+    const firstSegment = normalizedSegments[0]
+    const secondSegment = normalizedSegments[1]
+    const type = firstSegment === 'embed' ? secondSegment : firstSegment
+
+    if (type && SPOTIFY_ENTITY_TYPES.has(type as SpotifyEntityType)) {
+      return type as SpotifyEntityType
+    }
+    return null
+  } catch {
+    return null
+  }
 }
 
 export function SpotifyIframePlayer({
