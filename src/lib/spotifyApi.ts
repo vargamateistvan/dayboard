@@ -74,6 +74,50 @@ export interface SpotifyRecentPlayedItem {
   track: SpotifyRecentPlayedTrack
 }
 
+export interface SpotifySearchTrackItem {
+  type: 'track'
+  name: string
+  artists: SpotifyPlaybackArtist[]
+  album: {
+    name: string
+    images: Array<{ url: string; width?: number; height?: number }>
+  }
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifySearchAlbumItem {
+  type: 'album'
+  name: string
+  artists: SpotifyPlaybackArtist[]
+  images: Array<{ url: string; width?: number; height?: number }>
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifySearchPlaylistItem {
+  type: 'playlist'
+  name: string
+  owner: {
+    display_name: string | null
+  }
+  images: Array<{ url: string; width?: number; height?: number }>
+  external_urls: {
+    spotify: string
+  }
+  tracks: {
+    total: number
+  }
+}
+
+export interface SpotifySearchResults {
+  tracks: SpotifySearchTrackItem[]
+  albums: SpotifySearchAlbumItem[]
+  playlists: SpotifySearchPlaylistItem[]
+}
+
 export interface SpotifyAccountSnapshot {
   profile: SpotifyProfile
   playback: SpotifyPlaybackState | null
@@ -128,4 +172,42 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
   ])
 
   return { profile, playback, recentlyPlayed: recentlyPlayed?.items ?? null }
+}
+
+export async function searchSpotifyCatalog(
+  auth: SpotifyAuthSession,
+  query: string,
+): Promise<SpotifySearchResults> {
+  const trimmedQuery = query.trim()
+  if (!trimmedQuery) {
+    return { tracks: [], albums: [], playlists: [] }
+  }
+
+  const validAuth = await getValidSpotifyAuth(auth)
+  const params = new URLSearchParams({
+    q: trimmedQuery,
+    type: 'track,album,playlist',
+    limit: '4',
+  })
+  const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
+    headers: {
+      Authorization: `Bearer ${validAuth.accessToken}`,
+    },
+  })
+
+  if (!response.ok) {
+    throw new Error('Failed to search Spotify.')
+  }
+
+  const data = await response.json() as {
+    tracks?: { items?: SpotifySearchTrackItem[] }
+    albums?: { items?: SpotifySearchAlbumItem[] }
+    playlists?: { items?: SpotifySearchPlaylistItem[] }
+  }
+
+  return {
+    tracks: data.tracks?.items ?? [],
+    albums: data.albums?.items ?? [],
+    playlists: data.playlists?.items ?? [],
+  }
 }

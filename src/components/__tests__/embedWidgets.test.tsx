@@ -172,6 +172,7 @@ describe('SpotifyWidget', () => {
       'src',
       expect.stringContaining('https://open.spotify.com/embed/track/example'),
     )
+    expect(screen.getByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Connect Spotify/i })).not.toBeInTheDocument()
   })
 })

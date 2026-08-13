@@ -40,6 +40,248 @@
   color: var(--text-secondary);
 }
 
+.spotifyShell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.spotifyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 94%, var(--accent-primary) 6%);
+}
+
+.spotifyIdentity {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.spotifyAvatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-primary) 16%, var(--bg-surface));
+  border: 1px solid var(--border-color);
+  flex: 0 0 auto;
+}
+
+.spotifyLogo {
+  display: block;
+}
+
+.spotifyIdentityCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.spotifyTitle {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.spotifySubtitle {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.spotifyPills {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.spotifyPill {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+}
+
+.spotifyLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(16rem, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.spotifySidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.searchPanel,
+.librarySection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.searchRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.playerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0 0.1rem 0.2rem;
+}
+
+.playerLabel {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.playerSubLabel {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.playerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.actionButton,
+.actionButtonLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.resultGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.resultGroupTitle {
+  font-size: 0.73rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.resultList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.resultButton {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-surface) 86%, var(--accent-primary) 14%);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.resultArtwork {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.35rem;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  flex: 0 0 auto;
+}
+
+.resultImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.resultCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.resultTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resultSubtitle {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .progressTrack {
   overflow: hidden;
   height: 0.35rem;
@@ -189,6 +431,24 @@
 }
 
 @media (max-width: 700px) {
+  .spotifyHeader,
+  .searchPanel,
+  .librarySection {
+    padding: 0.7rem;
+  }
+
+  .spotifyLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .playerHeader {
+    flex-direction: column;
+  }
+
+  .playerActions {
+    justify-content: flex-start;
+  }
+
   .widgetFullscreen {
     gap: 0.65rem;
   }
