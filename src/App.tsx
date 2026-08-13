@@ -113,7 +113,7 @@ function presetMatchesSettings(
 }
 
 const WIDGET_RENDERERS = {
-  clock: (isFullscreen: boolean) => <ClockWidget isFullscreen={isFullscreen} />,
+  clock: (isFullscreen: boolean, rowCount: number) => <ClockWidget isFullscreen={isFullscreen} rowCount={rowCount} />,
   timezoneClock: (isFullscreen: boolean) => <TimezoneClockWidget isFullscreen={isFullscreen} />,
   weather: (isFullscreen: boolean) => <WeatherWidget isFullscreen={isFullscreen} />,
   flights: (isFullscreen: boolean) => <FlightWidget isFullscreen={isFullscreen} />,
@@ -130,7 +130,7 @@ const WIDGET_RENDERERS = {
   sports: (isFullscreen: boolean) => <SportsScoresWidget isFullscreen={isFullscreen} />,
   quote: (isFullscreen: boolean) => <QuoteWidget isFullscreen={isFullscreen} />,
   deviceInfo: (isFullscreen: boolean) => <DeviceInfoWidget isFullscreen={isFullscreen} />,
-} satisfies Record<Widget, (isFullscreen: boolean) => JSX.Element | null>
+} satisfies Record<Widget, (isFullscreen: boolean, rowCount: number) => JSX.Element | null>
 
 interface PresetSelectorProps {
   readonly presets: SettingsPreset[]
@@ -220,6 +220,7 @@ interface WidgetCellProps {
   readonly isFullscreen: boolean
   readonly isHidden: boolean
   readonly focusMode: boolean
+  readonly rowCount: number
   readonly placement: { column: number; row: number; columnSpan: number; rowSpan: number }
   readonly onToggleFullscreen: (widget: Widget) => void
 }
@@ -229,6 +230,7 @@ function WidgetCell({
   isFullscreen,
   isHidden,
   focusMode,
+  rowCount,
   placement,
   onToggleFullscreen,
 }: WidgetCellProps) {
@@ -259,7 +261,7 @@ function WidgetCell({
       >
         {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen)}</div>
+      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen, rowCount)}</div>
     </div>
   )
 }
@@ -408,6 +410,7 @@ function DashboardLayout({
             isFullscreen={fullscreenWidget === widget}
             isHidden={Boolean(fullscreenWidget && fullscreenWidget !== widget)}
             focusMode={focusMode}
+            rowCount={rowCount}
             placement={placements[widget]}
             onToggleFullscreen={onToggleWidgetFullscreen}
           />

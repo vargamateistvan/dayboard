@@ -43,6 +43,23 @@ describe('ClockWidget', () => {
       ),
     ).toBeInTheDocument()
   })
+
+  it('uses row-count-specific font sizing for the main clock', () => {
+    const { rerender } = render(<ClockWidget rowCount={2} />)
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+     hour: '2-digit',
+     minute: '2-digit',
+     second: '2-digit',
+    })
+
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('22rem')
+
+    rerender(<ClockWidget rowCount={3} />)
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('16rem')
+
+    rerender(<ClockWidget rowCount={4} />)
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('11rem')
+  })
 })
 
 describe('TimezoneClockWidget', () => {
