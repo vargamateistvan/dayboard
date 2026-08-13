@@ -54,6 +54,8 @@ yarn dev:https
 npm run dev:https
 ```
 
+`dev:https` uses `vite-plugin-mkcert` to generate a locally trusted certificate for `localhost`. On first run, you may be prompted to install/trust the local development CA in your OS keychain.
+
 ### HTTPS Preview
 
 ```bash
