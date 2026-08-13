@@ -30,6 +30,14 @@ function formatProgress(state: SpotifyIframePlaybackState | null): string {
   return `${formatDuration(state.position)} / ${formatDuration(state.duration)}`
 }
 
+function getProgressPercent(state: SpotifyIframePlaybackState | null): number {
+  if (!state || state.duration <= 0) {
+    return 0
+  }
+
+  return Math.min(100, Math.max(0, (state.position / state.duration) * 100))
+}
+
 export function SpotifyIframePlayer({
   sourceUrl,
   title,
@@ -55,6 +63,16 @@ export function SpotifyIframePlayer({
 
     return 'Pause'
   }, [isApiReady, playbackState])
+  const statusLabel = playbackState
+    ? playbackState.isBuffering
+      ? 'Buffering'
+      : playbackState.isPaused
+        ? 'Paused'
+        : 'Playing'
+    : isApiReady
+      ? 'Ready'
+      : 'Loading'
+  const progressPercent = getProgressPercent(playbackState)
 
   useEffect(() => {
     let cancelled = false
@@ -135,6 +153,10 @@ export function SpotifyIframePlayer({
     controllerRef.current?.togglePlay()
   }
 
+  const handleRestart = () => {
+    controllerRef.current?.restart()
+  }
+
   return (
     <div className={styles.spotifyPlayer}>
       <div className={styles.playerHeader}>
@@ -150,6 +172,14 @@ export function SpotifyIframePlayer({
             disabled={!canTogglePlay}
           >
             {playButtonLabel}
+          </button>
+          <button
+            className={styles.actionButton}
+            type="button"
+            onClick={handleRestart}
+            disabled={!canTogglePlay}
+          >
+            Restart
           </button>
           <a className={styles.actionButtonLink} href={sourceUrl} target="_blank" rel="noreferrer">
             Open in Spotify
@@ -177,8 +207,11 @@ export function SpotifyIframePlayer({
       </div>
 
       <div className={styles.spotifyMetaRow}>
-        <span className={styles.spotifyPill}>{isApiReady ? 'Interactive player' : 'Loading interactive player'}</span>
+        <span className={styles.spotifyPill}>{statusLabel}</span>
         <span className={styles.spotifyPill}>{formatProgress(playbackState)}</span>
+      </div>
+      <div className={styles.progressTrack} aria-hidden="true">
+        <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
       </div>
     </div>
   )
