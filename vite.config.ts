@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import basicSsl from '@vitejs/plugin-basic-ssl'
 
 const CALENDAR_PROXY_PATH = '/api/calendar'
 
@@ -71,7 +72,7 @@ function dayboardProxyPlugin() {
 }
 
 export default defineConfig({
-  plugins: [react(), dayboardProxyPlugin()],
+  plugins: [react(), basicSsl(), dayboardProxyPlugin()],
   base: '/dayboard/',
   server: {
     https: process.env.DAYBOARD_HTTPS === 'true',
