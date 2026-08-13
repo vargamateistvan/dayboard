@@ -83,72 +83,80 @@ export function SpotifyIframePlayer({
       return () => {}
     }
 
-    controllerHost.innerHTML = ''
-    controllerRef.current?.destroy()
-    controllerRef.current = null
-    setIsApiReady(false)
-    setPlaybackState(null)
     setApiError(null)
 
-    void loadSpotifyIframeApi()
-      .then((api) => {
-        if (cancelled || !hostRef.current) {
-          return
-        }
-        api.createController(
-          controllerHost,
-          {
-            url: sourceUrl,
-            width: '100%',
-            height: embedHeight,
-          },
-          (controller) => {
-            if (cancelled) {
-              controller.destroy()
-              return
-            }
+    if (!controllerRef.current) {
+      controllerHost.innerHTML = ''
+      setIsApiReady(false)
+      setPlaybackState(null)
 
-            controllerRef.current = controller
-            controller.addListener('ready', () => {
-              if (!cancelled) {
-                setIsApiReady(true)
+      void loadSpotifyIframeApi()
+        .then((api) => {
+          if (cancelled || !hostRef.current || hostRef.current !== controllerHost || !controllerHost.isConnected) {
+            return
+          }
+          api.createController(
+            controllerHost,
+            {
+              url: sourceUrl,
+              width: '100%',
+              height: embedHeight,
+            },
+            (controller) => {
+              if (cancelled || !controllerHost.isConnected) {
+                controller.destroy()
+                return
               }
-            })
-            controller.addListener('playback_update', (event) => {
-              if (!cancelled) {
-                setPlaybackState(event.data as SpotifyIframePlaybackState)
-              }
-            })
-            controller.addListener('playback_started', (event) => {
-              if (!cancelled) {
-                setPlaybackState((current) => ({
-                  ...(current ?? {
-                    duration: 0,
-                    position: 0,
+
+              controllerRef.current = controller
+              controller.addListener('ready', () => {
+                if (!cancelled) {
+                  setIsApiReady(true)
+                }
+              })
+              controller.addListener('playback_update', (event) => {
+                if (!cancelled) {
+                  setPlaybackState(event.data as SpotifyIframePlaybackState)
+                }
+              })
+              controller.addListener('playback_started', (event) => {
+                if (!cancelled) {
+                  setPlaybackState((current) => ({
+                    ...(current ?? {
+                      duration: 0,
+                      position: 0,
+                      isPaused: false,
+                      isBuffering: false,
+                      playingURI: sourceUrl,
+                    }),
+                    playingURI: (event.data as { playingURI: string }).playingURI,
                     isPaused: false,
-                    isBuffering: false,
-                    playingURI: sourceUrl,
-                  }),
-                  playingURI: (event.data as { playingURI: string }).playingURI,
-                  isPaused: false,
-                }))
-              }
-            })
-          },
-        )
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setApiError(error instanceof Error ? error.message : 'Failed to load Spotify player.')
-        }
-      })
+                  }))
+                }
+              })
+            },
+          )
+        })
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            setApiError(error instanceof Error ? error.message : 'Failed to load Spotify player.')
+          }
+        })
+    } else if (isApiReady) {
+      controllerRef.current.loadEntity(sourceUrl)
+    }
 
     return () => {
       cancelled = true
+    }
+  }, [embedHeight, isApiReady, sourceUrl])
+
+  useEffect(() => {
+    return () => {
       controllerRef.current?.destroy()
       controllerRef.current = null
     }
-  }, [embedHeight, sourceUrl])
+  }, [])
 
   const handleTogglePlay = () => {
     controllerRef.current?.togglePlay()
