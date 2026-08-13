@@ -19,7 +19,12 @@ import {
   type SpotifySearchResults,
   type SpotifySearchTrackItem,
 } from '../lib/spotifyApi'
-import { getStoredSpotifyAuth, onSpotifyAuthChanged, startSpotifyLogin } from '../lib/spotifyAuth'
+import {
+  clearStoredSpotifyAuth,
+  getStoredSpotifyAuth,
+  onSpotifyAuthChanged,
+  startSpotifyLogin,
+} from '../lib/spotifyAuth'
 import styles from './SpotifyWidget.module.css'
 
 interface SpotifyWidgetProps {
@@ -202,8 +207,15 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         }
       } catch (loadError) {
         if (!cancelled) {
+          const errorMessage = loadError instanceof Error ? loadError.message : 'Failed to load Spotify data.'
+          if (errorMessage.includes('Insufficient client scope')) {
+            clearStoredSpotifyAuth()
+            setConnectError('Spotify permissions changed. Please reconnect Spotify.')
+            setSpotifyStateError(null)
+            return
+          }
           setSpotifyState(null)
-          setSpotifyStateError(loadError instanceof Error ? loadError.message : 'Failed to load Spotify data.')
+          setSpotifyStateError(errorMessage)
         }
       } finally {
         if (!cancelled) {
