@@ -6,20 +6,89 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Dayboard is a customisable personal dashboard with weather, calendar, tasks, notes, Spotify, stocks, and focus mode in one place." />
+    <meta name="robots" content="index,follow" />
 
     <title>Dayboard – Personal Dashboard</title>
-    <meta name="description" content="Dayboard is a free, customisable personal dashboard. It brings together clock, weather, calendar (Google Calendar &amp; iCal), tasks, notes, Spotify, stocks, and more — all in one focused view." />
-
-    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://vargamateistvan.github.io/dayboard/" />
     <meta property="og:title" content="Dayboard – Personal Dashboard" />
-    <meta property="og:description" content="A free, customisable personal dashboard with clock, weather, Google Calendar, tasks, notes, Spotify, stocks, and focus mode." />
+    <meta property="og:description" content="A customisable personal dashboard for weather, Google Calendar, notes, tasks, Spotify, and focus-friendly productivity." />
     <meta property="og:image" content="https://vargamateistvan.github.io/dayboard/logo.svg" />
 
-    <!-- Google Search Console site ownership verification -->
-    <!-- Replace the content value with the token from Search Console → Verify → HTML tag -->
-    <!-- <meta name="google-site-verification" content="REPLACE_WITH_YOUR_VERIFICATION_TOKEN" /> -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1117;
+        --panel: #171b22;
+        --text: #edf2ff;
+        --muted: #afbdd3;
+        --accent: #7c6af7;
+      }
+
+      html, body {
+        margin: 0;
+        min-height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, "Segoe UI", sans-serif;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+      }
+
+      #root {
+        width: min(100%, 1000px);
+      }
+
+      .fallback-shell {
+        background: linear-gradient(180deg, rgba(124,106,247,0.12), rgba(255,255,255,0.02));
+        border: 1px solid rgba(124,106,247,0.3);
+        border-radius: 24px;
+        padding: clamp(1.5rem, 3vw, 3rem);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+      }
+
+      .fallback-kicker {
+        display: inline-block;
+        margin-bottom: 0.75rem;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: rgba(124,106,247,0.12);
+        color: #c7befd;
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0 0 0.75rem;
+        font-size: clamp(2rem, 4vw, 4rem);
+        letter-spacing: -0.06em;
+      }
+
+      .fallback-copy {
+        margin: 0;
+        max-width: 650px;
+        color: var(--muted);
+        font-size: 1.05rem;
+        line-height: 1.7;
+      }
+
+      .fallback-list {
+        margin: 1.5rem 0 0;
+        padding-left: 1.2rem;
+        color: var(--muted);
+        line-height: 1.8;
+      }
+    </style>
+
+    <!-- Google Search Console verification placeholder -->
+    <!-- Replace once you have a verified token: <meta name="google-site-verification" content="REPLACE_WITH_TOKEN" /> -->
 
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-VD2ZFY8K56"></script>
@@ -33,7 +102,21 @@
     <script src="https://accounts.google.com/gsi/client" async></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="fallback-shell" aria-label="Dayboard description">
+        <span class="fallback-kicker">Dayboard</span>
+        <h1>Personal dashboard for your day</h1>
+        <p class="fallback-copy">
+          Dayboard brings together weather, calendar, tasks, notes, Spotify, stocks, and other
+          widgets into one simple, customisable home dashboard for focus and planning.
+        </p>
+        <ul class="fallback-list">
+          <li>Google Calendar and iCal feed support</li>
+          <li>Weather, time, tasks, notes, and focus tools</li>
+          <li>Customisable layout with widgets and presets</li>
+        </ul>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
