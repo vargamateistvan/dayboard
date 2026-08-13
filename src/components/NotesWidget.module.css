@@ -128,21 +128,33 @@
 .note.yellow {
   background: #fef3c7;
   border-left: 4px solid #fcd34d;
+  --note-text-color: #422006;
+  --note-muted-color: #5f2f09;
+  --note-divider-color: rgba(66, 32, 6, 0.18);
 }
 
 .note.pink {
   background: #fbf1f7;
   border-left: 4px solid #f472b6;
+  --note-text-color: #5d1a3f;
+  --note-muted-color: #7e2858;
+  --note-divider-color: rgba(93, 26, 63, 0.18);
 }
 
 .note.blue {
   background: #eff6ff;
   border-left: 4px solid #60a5fa;
+  --note-text-color: #112f5a;
+  --note-muted-color: #1c4b8e;
+  --note-divider-color: rgba(17, 47, 90, 0.18);
 }
 
 .note.green {
   background: #f0fdf4;
   border-left: 4px solid #4ade80;
+  --note-text-color: #123021;
+  --note-muted-color: #1f4a34;
+  --note-divider-color: rgba(18, 48, 33, 0.18);
 }
 
 .textarea {
@@ -150,7 +162,7 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: var(--text-primary);
+  color: var(--note-text-color, var(--text-primary));
   font-size: 0.875rem;
   font-family: inherit;
   resize: none;
@@ -160,7 +172,7 @@
 }
 
 .textarea::placeholder {
-  color: var(--text-tertiary);
+  color: var(--note-muted-color, var(--text-tertiary));
   opacity: 0.7;
 }
 
@@ -170,7 +182,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding-top: 0.5rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px solid var(--note-divider-color, rgba(0, 0, 0, 0.1));
 }
 
 .noteColors {
@@ -220,11 +232,12 @@
   height: 1.5rem;
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--note-muted-color, var(--text-tertiary));
   cursor: pointer;
   border-radius: var(--radius-xs);
   transition: all 0.2s;
-  opacity: 0.6;
+  opacity: 0.92;
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .deleteBtn:hover {

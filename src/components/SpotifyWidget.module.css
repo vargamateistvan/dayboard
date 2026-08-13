@@ -191,6 +191,43 @@
   gap: 0.35rem;
 }
 
+.artistHero {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.artistHeroImage {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.7rem;
+  overflow: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.artistHeroCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.artistHeroTitle {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.artistHeroSubtitle {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
 .sectionHeader {
   display: flex;
   align-items: center;
@@ -210,6 +247,24 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+}
+
+.autocompleteWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  position: relative;
+}
+
+.autocompletePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.55rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 94%, var(--accent-primary) 6%);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
 }
 
 .playerHeader {

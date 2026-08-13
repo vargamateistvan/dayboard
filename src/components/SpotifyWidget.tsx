@@ -6,8 +6,10 @@ import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { resolveColorScheme } from '../lib/settings'
 import {
   fetchSpotifyAccountSnapshot,
+  fetchSpotifyArtistSnapshot,
   searchSpotifyCatalog,
   type SpotifyAccountSnapshot,
+  type SpotifyArtistSnapshot,
   type SpotifySavedAlbumItem,
   type SpotifyTopArtistItem,
   type SpotifyTopTrackItem,
@@ -85,6 +87,11 @@ function formatSearchPlaylist(item: SpotifySearchPlaylistItem): SpotifySelection
   }
 }
 
+function extractSpotifyArtistId(value: string): string | null {
+  const match = value.match(/open\.spotify\.com\/artist\/([A-Za-z0-9]+)/)
+  return match?.[1] ?? null
+}
+
 function formatTopArtist(item: SpotifyTopArtistItem): SpotifySelection {
   return {
     url: item.external_urls.spotify,
@@ -150,6 +157,12 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [searchResults, setSearchResults] = useState<SpotifySearchResults | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
+  const [autocompleteResults, setAutocompleteResults] = useState<SpotifySearchResults | null>(null)
+  const [autocompleteLoading, setAutocompleteLoading] = useState(false)
+  const [autocompleteError, setAutocompleteError] = useState<string | null>(null)
+  const [artistSnapshot, setArtistSnapshot] = useState<SpotifyArtistSnapshot | null>(null)
+  const [artistLoading, setArtistLoading] = useState(false)
+  const [artistError, setArtistError] = useState<string | null>(null)
   const isLargeEmbed = placements.spotify.rowSpan >= 2
 
   useEffect(() => {
@@ -166,6 +179,12 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           setSearchResults(null)
           setSearchError(null)
           setSearchLoading(false)
+          setAutocompleteResults(null)
+          setAutocompleteLoading(false)
+          setAutocompleteError(null)
+          setArtistSnapshot(null)
+          setArtistLoading(false)
+          setArtistError(null)
         }
         return
       }
@@ -251,8 +270,73 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     }
   }
 
+  useEffect(() => {
+    const auth = getStoredSpotifyAuth()
+    const trimmedQuery = searchQuery.trim()
+
+    if (!auth || trimmedQuery.length < 2) {
+      setAutocompleteResults(null)
+      setAutocompleteLoading(false)
+      setAutocompleteError(null)
+      return
+    }
+
+    let cancelled = false
+    setAutocompleteLoading(true)
+    setAutocompleteError(null)
+
+    const timer = window.setTimeout(() => {
+      void searchSpotifyCatalog(auth, trimmedQuery)
+        .then((results) => {
+          if (!cancelled) {
+            setAutocompleteResults(results)
+          }
+        })
+        .catch((error: unknown) => {
+          if (!cancelled) {
+            setAutocompleteResults(null)
+            setAutocompleteError(error instanceof Error ? error.message : 'Failed to load autocomplete.')
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setAutocompleteLoading(false)
+          }
+        })
+    }, 250)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [searchQuery])
+
   const handleUseSelection = (selection: SpotifySelection) => {
+    setSearchQuery(selection.title)
     setSelectedSelection(selection)
+    const artistId = extractSpotifyArtistId(selection.url)
+    if (artistId) {
+      setArtistLoading(true)
+      setArtistError(null)
+      const auth = getStoredSpotifyAuth()
+      if (auth) {
+        void fetchSpotifyArtistSnapshot(auth, artistId)
+          .then((snapshot) => {
+            setArtistSnapshot(snapshot)
+          })
+          .catch((error: unknown) => {
+            setArtistSnapshot(null)
+            setArtistError(error instanceof Error ? error.message : 'Failed to load artist details.')
+          })
+          .finally(() => {
+            setArtistLoading(false)
+          })
+      }
+    } else {
+      setArtistSnapshot(null)
+      setArtistLoading(false)
+      setArtistError(null)
+    }
   }
 
   return (
@@ -327,17 +411,52 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                     {getPlaylistCountLabel(searchResults ?? { tracks: [], albums: [], playlists: [] })}
                   </span>
                 </div>
-                <div className={styles.searchRow}>
-                  <input
-                    className={styles.input}
-                    type="search"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Tracks, albums, or playlists"
-                  />
-                  <button className={styles.button} type="submit" disabled={searchLoading}>
-                    {searchLoading ? 'Searching…' : 'Search'}
-                  </button>
+                <div className={styles.autocompleteWrap}>
+                  <div className={styles.searchRow}>
+                    <input
+                      className={styles.input}
+                      type="search"
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      placeholder="Tracks, albums, or playlists"
+                    />
+                    <button className={styles.button} type="submit" disabled={searchLoading}>
+                      {searchLoading ? 'Searching…' : 'Search'}
+                    </button>
+                  </div>
+                  {autocompleteLoading ? <div className={styles.connectHint}>Searching as you type…</div> : null}
+                  {autocompleteError ? <div className={styles.error}>{autocompleteError}</div> : null}
+                  {searchQuery.trim().length >= 2 && autocompleteResults ? (
+                    <div className={styles.autocompletePanel}>
+                      {autocompleteResults.tracks.slice(0, 3).map((item) => (
+                        <SearchResultButton
+                          key={item.external_urls.spotify}
+                          label={formatSearchTrack(item)}
+                          artworkUrl={item.album.images[0]?.url}
+                          fallbackBrand="spotify"
+                          onSelect={handleUseSelection}
+                        />
+                      ))}
+                      {autocompleteResults.albums.slice(0, 2).map((item) => (
+                        <SearchResultButton
+                          key={item.external_urls.spotify}
+                          label={formatSearchAlbum(item)}
+                          artworkUrl={item.images[0]?.url}
+                          fallbackBrand="spotify"
+                          onSelect={handleUseSelection}
+                        />
+                      ))}
+                      {autocompleteResults.playlists.slice(0, 2).map((item) => (
+                        <SearchResultButton
+                          key={item.external_urls.spotify}
+                          label={formatSearchPlaylist(item)}
+                          artworkUrl={item.images[0]?.url}
+                          fallbackBrand="spotify"
+                          onSelect={handleUseSelection}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
                 {searchError && <div className={styles.error}>{searchError}</div>}
               </form>
@@ -384,6 +503,45 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                       }))}
                       onSelect={handleUseSelection}
                     />
+                  </div>
+                </div>
+              ) : null}
+
+              {artistSnapshot ? (
+                <div className={styles.librarySection}>
+                  <div className={styles.sectionHeader}>
+                    <span className={styles.sectionTitle}>Artist focus</span>
+                    <span className={styles.spotifyPill}>Top tracks</span>
+                  </div>
+                  <div className={styles.artistHero}>
+                    <div className={styles.artistHeroImage}>
+                      {artistSnapshot.artist.images[0]?.url ? (
+                        <img
+                          className={styles.resultImage}
+                          src={artistSnapshot.artist.images[0].url}
+                          alt=""
+                        />
+                      ) : (
+                        <MediaBrandIcon brand="spotify" size={20} />
+                      )}
+                    </div>
+                    <div className={styles.artistHeroCopy}>
+                      <div className={styles.artistHeroTitle}>{artistSnapshot.artist.name}</div>
+                      <div className={styles.artistHeroSubtitle}>Tap a top track to load it in the player</div>
+                    </div>
+                  </div>
+                  {artistLoading ? <div className={styles.connectHint}>Loading artist tracks…</div> : null}
+                  {artistError ? <div className={styles.error}>{artistError}</div> : null}
+                  <div className={styles.resultList}>
+                    {artistSnapshot.topTracks.slice(0, 5).map((item) => (
+                      <SearchResultButton
+                        key={item.external_urls.spotify}
+                        label={formatTopTrack(item)}
+                        artworkUrl={item.album.images[0]?.url}
+                        fallbackBrand="spotify"
+                        onSelect={handleUseSelection}
+                      />
+                    ))}
                   </div>
                 </div>
               ) : null}

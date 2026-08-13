@@ -113,6 +113,7 @@ export interface SpotifySearchPlaylistItem {
 }
 
 export interface SpotifyTopArtistItem {
+  id: string
   name: string
   images: Array<{ url: string; width?: number; height?: number }>
   external_urls: {
@@ -148,6 +149,11 @@ export interface SpotifyLibrarySnapshot {
   topTracks: SpotifyTopTrackItem[]
   savedAlbums: SpotifySavedAlbumItem[]
   playlists: SpotifySearchPlaylistItem[]
+}
+
+export interface SpotifyArtistSnapshot {
+  artist: SpotifyTopArtistItem
+  topTracks: SpotifyTopTrackItem[]
 }
 
 export interface SpotifySearchResults {
@@ -278,5 +284,29 @@ export async function searchSpotifyCatalog(
     tracks: data.tracks?.items ?? [],
     albums: data.albums?.items ?? [],
     playlists: data.playlists?.items ?? [],
+  }
+}
+
+export async function fetchSpotifyArtistSnapshot(
+  auth: SpotifyAuthSession,
+  artistId: string,
+): Promise<SpotifyArtistSnapshot> {
+  const trimmedArtistId = artistId.trim()
+  if (!trimmedArtistId) {
+    throw new Error('Spotify artist id is required.')
+  }
+
+  const validAuth = await getValidSpotifyAuth(auth)
+  const [artistResponse, topTracksResponse] = await Promise.all([
+    fetchSpotifyJson<SpotifyTopArtistItem>(validAuth.accessToken, `/artists/${trimmedArtistId}`),
+    fetchSpotifyJson<{ tracks?: SpotifyTopTrackItem[] }>(
+      validAuth.accessToken,
+      `/artists/${trimmedArtistId}/top-tracks?market=from_token`,
+    ),
+  ])
+
+  return {
+    artist: artistResponse,
+    topTracks: topTracksResponse.tracks ?? [],
   }
 }

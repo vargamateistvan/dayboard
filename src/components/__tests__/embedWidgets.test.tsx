@@ -18,6 +18,7 @@ vi.mock('../../lib/spotifyAuth', () => ({
 
 vi.mock('../../lib/spotifyApi', () => ({
   fetchSpotifyAccountSnapshot: vi.fn(),
+  searchSpotifyCatalog: vi.fn(),
 }))
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
@@ -167,6 +168,7 @@ describe('SpotifyWidget', () => {
       library: {
         topArtists: [
           {
+            id: 'artist-example',
             name: 'Fleetwood Mac',
             images: [],
             external_urls: {
@@ -201,6 +203,54 @@ describe('SpotifyWidget', () => {
     expect(screen.getByText('Your Spotify library')).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Connect Spotify/i })).not.toBeInTheDocument()
+  })
+
+  it('shows autocomplete suggestions while typing a search query', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    })
+    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
+      profile: {
+        id: 'dayboard',
+        display_name: 'Dayboard',
+        images: [],
+      },
+      playback: null,
+      recentlyPlayed: null,
+      library: null,
+    })
+    vi.mocked(spotifyApi.searchSpotifyCatalog).mockResolvedValue({
+      tracks: [
+        {
+          type: 'track',
+          name: 'Dreams',
+          artists: [{ name: 'Fleetwood Mac' }],
+          album: {
+            name: 'Rumours',
+            images: [],
+          },
+          external_urls: {
+            spotify: 'https://open.spotify.com/track/example',
+          },
+        },
+      ],
+      albums: [],
+      playlists: [],
+    })
+
+    renderWithSettings(<SpotifyWidget />)
+
+    expect(await screen.findByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText(/Tracks, albums, or playlists/i), {
+      target: { value: 'dre' },
+    })
+
+    expect(await screen.findByText('Dreams')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Dreams'))
+    expect(screen.getByText(/Showing Dreams/i)).toBeInTheDocument()
   })
 })
 
