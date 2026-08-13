@@ -10,8 +10,6 @@ import {
   searchSpotifyCatalog,
   type SpotifyAccountSnapshot,
   type SpotifyArtistSnapshot,
-  type SpotifySavedAlbumItem,
-  type SpotifyTopArtistItem,
   type SpotifyTopTrackItem,
   type SpotifyRecentPlayedItem,
   type SpotifySearchAlbumItem,
@@ -92,27 +90,11 @@ function extractSpotifyArtistId(value: string): string | null {
   return match?.[1] ?? null
 }
 
-function formatTopArtist(item: SpotifyTopArtistItem): SpotifySelection {
-  return {
-    url: item.external_urls.spotify,
-    title: item.name,
-    subtitle: 'Top artist',
-  }
-}
-
 function formatTopTrack(item: SpotifyTopTrackItem): SpotifySelection {
   return {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.artists.map((artist) => artist.name).join(' · '),
-  }
-}
-
-function formatSavedAlbum(item: SpotifySavedAlbumItem): SpotifySelection {
-  return {
-    url: item.album.external_urls.spotify,
-    title: item.album.name,
-    subtitle: item.album.artists.map((artist) => artist.name).join(' · '),
   }
 }
 
@@ -139,10 +121,6 @@ function getPlaylistCountLabel(results: SpotifySearchResults): string {
   return counts.some((count) => count > 0)
     ? `${counts.reduce((sum, count) => sum + count, 0)} results`
     : 'No results yet'
-}
-
-function getCountLabel(count: number, emptyLabel: string): string {
-  return count > 0 ? `${count}` : emptyLabel
 }
 
 export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
@@ -464,45 +442,19 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
               {library ? (
                 <div className={styles.librarySection}>
                   <div className={styles.sectionHeader}>
-                    <span className={styles.sectionTitle}>Your Spotify library</span>
+                    <span className={styles.sectionTitle}>Playlists</span>
+                    <span className={styles.spotifyPill}>{library.playlists.length || 'No playlists'}</span>
                   </div>
-                  <div className={styles.libraryGrid}>
-                    <LibraryGroup
-                      title="Top tracks"
-                      countLabel={getCountLabel(library.topTracks.length, 'No tracks')}
-                      items={library.topTracks.map((item) => ({
-                        label: formatTopTrack(item),
-                        artworkUrl: item.album.images[0]?.url,
-                      }))}
-                      onSelect={handleUseSelection}
-                    />
-                    <LibraryGroup
-                      title="Top artists"
-                      countLabel={getCountLabel(library.topArtists.length, 'No artists')}
-                      items={library.topArtists.map((item) => ({
-                        label: formatTopArtist(item),
-                        artworkUrl: item.images[0]?.url,
-                      }))}
-                      onSelect={handleUseSelection}
-                    />
-                    <LibraryGroup
-                      title="Playlists"
-                      countLabel={getCountLabel(library.playlists.length, 'No playlists')}
-                      items={library.playlists.map((item) => ({
-                        label: formatSearchPlaylist(item),
-                        artworkUrl: item.images[0]?.url,
-                      }))}
-                      onSelect={handleUseSelection}
-                    />
-                    <LibraryGroup
-                      title="Saved albums"
-                      countLabel={getCountLabel(library.savedAlbums.length, 'No albums')}
-                      items={library.savedAlbums.map((item) => ({
-                        label: formatSavedAlbum(item),
-                        artworkUrl: item.album.images[0]?.url,
-                      }))}
-                      onSelect={handleUseSelection}
-                    />
+                  <div className={styles.resultList}>
+                    {library.playlists.slice(0, 5).map((item) => (
+                      <SearchResultButton
+                        key={item.external_urls.spotify}
+                        label={formatSearchPlaylist(item)}
+                        artworkUrl={item.images[0]?.url}
+                        fallbackBrand="spotify"
+                        onSelect={handleUseSelection}
+                      />
+                    ))}
                   </div>
                 </div>
               ) : null}
@@ -667,37 +619,5 @@ function SearchResultButton({ label, artworkUrl, fallbackBrand, onSelect }: Sear
         <div className={styles.resultSubtitle}>{label.subtitle}</div>
       </div>
     </button>
-  )
-}
-
-interface LibraryGroupProps {
-  readonly title: string
-  readonly countLabel: string
-  readonly items: Array<{
-    label: SpotifySelection
-    artworkUrl?: string
-  }>
-  readonly onSelect: (selection: SpotifySelection) => void
-}
-
-function LibraryGroup({ title, countLabel, items, onSelect }: LibraryGroupProps) {
-  return (
-    <section className={styles.libraryGroup}>
-      <div className={styles.sectionHeader}>
-        <span className={styles.resultGroupTitle}>{title}</span>
-        <span className={styles.spotifyPill}>{countLabel}</span>
-      </div>
-      <div className={styles.resultList}>
-        {items.slice(0, 5).map((item) => (
-          <SearchResultButton
-            key={item.label.url}
-            label={item.label}
-            artworkUrl={item.artworkUrl}
-            fallbackBrand="spotify"
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
-    </section>
   )
 }
