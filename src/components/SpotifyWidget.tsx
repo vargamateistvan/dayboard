@@ -442,9 +442,10 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
               {library ? (
                 <div className={styles.librarySection}>
                   <div className={styles.sectionHeader}>
-                    <span className={styles.sectionTitle}>Playlists</span>
+                    <span className={styles.sectionTitle}>Your Spotify library</span>
                     <span className={styles.spotifyPill}>{library.playlists.length || 'No playlists'}</span>
                   </div>
+                  <div className={styles.resultGroupTitle}>Playlists</div>
                   <div className={styles.resultList}>
                     {library.playlists.slice(0, 5).map((item) => (
                       <SearchResultButton
