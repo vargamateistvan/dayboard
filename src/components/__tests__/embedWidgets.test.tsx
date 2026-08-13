@@ -250,7 +250,10 @@ describe('SpotifyWidget', () => {
 
     expect(await screen.findByText('Dreams')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Dreams'))
-    expect(screen.getByText(/Showing Dreams/i)).toBeInTheDocument()
+    expect(await screen.findByTitle('Spotify Player player')).toHaveAttribute(
+      'src',
+      expect.stringContaining('https://open.spotify.com/embed/track/example'),
+    )
   })
 
   it('ignores recently played entries missing track details', async () => {

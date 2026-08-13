@@ -148,27 +148,25 @@
   position: relative;
   min-height: 0;
   min-width: 0;
-  padding: 0.4rem;
+  padding: 0;
+  overflow: hidden;
 }
 
 .embedAreaNormal {
-  min-height: 10rem;
+  height: 152px;
 }
 
 .embedAreaLarge {
-  min-height: 22rem;
+  height: 352px;
 }
 
 .embedAreaFullscreen {
   min-height: clamp(28rem, 68vh, 56rem);
+  height: auto;
 }
 
 .spotifySelectionBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.2rem 0.2rem 0.45rem;
+  display: none;
 }
 
 .spotifySelectionText {

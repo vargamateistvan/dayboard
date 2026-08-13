@@ -380,30 +380,11 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
           <div className={styles.spotifyLayout}>
             <div className={[styles.embedArea, isFullscreen ? styles.embedAreaFullscreen : '', isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal].join(' ')}>
-              {selectedSelection ? (
-                <div className={styles.spotifySelectionBar}>
-                  <span className={styles.spotifySelectionText}>
-                    Showing {selectedSelection.title}
-                  </span>
-                  <button
-                    className={styles.actionButton}
-                    type="button"
-                    onClick={() => setSelectedSelection(null)}
-                  >
-                    Back to live
-                  </button>
-                </div>
-              ) : null}
               {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
               {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
               {!spotifyStateLoading && !spotifyStateError && activePlayerUrl ? (
                 <SpotifyIframePlayer
                   sourceUrl={activePlayerUrl}
-                  title={activeSelection?.title ?? 'Spotify player'}
-                  subtitle={
-                    activeSelection?.subtitle ??
-                    'Open Spotify and start playing to show the player.'
-                  }
                   embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
                   colorScheme={resolveColorScheme(settings.colorScheme)}
                 />

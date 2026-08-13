@@ -1,78 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { MusicEmbedWidget } from './MusicEmbedWidget'
-import { loadSpotifyIframeApi, type SpotifyIframeController, type SpotifyIframePlaybackState } from '../lib/spotifyIframeApi'
+import { loadSpotifyIframeApi, type SpotifyIframeController } from '../lib/spotifyIframeApi'
 import styles from './SpotifyWidget.module.css'
 
 interface SpotifyIframePlayerProps {
   readonly sourceUrl: string
-  readonly title: string
-  readonly subtitle: string
   readonly colorScheme: 'light' | 'dark'
   readonly embedSize: 'normal' | 'large' | 'fullscreen'
 }
 
-function formatDuration(ms: number | null): string {
-  if (ms === null || Number.isNaN(ms)) {
-    return '0:00'
-  }
-
-  const totalSeconds = Math.max(0, Math.round(ms / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${minutes}:${String(seconds).padStart(2, '0')}`
-}
-
-function formatProgress(state: SpotifyIframePlaybackState | null): string {
-  if (!state || state.duration <= 0) {
-    return '0:00'
-  }
-
-  return `${formatDuration(state.position)} / ${formatDuration(state.duration)}`
-}
-
-function getProgressPercent(state: SpotifyIframePlaybackState | null): number {
-  if (!state || state.duration <= 0) {
-    return 0
-  }
-
-  return Math.min(100, Math.max(0, (state.position / state.duration) * 100))
-}
-
 export function SpotifyIframePlayer({
   sourceUrl,
-  title,
-  subtitle,
   colorScheme,
   embedSize,
 }: SpotifyIframePlayerProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<SpotifyIframeController | null>(null)
   const [isApiReady, setIsApiReady] = useState(false)
-  const [playbackState, setPlaybackState] = useState<SpotifyIframePlaybackState | null>(null)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const canTogglePlay = isApiReady && controllerRef.current
-  const playButtonLabel = useMemo(() => {
-    if (!isApiReady) {
-      return 'Loading player…'
-    }
-
-    if (!playbackState || playbackState.isPaused) {
-      return 'Play'
-    }
-
-    return 'Pause'
-  }, [isApiReady, playbackState])
-  const statusLabel = playbackState
-    ? playbackState.isBuffering
-      ? 'Buffering'
-      : playbackState.isPaused
-        ? 'Paused'
-        : 'Playing'
-    : isApiReady
-      ? 'Ready'
-      : 'Loading'
-  const progressPercent = getProgressPercent(playbackState)
   const embedHeight = embedSize === 'fullscreen' ? '100%' : embedSize === 'large' ? 352 : 152
 
   useEffect(() => {
@@ -88,7 +34,6 @@ export function SpotifyIframePlayer({
     if (!controllerRef.current) {
       controllerHost.innerHTML = ''
       setIsApiReady(false)
-      setPlaybackState(null)
 
       void loadSpotifyIframeApi()
         .then((api) => {
@@ -115,24 +60,10 @@ export function SpotifyIframePlayer({
                 }
               })
               controller.addListener('playback_update', (event) => {
-                if (!cancelled) {
-                  setPlaybackState(event.data as SpotifyIframePlaybackState)
-                }
+                void event
               })
               controller.addListener('playback_started', (event) => {
-                if (!cancelled) {
-                  setPlaybackState((current) => ({
-                    ...(current ?? {
-                      duration: 0,
-                      position: 0,
-                      isPaused: false,
-                      isBuffering: false,
-                      playingURI: sourceUrl,
-                    }),
-                    playingURI: (event.data as { playingURI: string }).playingURI,
-                    isPaused: false,
-                  }))
-                }
+                void event
               })
             },
           )
@@ -158,44 +89,8 @@ export function SpotifyIframePlayer({
     }
   }, [])
 
-  const handleTogglePlay = () => {
-    controllerRef.current?.togglePlay()
-  }
-
-  const handleRestart = () => {
-    controllerRef.current?.restart()
-  }
-
   return (
     <div className={styles.spotifyPlayer}>
-      <div className={styles.playerHeader}>
-        <div>
-          <div className={styles.playerLabel}>{title}</div>
-          <div className={styles.playerSubLabel}>{subtitle}</div>
-        </div>
-        <div className={styles.playerActions}>
-          <button
-            className={styles.actionButton}
-            type="button"
-            onClick={handleTogglePlay}
-            disabled={!canTogglePlay}
-          >
-            {playButtonLabel}
-          </button>
-          <button
-            className={styles.actionButton}
-            type="button"
-            onClick={handleRestart}
-            disabled={!canTogglePlay}
-          >
-            Restart
-          </button>
-          <a className={styles.actionButtonLink} href={sourceUrl} target="_blank" rel="noreferrer">
-            Open in Spotify
-          </a>
-        </div>
-      </div>
-
       <div className={[styles.embedArea, embedSize === 'fullscreen' ? styles.embedAreaFullscreen : '', embedSize === 'large' ? styles.embedAreaLarge : styles.embedAreaNormal].join(' ')}>
         {apiError ? <div className={styles.error}>{apiError}</div> : null}
         {!isApiReady ? (
@@ -213,14 +108,6 @@ export function SpotifyIframePlayer({
           </div>
         ) : null}
         <div ref={hostRef} className={styles.spotifyIframeHost} />
-      </div>
-
-      <div className={styles.spotifyMetaRow}>
-        <span className={styles.spotifyPill}>{statusLabel}</span>
-        <span className={styles.spotifyPill}>{formatProgress(playbackState)}</span>
-      </div>
-      <div className={styles.progressTrack} aria-hidden="true">
-        <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
       </div>
     </div>
   )
