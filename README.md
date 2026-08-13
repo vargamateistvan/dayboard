@@ -79,6 +79,8 @@ VITE_SPOTIFY_CLIENT_ID=your-spotify-client-id
 
 Dayboard uses Spotify Authorization Code with PKCE in the browser, so the Spotify client secret must not be added to frontend environment variables.
 
+If you deploy through GitHub Actions/GitHub Pages, add `VITE_SPOTIFY_CLIENT_ID` as a repository secret too; the build workflow injects it during `yarn build`.
+
 ### Build
 
 ```bash
