@@ -63,6 +63,9 @@ export interface Settings {
   theme: Theme
   colorScheme: ColorScheme
   fontPreset: FontPreset
+  clockTimeFontSizeRem: number | null
+  clockDateFontSizeRem: number | null
+  clockTimeStretchPercent: number | null
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
   globalCalendarFeeds: CalendarFeed[]
@@ -195,6 +198,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'default',
   colorScheme: 'system',
   fontPreset: 'space-grotesk',
+  clockTimeFontSizeRem: null,
+  clockDateFontSizeRem: null,
+  clockTimeStretchPercent: null,
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
   globalCalendarFeeds: [],
@@ -329,6 +335,30 @@ function normalizeFontPreset(fontPreset: unknown): FontPreset {
 
   const matched = FONT_PRESET_OPTIONS.find((option) => option.id === fontPreset)
   return matched?.id ?? DEFAULT_SETTINGS.fontPreset
+}
+
+function normalizeClockFontSizeRem(value: unknown): number | null {
+  if (value == null || value === '') {
+    return null
+  }
+
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return null
+  }
+
+  return Math.min(40, Math.max(0.5, Math.round(value * 10) / 10))
+}
+
+function normalizeClockTimeStretchPercent(value: unknown): number | null {
+  if (value == null || value === '') {
+    return null
+  }
+
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return null
+  }
+
+  return Math.min(200, Math.max(50, Math.round(value)))
 }
 
 function normalizeWeatherRefreshMinutes(value: unknown): number {
@@ -679,6 +709,9 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     ...DEFAULT_SETTINGS,
     ...rest,
     fontPreset: normalizeFontPreset(rest.fontPreset),
+    clockTimeFontSizeRem: normalizeClockFontSizeRem((rest as { clockTimeFontSizeRem?: unknown }).clockTimeFontSizeRem),
+    clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
+    clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
     showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
     calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
     globalCalendarFeeds: normalizeCalendarFeeds((rest as { globalCalendarFeeds?: unknown }).globalCalendarFeeds),
@@ -783,6 +816,9 @@ export function saveSettings(settings: Settings): void {
       theme: settings.theme,
       colorScheme: settings.colorScheme,
       fontPreset: normalizeFontPreset(settings.fontPreset),
+      clockTimeFontSizeRem: normalizeClockFontSizeRem(settings.clockTimeFontSizeRem),
+      clockDateFontSizeRem: normalizeClockFontSizeRem(settings.clockDateFontSizeRem),
+      clockTimeStretchPercent: normalizeClockTimeStretchPercent(settings.clockTimeStretchPercent),
       showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
       globalCalendarFeeds: normalizeCalendarFeeds(settings.globalCalendarFeeds),
@@ -886,6 +922,27 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (!settings.fontPreset) {
     errors.push('Invalid fontPreset')
+  }
+
+  if (
+    settings.clockTimeFontSizeRem !== null &&
+    (settings.clockTimeFontSizeRem < 0.5 || settings.clockTimeFontSizeRem > 40)
+  ) {
+    errors.push('clockTimeFontSizeRem must be between 0.5 and 40 when provided')
+  }
+
+  if (
+    settings.clockDateFontSizeRem !== null &&
+    (settings.clockDateFontSizeRem < 0.5 || settings.clockDateFontSizeRem > 40)
+  ) {
+    errors.push('clockDateFontSizeRem must be between 0.5 and 40 when provided')
+  }
+
+  if (
+    settings.clockTimeStretchPercent !== null &&
+    (settings.clockTimeStretchPercent < 50 || settings.clockTimeStretchPercent > 200)
+  ) {
+    errors.push('clockTimeStretchPercent must be between 50 and 200 when provided')
   }
 
   if (typeof settings.showBuyMeACoffeeWidget !== 'boolean') {

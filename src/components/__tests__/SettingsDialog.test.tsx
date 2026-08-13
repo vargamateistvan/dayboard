@@ -156,6 +156,22 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('persists manual clock font-size settings', () => {
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    fireEvent.change(screen.getByLabelText('Time font size (rem)'), { target: { value: '18.5' } })
+    fireEvent.change(screen.getByLabelText('Date font size (rem)'), { target: { value: '2.1' } })
+    fireEvent.change(screen.getByLabelText('Time stretch (%)'), { target: { value: '135' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      clockTimeFontSizeRem: 18.5,
+      clockDateFontSizeRem: 2.1,
+      clockTimeStretchPercent: 135,
+    })
+  })
+
   it('persists sports widget refresh and league filters', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,

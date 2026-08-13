@@ -128,6 +128,9 @@ describe('settings persistence', () => {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
+      clockTimeFontSizeRem: 18,
+      clockDateFontSizeRem: 1.8,
+      clockTimeStretchPercent: 130,
       showBuyMeACoffeeWidget: false,
       calendarFeeds: [
         { url: 'https://example.com/cal.ics', color: '#123456' },

@@ -148,6 +148,42 @@ function isValidTimeZone(value: string): boolean {
   }
 }
 
+function formatOptionalFontSizeRem(value: number | null): string {
+  return value == null ? "" : String(value)
+}
+
+function parseOptionalFontSizeRem(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const parsed = Number.parseFloat(trimmed)
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  return Math.min(40, Math.max(0.5, Math.round(parsed * 10) / 10))
+}
+
+function formatOptionalStretchPercent(value: number | null): string {
+  return value == null ? "" : String(value)
+}
+
+function parseOptionalStretchPercent(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const parsed = Number.parseInt(trimmed, 10)
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  return Math.min(200, Math.max(50, Math.round(parsed)))
+}
+
 type BackgroundMode = "solid" | "gradient";
 
 interface ParsedBackground {
@@ -1074,6 +1110,15 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [worldClockTimeZone, setWorldClockTimeZone] = useState(
     settings.worldClockTimeZone,
   );
+  const [clockTimeFontSize, setClockTimeFontSize] = useState(
+    formatOptionalFontSizeRem(settings.clockTimeFontSizeRem),
+  );
+  const [clockDateFontSize, setClockDateFontSize] = useState(
+    formatOptionalFontSizeRem(settings.clockDateFontSizeRem),
+  );
+  const [clockTimeStretch, setClockTimeStretch] = useState(
+    formatOptionalStretchPercent(settings.clockTimeStretchPercent),
+  );
   const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
     string | null
   >(null);
@@ -1148,6 +1193,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
   const isFlightsOnLayout = visibility.flights;
+  const isClockOnLayout = visibility.clock;
   const isTimezoneClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
   const isSportsOnLayout = visibility.sports;
@@ -1208,6 +1254,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setFlightsUseDeviceLocation(nextSettings.flightsUseDeviceLocation);
     setFlightsManualLatitude(nextSettings.flightsManualLatitude);
     setFlightsManualLongitude(nextSettings.flightsManualLongitude);
+    setClockTimeFontSize(formatOptionalFontSizeRem(nextSettings.clockTimeFontSizeRem));
+    setClockDateFontSize(formatOptionalFontSizeRem(nextSettings.clockDateFontSizeRem));
+    setClockTimeStretch(formatOptionalStretchPercent(nextSettings.clockTimeStretchPercent));
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
@@ -1265,6 +1314,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     flightsUseDeviceLocation,
     flightsManualLatitude: flightsManualLatitude.trim(),
     flightsManualLongitude: flightsManualLongitude.trim(),
+    clockTimeFontSizeRem: parseOptionalFontSizeRem(clockTimeFontSize),
+    clockDateFontSizeRem: parseOptionalFontSizeRem(clockDateFontSize),
+    clockTimeStretchPercent: parseOptionalStretchPercent(clockTimeStretch),
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl: settings.spotifyEmbedUrl,
@@ -2570,6 +2622,56 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                       </p>
                     </section>
                   </>
+                )}
+
+                {isClockOnLayout && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Clock</h3>
+                    <div className={styles.intervalRow}>
+                      <label className={styles.intervalLabel}>
+                        <span>Time font size (rem)</span>
+                        <input
+                          className={styles.numberInput}
+                          type="number"
+                          min={0.5}
+                          max={40}
+                          step={0.1}
+                          value={clockTimeFontSize}
+                          placeholder="Auto"
+                          onChange={(e) => setClockTimeFontSize(e.target.value)}
+                        />
+                      </label>
+                      <label className={styles.intervalLabel}>
+                        <span>Date font size (rem)</span>
+                        <input
+                          className={styles.numberInput}
+                          type="number"
+                          min={0.5}
+                          max={40}
+                          step={0.1}
+                          value={clockDateFontSize}
+                          placeholder="Auto"
+                          onChange={(e) => setClockDateFontSize(e.target.value)}
+                        />
+                      </label>
+                      <label className={styles.intervalLabel}>
+                        <span>Time stretch (%)</span>
+                        <input
+                          className={styles.numberInput}
+                          type="number"
+                          min={50}
+                          max={200}
+                          step={1}
+                          value={clockTimeStretch}
+                          placeholder="100"
+                          onChange={(e) => setClockTimeStretch(e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <p className={styles.hint}>
+                      Leave size fields empty to keep automatic sizing based on the clock row height. Stretch uses 100% by default.
+                    </p>
+                  </section>
                 )}
 
                 {isTimezoneClockOnLayout && (

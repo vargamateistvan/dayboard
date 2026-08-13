@@ -7,13 +7,23 @@ import { PomodoroStats } from '../PomodoroStats'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 
+function renderClockWidget(rowCount?: number) {
+  return render(
+    <SettingsProvider>
+      <ClockWidget rowCount={rowCount} />
+    </SettingsProvider>,
+  )
+}
+
 describe('ClockWidget', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-08T12:34:56Z'))
+    localStorage.clear()
   })
 
   afterEach(() => {
+    localStorage.clear()
     vi.useRealTimers()
     vi.restoreAllMocks()
   })
@@ -21,7 +31,7 @@ describe('ClockWidget', () => {
   it('renders the current time and date', () => {
     const now = new Date()
 
-    render(<ClockWidget />)
+    renderClockWidget()
 
     expect(
       screen.getByText(
@@ -45,20 +55,68 @@ describe('ClockWidget', () => {
   })
 
   it('uses row-count-specific font sizing for the main clock', () => {
-    const { rerender } = render(<ClockWidget rowCount={2} />)
+    const { rerender } = renderClockWidget(2)
     const currentTime = new Date().toLocaleTimeString(undefined, {
      hour: '2-digit',
      minute: '2-digit',
      second: '2-digit',
     })
 
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('22rem')
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('22rem')
 
-    rerender(<ClockWidget rowCount={3} />)
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('16rem')
+    rerender(
+      <SettingsProvider>
+        <ClockWidget rowCount={3} />
+      </SettingsProvider>,
+    )
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('16rem')
 
-    rerender(<ClockWidget rowCount={4} />)
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size')).toBe('11rem')
+    rerender(
+      <SettingsProvider>
+        <ClockWidget rowCount={4} />
+      </SettingsProvider>,
+    )
+    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('11rem')
+  })
+
+  it('applies manual clock font-size settings when configured', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockTimeFontSizeRem: 19.5,
+      clockDateFontSizeRem: 2.2,
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    const timeElement = screen.getByText(currentTime)
+    const widgetElement = timeElement.parentElement
+
+    expect(widgetElement?.style.getPropertyValue('--clock-time-size-override')).toBe('19.5rem')
+    expect(widgetElement?.style.getPropertyValue('--clock-date-size-override')).toBe('2.2rem')
+  })
+
+  it('applies manual clock stretch when configured', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockTimeStretchPercent: 140,
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    const timeElement = screen.getByText(currentTime)
+    const widgetElement = timeElement.parentElement
+
+    expect(widgetElement?.style.getPropertyValue('--clock-time-stretch')).toBe('1.4')
   })
 })
 

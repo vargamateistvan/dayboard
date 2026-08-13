@@ -1,4 +1,5 @@
 import { useEffect, useState, type CSSProperties } from 'react'
+import { useSettings } from '../lib/useSettings'
 import styles from './ClockWidget.module.css'
 
 interface ClockWidgetProps {
@@ -7,7 +8,10 @@ interface ClockWidgetProps {
 }
 
 type ClockWidgetStyle = CSSProperties & {
-  '--clock-time-size'?: string
+  '--clock-time-size-auto'?: string
+  '--clock-time-size-override'?: string
+  '--clock-date-size-override'?: string
+  '--clock-time-stretch'?: string
 }
 
 function getClockTimeSize(rowCount: number): string | undefined {
@@ -28,6 +32,7 @@ function getClockTimeSize(rowCount: number): string | undefined {
 
 export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetProps) {
   const [now, setNow] = useState(() => new Date())
+  const { settings } = useSettings()
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -46,9 +51,15 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
     month: 'long',
     day: 'numeric',
   })
-  const style: ClockWidgetStyle | undefined = isFullscreen
-    ? undefined
-    : { '--clock-time-size': getClockTimeSize(rowCount) }
+  const style: ClockWidgetStyle = {
+    '--clock-time-size-auto': getClockTimeSize(rowCount),
+    '--clock-time-size-override':
+      settings.clockTimeFontSizeRem == null ? undefined : `${settings.clockTimeFontSizeRem}rem`,
+    '--clock-date-size-override':
+      settings.clockDateFontSizeRem == null ? undefined : `${settings.clockDateFontSizeRem}rem`,
+    '--clock-time-stretch':
+      settings.clockTimeStretchPercent == null ? undefined : String(settings.clockTimeStretchPercent / 100),
+  }
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} style={style}>

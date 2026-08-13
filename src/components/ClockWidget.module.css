@@ -15,7 +15,7 @@
     the weather/calendar/tasks rows beneath it.
   */
   font-size: clamp(2.8rem, min(12vw, 20dvh), 14rem);
-  font-size: var(--clock-time-size, clamp(2.8rem, min(28cqw, 72cqh), 18rem));
+  font-size: var(--clock-time-size-override, var(--clock-time-size-auto, clamp(2.8rem, min(28cqw, 72cqh), 18rem)));
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 0.88;
@@ -25,13 +25,15 @@
   max-width: 100%;
   overflow: hidden;
   text-overflow: clip;
+  transform: scaleX(var(--clock-time-stretch, 1));
+  transform-origin: center center;
 }
 
 .date {
   margin-top: clamp(0.2rem, 0.8vw, 0.7rem);
   margin-top: clamp(0.2rem, 2cqh, 0.7rem);
   font-size: clamp(0.85rem, min(1.8vw, 2.4dvh), 1.5rem);
-  font-size: clamp(0.85rem, min(3.4cqw, 9cqh), 1.5rem);
+  font-size: var(--clock-date-size-override, clamp(0.85rem, min(3.4cqw, 9cqh), 1.5rem));
   font-weight: 400;
   color: var(--color-text-muted);
   letter-spacing: -0.01em;
@@ -51,7 +53,7 @@
 
 .fullscreen .time {
   font-size: clamp(3.2rem, min(20vw, 26dvh), 22rem);
-  font-size: clamp(3.2rem, min(32cqw, 78cqh), 22rem);
+  font-size: var(--clock-time-size-override, clamp(3.2rem, min(32cqw, 78cqh), 22rem));
   line-height: 0.84;
   text-align: center;
 }
@@ -62,7 +64,7 @@
   max-width: 100%;
   text-align: center;
   font-size: clamp(1.05rem, min(3.1vw, 4.2dvh), 3rem);
-  font-size: clamp(1.05rem, min(4.2cqw, 10cqh), 3rem);
+  font-size: var(--clock-date-size-override, clamp(1.05rem, min(4.2cqw, 10cqh), 3rem));
   white-space: normal;
   text-wrap: balance;
 }
@@ -71,13 +73,13 @@
 @media (max-width: 700px) {
   .time {
     font-size: clamp(2.2rem, 10.5vw, 4.2rem);
-    font-size: clamp(2.2rem, min(30cqw, 72cqh), 4.8rem);
+    font-size: var(--clock-time-size-override, var(--clock-time-size-auto, clamp(2.2rem, min(30cqw, 72cqh), 4.8rem)));
     line-height: 0.88;
   }
 
   .date {
     font-size: clamp(0.75rem, 2.4vw, 0.95rem);
-    font-size: clamp(0.75rem, min(4.2cqw, 12cqh), 1rem);
+    font-size: var(--clock-date-size-override, clamp(0.75rem, min(4.2cqw, 12cqh), 1rem));
     margin-top: 0.1rem;
   }
 }
@@ -89,12 +91,12 @@
 
   .fullscreen .time {
     font-size: clamp(2.2rem, min(14vw, 20dvh), 5.6rem);
-    font-size: clamp(2.2rem, min(30cqw, 72cqh), 6rem);
+    font-size: var(--clock-time-size-override, clamp(2.2rem, min(30cqw, 72cqh), 6rem));
     line-height: 0.86;
   }
 
   .fullscreen .date {
     font-size: clamp(0.82rem, min(2.1vw, 3.8dvh), 1.2rem);
-    font-size: clamp(0.82rem, min(4cqw, 10cqh), 1.2rem);
+    font-size: var(--clock-date-size-override, clamp(0.82rem, min(4cqw, 10cqh), 1.2rem));
   }
 }
