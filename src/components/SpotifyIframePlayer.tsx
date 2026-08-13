@@ -9,6 +9,11 @@ interface SpotifyIframePlayerProps {
   readonly embedSize: 'normal' | 'large' | 'fullscreen'
 }
 
+function getSpotifyEntityType(sourceUrl: string): 'track' | 'episode' | 'playlist' | 'album' | 'artist' | 'show' | null {
+  const match = sourceUrl.match(/open\.spotify\.com\/(track|episode|playlist|album|artist|show)\//)
+  return (match?.[1] as ReturnType<typeof getSpotifyEntityType>) ?? null
+}
+
 export function SpotifyIframePlayer({
   sourceUrl,
   colorScheme,
@@ -19,7 +24,16 @@ export function SpotifyIframePlayer({
   const [isApiReady, setIsApiReady] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const embedHeight = embedSize === 'fullscreen' ? '100%' : embedSize === 'large' ? 460 : 232
+  const entityType = getSpotifyEntityType(sourceUrl)
+  const isCompactEntity = entityType === 'track' || entityType === 'episode'
+  const embedHeight =
+    embedSize === 'fullscreen'
+      ? '100%'
+      : isCompactEntity
+        ? 152
+        : embedSize === 'large'
+          ? 460
+          : 232
 
   useEffect(() => {
     let cancelled = false
@@ -91,7 +105,14 @@ export function SpotifyIframePlayer({
 
   return (
     <div className={styles.spotifyPlayer}>
-      <div className={[styles.embedArea, embedSize === 'fullscreen' ? styles.embedAreaFullscreen : '', embedSize === 'large' ? styles.embedAreaLarge : styles.embedAreaNormal].join(' ')}>
+      <div
+        className={[
+          styles.embedArea,
+          embedSize === 'fullscreen' ? styles.embedAreaFullscreen : '',
+          embedSize === 'large' ? styles.embedAreaLarge : styles.embedAreaNormal,
+        ].join(' ')}
+        style={embedSize === 'fullscreen' ? undefined : { height: `${embedHeight}px` }}
+      >
         {apiError ? <div className={styles.error}>{apiError}</div> : null}
         {!isApiReady ? (
           <div className={styles.spotifyFallbackLayer}>

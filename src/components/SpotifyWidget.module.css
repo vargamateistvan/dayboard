@@ -144,6 +144,15 @@
   min-height: 0;
 }
 
+.playerPane {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: 0.55rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .embedArea {
   position: relative;
   min-height: 0;
@@ -153,11 +162,11 @@
 }
 
 .embedAreaNormal {
-  height: 232px;
+  min-height: 152px;
 }
 
 .embedAreaLarge {
-  height: 460px;
+  min-height: 460px;
 }
 
 .embedAreaFullscreen {
