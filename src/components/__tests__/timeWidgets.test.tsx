@@ -117,6 +117,7 @@ describe('ClockWidget', () => {
     const widgetElement = timeElement.parentElement
 
     expect(widgetElement?.style.getPropertyValue('--clock-time-stretch')).toBe('1.4')
+    expect(widgetElement?.style.getPropertyValue('--clock-time-width-factor')).toBe('1.4')
   })
 })
 

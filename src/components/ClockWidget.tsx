@@ -12,6 +12,7 @@ type ClockWidgetStyle = CSSProperties & {
   '--clock-time-size-override'?: string
   '--clock-date-size-override'?: string
   '--clock-time-stretch'?: string
+  '--clock-time-width-factor'?: string
 }
 
 function getClockTimeSize(rowCount: number): string | undefined {
@@ -59,6 +60,10 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
       settings.clockDateFontSizeRem == null ? undefined : `${settings.clockDateFontSizeRem}rem`,
     '--clock-time-stretch':
       settings.clockTimeStretchPercent == null ? undefined : String(settings.clockTimeStretchPercent / 100),
+    '--clock-time-width-factor':
+      settings.clockTimeStretchPercent == null
+        ? undefined
+        : String(Math.max(settings.clockTimeStretchPercent / 100, 1)),
   }
 
   return (

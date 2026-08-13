@@ -4,9 +4,11 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  width: 100%;
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  container-type: size;
 }
 
 .time {
@@ -22,7 +24,10 @@
   color: var(--color-text);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  max-width: 100%;
+  width: calc(100% / var(--clock-time-width-factor, 1));
+  max-width: none;
+  align-self: center;
+  text-align: center;
   overflow: hidden;
   text-overflow: clip;
   transform: scaleX(var(--clock-time-stretch, 1));

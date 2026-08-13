@@ -172,6 +172,17 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('updates clock settings immediately while editing', () => {
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    fireEvent.change(screen.getByLabelText('Time stretch (%)'), { target: { value: '145' } })
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      clockTimeStretchPercent: 145,
+    })
+  })
+
   it('persists sports widget refresh and league filters', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,

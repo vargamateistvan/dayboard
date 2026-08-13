@@ -1356,6 +1356,34 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   });
 
   useEffect(() => {
+    const nextClockTimeFontSizeRem = parseOptionalFontSizeRem(clockTimeFontSize);
+    const nextClockDateFontSizeRem = parseOptionalFontSizeRem(clockDateFontSize);
+    const nextClockTimeStretchPercent = parseOptionalStretchPercent(clockTimeStretch);
+
+    if (
+      settings.clockTimeFontSizeRem === nextClockTimeFontSizeRem
+      && settings.clockDateFontSizeRem === nextClockDateFontSizeRem
+      && settings.clockTimeStretchPercent === nextClockTimeStretchPercent
+    ) {
+      return;
+    }
+
+    updateSettings({
+      clockTimeFontSizeRem: nextClockTimeFontSizeRem,
+      clockDateFontSizeRem: nextClockDateFontSizeRem,
+      clockTimeStretchPercent: nextClockTimeStretchPercent,
+    });
+  }, [
+    clockDateFontSize,
+    clockTimeFontSize,
+    clockTimeStretch,
+    settings.clockDateFontSizeRem,
+    settings.clockTimeFontSizeRem,
+    settings.clockTimeStretchPercent,
+    updateSettings,
+  ]);
+
+  useEffect(() => {
     if (selectedPresetName) {
       setEditingPresetName(selectedPresetName);
     }
