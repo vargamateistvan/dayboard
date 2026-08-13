@@ -169,6 +169,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [artistSnapshot, setArtistSnapshot] = useState<SpotifyArtistSnapshot | null>(null)
   const [artistLoading, setArtistLoading] = useState(false)
   const [artistError, setArtistError] = useState<string | null>(null)
+  const [stablePlayerUrl, setStablePlayerUrl] = useState('')
   const isLargeEmbed = placements.spotify.rowSpan >= 2
 
   useEffect(() => {
@@ -191,6 +192,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           setArtistSnapshot(null)
           setArtistLoading(false)
           setArtistError(null)
+          setStablePlayerUrl('')
         }
         return
       }
@@ -212,6 +214,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             clearStoredSpotifyAuth()
             setConnectError('Spotify permissions changed. Please reconnect Spotify.')
             setSpotifyStateError(null)
+            setStablePlayerUrl('')
             return
           }
           setSpotifyState(null)
@@ -299,6 +302,13 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         .slice(0, 3),
     [spotifyState?.recentlyPlayed],
   )
+
+  useEffect(() => {
+    if (!activePlayerUrl) {
+      return
+    }
+    setStablePlayerUrl((current) => (current === activePlayerUrl ? current : activePlayerUrl))
+  }, [activePlayerUrl])
 
   const handleConnectSpotify = () => {
     setConnectError(null)
@@ -437,14 +447,14 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             <div className={styles.playerPane}>
               {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
               {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
-              {!spotifyStateError && activePlayerUrl ? (
+              {!spotifyStateError && stablePlayerUrl ? (
                 <SpotifyIframePlayer
-                  sourceUrl={activePlayerUrl}
+                  sourceUrl={stablePlayerUrl}
                   embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
                   colorScheme={resolveColorScheme(settings.colorScheme)}
                 />
               ) : null}
-              {!spotifyStateLoading && !spotifyStateError && !activePlayerUrl ? (
+              {!spotifyStateLoading && !spotifyStateError && !stablePlayerUrl ? (
                 <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>
               ) : null}
             </div>
