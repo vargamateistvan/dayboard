@@ -115,7 +115,11 @@ export function SpotifyIframePlayer({
           embedSize === 'fullscreen' ? styles.embedAreaFullscreen : '',
           embedSize === 'large' ? styles.embedAreaLarge : styles.embedAreaNormal,
         ].join(' ')}
-        style={embedSize === 'fullscreen' ? undefined : { height: `${embedHeight}px` }}
+        style={
+          embedSize === 'fullscreen'
+            ? undefined
+            : { height: `${embedHeight}px`, minHeight: `${embedHeight}px` }
+        }
       >
         {apiError ? <div className={styles.error}>{apiError}</div> : null}
         {!isApiReady ? (
