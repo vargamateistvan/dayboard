@@ -38,6 +38,29 @@ describe('fetchSpotifyAccountSnapshot', () => {
           item: null,
         }),
       })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [
+            {
+              played_at: '2026-08-13T10:00:00.000Z',
+              track: {
+                type: 'track',
+                name: 'Dreams',
+                artists: [{ name: 'Fleetwood Mac' }],
+                album: {
+                  name: 'Rumours',
+                  images: [],
+                },
+                external_urls: {
+                  spotify: 'https://open.spotify.com/track/example',
+                },
+              },
+            },
+          ],
+        }),
+      })
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -54,9 +77,11 @@ describe('fetchSpotifyAccountSnapshot', () => {
       progress_ms: null,
       item: null,
     })
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(snapshot.recentlyPlayed).toHaveLength(1)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me')
     expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player')
+    expect(fetchMock.mock.calls[2]?.[0]).toContain('/me/player/recently-played?limit=3')
     vi.unstubAllGlobals()
   })
 })

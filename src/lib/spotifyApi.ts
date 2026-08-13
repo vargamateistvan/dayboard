@@ -56,9 +56,28 @@ export interface SpotifyPlaybackState {
   item: SpotifyPlaybackItem | null
 }
 
+export interface SpotifyRecentPlayedTrack {
+  type: 'track'
+  name: string
+  artists: SpotifyPlaybackArtist[]
+  album: {
+    name: string
+    images: Array<{ url: string; width?: number; height?: number }>
+  }
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifyRecentPlayedItem {
+  played_at: string
+  track: SpotifyRecentPlayedTrack
+}
+
 export interface SpotifyAccountSnapshot {
   profile: SpotifyProfile
   playback: SpotifyPlaybackState | null
+  recentlyPlayed: SpotifyRecentPlayedItem[] | null
 }
 
 async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T> {
@@ -86,7 +105,7 @@ async function fetchSpotifyOptionalJson<T>(accessToken: string, path: string): P
     },
   })
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 401 || response.status === 403) {
     return null
   }
 
@@ -99,10 +118,14 @@ async function fetchSpotifyOptionalJson<T>(accessToken: string, path: string): P
 
 export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Promise<SpotifyAccountSnapshot> {
   const validAuth = await getValidSpotifyAuth(auth)
-  const [profile, playback] = await Promise.all([
+  const [profile, playback, recentlyPlayed] = await Promise.all([
     fetchSpotifyJson<SpotifyProfile>(validAuth.accessToken, '/me'),
     fetchSpotifyOptionalJson<SpotifyPlaybackState>(validAuth.accessToken, '/me/player'),
+    fetchSpotifyOptionalJson<{ items?: SpotifyRecentPlayedItem[] }>(
+      validAuth.accessToken,
+      '/me/player/recently-played?limit=3',
+    ),
   ])
 
-  return { profile, playback }
+  return { profile, playback, recentlyPlayed: recentlyPlayed?.items ?? null }
 }

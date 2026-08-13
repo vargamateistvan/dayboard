@@ -89,7 +89,9 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
   const spotifyConnected = Boolean(spotifyState)
   const spotifyDisplayName = spotifyState?.profile.display_name?.trim() || spotifyState?.profile.id || ''
+  const spotifyAvatarUrl = spotifyState?.profile.images[0]?.url ?? ''
   const spotifyPlayback = spotifyState?.playback ?? null
+  const spotifyRecentlyPlayed = spotifyState?.recentlyPlayed ?? []
   const spotifyNowPlaying = useMemo(() => {
     if (!spotifyPlayback?.item) {
       return null
@@ -113,6 +115,21 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       durationMs: spotifyPlayback.item.duration_ms,
     }
   }, [spotifyPlayback])
+
+  const spotifyRecentHistory = useMemo(() => {
+    return spotifyRecentlyPlayed.map((entry) => ({
+      title: entry.track.name,
+      subtitle: entry.track.artists.map((artist) => artist.name).join(', '),
+      detail: entry.track.album.name,
+      href: entry.track.external_urls.spotify,
+      playedAt: new Date(entry.played_at).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    }))
+  }, [spotifyRecentlyPlayed])
 
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextUrl = event.target.value
@@ -162,9 +179,14 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
      {spotifyConnected && (
        <section className={styles.accountCard}>
          <div className={styles.accountHeader}>
-           <div>
-             <div className={styles.accountLabel}>Connected Spotify</div>
-             <div className={styles.accountName}>{spotifyDisplayName}</div>
+           <div className={styles.accountIdentity}>
+             {spotifyAvatarUrl ? (
+               <img className={styles.accountAvatar} src={spotifyAvatarUrl} alt="" />
+             ) : null}
+             <div>
+               <div className={styles.accountLabel}>Connected Spotify</div>
+               <div className={styles.accountName}>{spotifyDisplayName}</div>
+             </div>
            </div>
            <div className={styles.accountBadge}>{spotifyPlayback?.is_playing ? 'Playing' : 'Connected'}</div>
          </div>
@@ -206,6 +228,24 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                    )}%`,
                  }}
                />
+             </div>
+           </div>
+         )}
+
+         {!spotifyStateLoading && !spotifyStateError && spotifyRecentHistory.length > 0 && (
+           <div className={styles.historySection}>
+             <div className={styles.historyLabel}>Recently played</div>
+             <div className={styles.historyList}>
+               {spotifyRecentHistory.map((item) => (
+                 <div key={`${item.href}-${item.playedAt}`} className={styles.historyItem}>
+                   <div className={styles.historyTitle}>{item.title}</div>
+                   <div className={styles.historySubtitle}>
+                     {item.subtitle}
+                     {item.detail ? ` · ${item.detail}` : ''}
+                     {item.playedAt ? ` · ${item.playedAt}` : ''}
+                   </div>
+                 </div>
+               ))}
              </div>
            </div>
          )}

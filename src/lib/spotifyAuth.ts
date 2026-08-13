@@ -12,6 +12,9 @@ export interface SpotifyAuthNotice {
 const SPOTIFY_SCOPES = [
   'user-read-email',
   'user-read-private',
+  'user-read-playback-state',
+  'user-read-currently-playing',
+  'user-read-recently-played',
 ]
 const AUTH_STORAGE_KEY = 'dayboard_spotify_auth'
 const AUTH_NOTICE_KEY = 'dayboard_spotify_auth_notice'

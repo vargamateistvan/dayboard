@@ -165,14 +165,33 @@ describe('SpotifyWidget', () => {
           duration_ms: 257_000,
         },
       },
+      recentlyPlayed: [
+        {
+          played_at: '2026-08-13T10:00:00.000Z',
+          track: {
+            type: 'track',
+            name: 'Dreams',
+            artists: [{ name: 'Fleetwood Mac' }],
+            album: {
+              name: 'Rumours',
+              images: [],
+            },
+            external_urls: {
+              spotify: 'https://open.spotify.com/track/example',
+            },
+          },
+        },
+      ],
     })
 
     renderWithSettings(<SpotifyWidget />)
 
     expect(await screen.findByText('Connected Spotify')).toBeInTheDocument()
     expect(screen.getByText('Dayboard')).toBeInTheDocument()
-    expect(screen.getByText('Dreams')).toBeInTheDocument()
-    expect(screen.getByText(/Fleetwood Mac/)).toBeInTheDocument()
+    const historySection = screen.getByText(/Recently played/).parentElement
+    expect(historySection).not.toBeNull()
+    expect(historySection?.textContent).toContain('Dreams')
+    expect(historySection?.textContent).toContain('Fleetwood Mac')
     expect(screen.getByRole('link', { name: /Open in Spotify/i })).toHaveAttribute(
       'href',
       'https://open.spotify.com/track/example',
