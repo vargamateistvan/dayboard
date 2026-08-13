@@ -73,6 +73,7 @@ export function SpotifyIframePlayer({
       ? 'Ready'
       : 'Loading'
   const progressPercent = getProgressPercent(playbackState)
+  const embedHeight = embedSize === 'fullscreen' ? '100%' : embedSize === 'large' ? 352 : 152
 
   useEffect(() => {
     let cancelled = false
@@ -99,7 +100,7 @@ export function SpotifyIframePlayer({
           {
             url: sourceUrl,
             width: '100%',
-            height: '100%',
+            height: embedHeight,
           },
           (controller) => {
             if (cancelled) {
@@ -147,7 +148,7 @@ export function SpotifyIframePlayer({
       controllerRef.current?.destroy()
       controllerRef.current = null
     }
-  }, [sourceUrl])
+  }, [embedHeight, sourceUrl])
 
   const handleTogglePlay = () => {
     controllerRef.current?.togglePlay()

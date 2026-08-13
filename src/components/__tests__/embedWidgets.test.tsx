@@ -252,6 +252,39 @@ describe('SpotifyWidget', () => {
     fireEvent.click(screen.getByText('Dreams'))
     expect(screen.getByText(/Showing Dreams/i)).toBeInTheDocument()
   })
+
+  it('ignores recently played entries missing track details', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    })
+    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
+      profile: {
+        id: 'dayboard',
+        display_name: 'Dayboard',
+        images: [],
+      },
+      playback: null,
+      recentlyPlayed: [
+        {
+          played_at: '2026-08-13T10:00:00.000Z',
+          track: null,
+        },
+      ],
+      library: {
+        topArtists: [],
+        topTracks: [],
+        savedAlbums: [],
+        playlists: [],
+      },
+    })
+
+    renderWithSettings(<SpotifyWidget />)
+
+    expect(await screen.findByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
+    expect(screen.queryByText(/TypeError/i)).not.toBeInTheDocument()
+  })
 })
 
 describe('AppleMusicWidget', () => {

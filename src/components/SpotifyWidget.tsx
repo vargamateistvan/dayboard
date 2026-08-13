@@ -33,9 +33,10 @@ type SpotifySelection = {
 function formatPlaybackSummary(snapshot: SpotifyAccountSnapshot | null): SpotifySelection | null {
   const item = snapshot?.playback?.item
   if (!item) {
-    return snapshot?.recentlyPlayed?.[0]
-      ? formatRecentSummary(snapshot.recentlyPlayed[0])
-      : null
+    const firstRecentWithTrack = snapshot?.recentlyPlayed?.find(
+      (recentlyPlayedItem) => Boolean(recentlyPlayedItem.track?.external_urls.spotify),
+    )
+    return firstRecentWithTrack ? formatRecentSummary(firstRecentWithTrack) : null
   }
 
   if (item.type === 'track') {
@@ -53,7 +54,11 @@ function formatPlaybackSummary(snapshot: SpotifyAccountSnapshot | null): Spotify
   }
 }
 
-function formatRecentSummary(item: SpotifyRecentPlayedItem): SpotifySelection {
+function formatRecentSummary(item: SpotifyRecentPlayedItem): SpotifySelection | null {
+  if (!item.track?.external_urls.spotify) {
+    return null
+  }
+
   return {
     url: item.track.external_urls.spotify,
     title: item.track.name,
@@ -212,6 +217,33 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
   const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
   const library = spotifyState?.library
+  const playlistItems = useMemo(
+    () =>
+      (library?.playlists ?? []).filter(
+        (playlist): playlist is SpotifySearchPlaylistItem =>
+          typeof playlist.external_urls.spotify === 'string' && playlist.external_urls.spotify.length > 0,
+      ),
+    [library?.playlists],
+  )
+  const recentPlayedItems = useMemo(
+    () =>
+      (spotifyState?.recentlyPlayed ?? [])
+        .map((item) => {
+          const selection = formatRecentSummary(item)
+          if (!selection) {
+            return null
+          }
+
+          return {
+            playedAt: item.played_at,
+            selection,
+            artworkUrl: item.track?.album.images[0]?.url,
+          }
+        })
+        .filter((item): item is { playedAt: string; selection: SpotifySelection; artworkUrl: string | undefined } => item !== null)
+        .slice(0, 3),
+    [spotifyState?.recentlyPlayed],
+  )
 
   const handleConnectSpotify = () => {
     setConnectError(null)
@@ -443,11 +475,11 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                 <div className={styles.librarySection}>
                   <div className={styles.sectionHeader}>
                     <span className={styles.sectionTitle}>Your Spotify library</span>
-                    <span className={styles.spotifyPill}>{library.playlists.length || 'No playlists'}</span>
+                    <span className={styles.spotifyPill}>{playlistItems.length || 'No playlists'}</span>
                   </div>
                   <div className={styles.resultGroupTitle}>Playlists</div>
                   <div className={styles.resultList}>
-                    {library.playlists.slice(0, 5).map((item) => (
+                    {playlistItems.slice(0, 5).map((item) => (
                       <SearchResultButton
                         key={item.external_urls.spotify}
                         label={formatSearchPlaylist(item)}
@@ -502,29 +534,29 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
               <div className={styles.librarySection}>
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>Recently played</span>
-                  {spotifyState?.recentlyPlayed?.length ? (
-                    <span className={styles.spotifyPill}>{spotifyState.recentlyPlayed.length}</span>
+                  {recentPlayedItems.length ? (
+                    <span className={styles.spotifyPill}>{recentPlayedItems.length}</span>
                   ) : null}
                 </div>
                 <div className={styles.resultList}>
-                  {(spotifyState?.recentlyPlayed ?? []).slice(0, 3).map((item) => (
+                  {recentPlayedItems.map((item) => (
                     <button
-                      key={`${item.played_at}-${item.track.external_urls.spotify}`}
+                      key={`${item.playedAt}-${item.selection.url}`}
                       type="button"
                       className={styles.resultButton}
-                      onClick={() => handleUseSelection(formatRecentSummary(item))}
+                      onClick={() => handleUseSelection(item.selection)}
                     >
                       <div className={styles.resultArtwork}>
-                        {item.track.album.images[0]?.url ? (
-                          <img className={styles.resultImage} src={item.track.album.images[0].url} alt="" />
+                        {item.artworkUrl ? (
+                          <img className={styles.resultImage} src={item.artworkUrl} alt="" />
                         ) : (
                           <MediaBrandIcon brand="spotify" size={16} />
                         )}
                       </div>
                       <div className={styles.resultCopy}>
-                        <div className={styles.resultTitle}>{item.track.name}</div>
+                        <div className={styles.resultTitle}>{item.selection.title}</div>
                         <div className={styles.resultSubtitle}>
-                          {item.track.artists.map((artist) => artist.name).join(' · ')} · {formatRelativeTime(item.played_at)}
+                          {item.selection.subtitle} · {formatRelativeTime(item.playedAt)}
                         </div>
                       </div>
                     </button>

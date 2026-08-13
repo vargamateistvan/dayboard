@@ -100,7 +100,6 @@ export function MusicEmbedWidget({
             title={`${title} player`}
             loading="lazy"
             allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-            allowFullScreen
           />
         </div>
       )}

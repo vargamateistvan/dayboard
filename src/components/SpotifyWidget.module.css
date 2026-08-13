@@ -60,6 +60,19 @@
   min-height: 0;
 }
 
+.spotifyPlayer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-height: 0;
+}
+
+.spotifyPlayer .embedArea {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
 .spotifyHeader {
   display: flex;
   align-items: center;
@@ -164,6 +177,7 @@
 }
 
 .actionButton,
+.actionButtonLink,
 .button {
   display: inline-flex;
   align-items: center;
@@ -176,6 +190,33 @@
   color: var(--text-primary);
   font-size: 0.76rem;
   font-weight: 600;
+  text-decoration: none;
+}
+
+.playerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.playerLabel {
+  font-size: 0.93rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.playerSubLabel {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.playerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .spotifySidebar {
@@ -240,6 +281,17 @@
   border-radius: var(--radius-sm);
 }
 
+.spotifyFallbackLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.spotifyIframeHost {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 .resultGroup,
 .resultList {
   display: flex;
@@ -302,6 +354,26 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.spotifyMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.progressTrack {
+  overflow: hidden;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-primary);
 }
 
 .artistHero {

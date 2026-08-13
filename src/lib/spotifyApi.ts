@@ -71,7 +71,7 @@ export interface SpotifyRecentPlayedTrack {
 
 export interface SpotifyRecentPlayedItem {
   played_at: string
-  track: SpotifyRecentPlayedTrack
+  track: SpotifyRecentPlayedTrack | null
 }
 
 export interface SpotifySearchTrackItem {
@@ -187,14 +187,49 @@ async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T
   return response.json() as Promise<T>
 }
 
-async function fetchSpotifyOptionalJson<T>(accessToken: string, path: string): Promise<T | null> {
+const forbiddenOptionalPathsByToken = new Map<string, Set<string>>()
+
+function getForbiddenPathSetForToken(accessToken: string): Set<string> {
+  const existing = forbiddenOptionalPathsByToken.get(accessToken)
+  if (existing) {
+    return existing
+  }
+
+  const created = new Set<string>()
+  forbiddenOptionalPathsByToken.set(accessToken, created)
+  return created
+}
+
+function filterNonNullItems<T>(items: Array<T | null | undefined> | undefined): T[] {
+  return (items ?? []).filter((item): item is T => item !== null && item !== undefined)
+}
+
+async function fetchSpotifyOptionalJson<T>(
+  accessToken: string,
+  path: string,
+  options?: {
+    skipKnownForbiddenPath?: boolean
+  },
+): Promise<T | null> {
+  const forbiddenPathSet = getForbiddenPathSetForToken(accessToken)
+  if (options?.skipKnownForbiddenPath && forbiddenPathSet.has(path)) {
+    return null
+  }
+
   const response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   })
 
-  if (response.status === 204 || response.status === 401 || response.status === 403) {
+  if (response.status === 403) {
+    if (options?.skipKnownForbiddenPath) {
+      forbiddenPathSet.add(path)
+    }
+    return null
+  }
+
+  if (response.status === 204 || response.status === 401) {
     return null
   }
 
@@ -218,18 +253,22 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
       fetchSpotifyOptionalJson<{ items?: SpotifyTopArtistItem[] }>(
         validAuth.accessToken,
         '/me/top/artists?limit=5',
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifyTopTrackItem[] }>(
         validAuth.accessToken,
         '/me/top/tracks?limit=5',
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifySavedAlbumItem[] }>(
         validAuth.accessToken,
         '/me/albums?limit=5',
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifySearchPlaylistItem[] }>(
         validAuth.accessToken,
         '/me/playlists?limit=5',
+        { skipKnownForbiddenPath: true },
       ),
     ]),
   ])
@@ -239,12 +278,12 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
   return {
     profile,
     playback,
-    recentlyPlayed: recentlyPlayed?.items ?? null,
+    recentlyPlayed: filterNonNullItems(recentlyPlayed?.items),
     library: {
-      topArtists: topArtists?.items ?? [],
-      topTracks: topTracks?.items ?? [],
-      savedAlbums: savedAlbums?.items ?? [],
-      playlists: playlists?.items ?? [],
+      topArtists: filterNonNullItems(topArtists?.items),
+      topTracks: filterNonNullItems(topTracks?.items),
+      savedAlbums: filterNonNullItems(savedAlbums?.items),
+      playlists: filterNonNullItems(playlists?.items),
     },
   }
 }
@@ -275,15 +314,15 @@ export async function searchSpotifyCatalog(
   }
 
   const data = await response.json() as {
-    tracks?: { items?: SpotifySearchTrackItem[] }
-    albums?: { items?: SpotifySearchAlbumItem[] }
-    playlists?: { items?: SpotifySearchPlaylistItem[] }
+    tracks?: { items?: Array<SpotifySearchTrackItem | null> }
+    albums?: { items?: Array<SpotifySearchAlbumItem | null> }
+    playlists?: { items?: Array<SpotifySearchPlaylistItem | null> }
   }
 
   return {
-    tracks: data.tracks?.items ?? [],
-    albums: data.albums?.items ?? [],
-    playlists: data.playlists?.items ?? [],
+    tracks: filterNonNullItems(data.tracks?.items),
+    albums: filterNonNullItems(data.albums?.items),
+    playlists: filterNonNullItems(data.playlists?.items),
   }
 }
 
