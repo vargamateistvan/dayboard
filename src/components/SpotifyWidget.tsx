@@ -437,7 +437,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             <div className={styles.playerPane}>
               {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
               {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
-              {!spotifyStateLoading && !spotifyStateError && activePlayerUrl ? (
+              {!spotifyStateError && activePlayerUrl ? (
                 <SpotifyIframePlayer
                   sourceUrl={activePlayerUrl}
                   embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
