@@ -19,7 +19,7 @@ export function SpotifyIframePlayer({
   const [isApiReady, setIsApiReady] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const embedHeight = embedSize === 'fullscreen' ? '100%' : embedSize === 'large' ? 352 : 152
+  const embedHeight = embedSize === 'fullscreen' ? '100%' : embedSize === 'large' ? 460 : 232
 
   useEffect(() => {
     let cancelled = false

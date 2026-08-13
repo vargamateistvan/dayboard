@@ -10,6 +10,8 @@ import {
   searchSpotifyCatalog,
   type SpotifyAccountSnapshot,
   type SpotifyArtistSnapshot,
+  type SpotifySavedAlbumItem,
+  type SpotifyTopArtistItem,
   type SpotifyTopTrackItem,
   type SpotifyRecentPlayedItem,
   type SpotifySearchAlbumItem,
@@ -100,6 +102,22 @@ function formatTopTrack(item: SpotifyTopTrackItem): SpotifySelection {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.artists.map((artist) => artist.name).join(' · '),
+  }
+}
+
+function formatTopArtist(item: SpotifyTopArtistItem): SpotifySelection {
+  return {
+    url: item.external_urls.spotify,
+    title: item.name,
+    subtitle: 'Top artist',
+  }
+}
+
+function formatSavedAlbum(item: SpotifySavedAlbumItem): SpotifySelection {
+  return {
+    url: item.album.external_urls.spotify,
+    title: item.album.name,
+    subtitle: item.album.artists.map((artist) => artist.name).join(' · '),
   }
 }
 
@@ -217,6 +235,22 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
   const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
   const library = spotifyState?.library
+  const topTrackItems = useMemo(
+    () =>
+      (library?.topTracks ?? []).filter(
+        (track): track is SpotifyTopTrackItem =>
+          typeof track.external_urls.spotify === 'string' && track.external_urls.spotify.length > 0,
+      ),
+    [library?.topTracks],
+  )
+  const topArtistItems = useMemo(
+    () =>
+      (library?.topArtists ?? []).filter(
+        (artist): artist is SpotifyTopArtistItem =>
+          typeof artist.external_urls.spotify === 'string' && artist.external_urls.spotify.length > 0,
+      ),
+    [library?.topArtists],
+  )
   const playlistItems = useMemo(
     () =>
       (library?.playlists ?? []).filter(
@@ -224,6 +258,15 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           typeof playlist.external_urls.spotify === 'string' && playlist.external_urls.spotify.length > 0,
       ),
     [library?.playlists],
+  )
+  const savedAlbumItems = useMemo(
+    () =>
+      (library?.savedAlbums ?? []).filter(
+        (savedAlbum): savedAlbum is SpotifySavedAlbumItem =>
+          typeof savedAlbum.album.external_urls.spotify === 'string' &&
+          savedAlbum.album.external_urls.spotify.length > 0,
+      ),
+    [library?.savedAlbums],
   )
   const recentPlayedItems = useMemo(
     () =>
@@ -456,19 +499,67 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                 <div className={styles.librarySection}>
                   <div className={styles.sectionHeader}>
                     <span className={styles.sectionTitle}>Your Spotify library</span>
-                    <span className={styles.spotifyPill}>{playlistItems.length || 'No playlists'}</span>
+                    <span className={styles.spotifyPill}>
+                      {topTrackItems.length + topArtistItems.length + playlistItems.length + savedAlbumItems.length}
+                    </span>
                   </div>
-                  <div className={styles.resultGroupTitle}>Playlists</div>
-                  <div className={styles.resultList}>
-                    {playlistItems.slice(0, 5).map((item) => (
-                      <SearchResultButton
-                        key={item.external_urls.spotify}
-                        label={formatSearchPlaylist(item)}
-                        artworkUrl={item.images[0]?.url}
-                        fallbackBrand="spotify"
-                        onSelect={handleUseSelection}
-                      />
-                    ))}
+                  <div className={styles.libraryCollections}>
+                    <div className={styles.libraryCollection}>
+                      <div className={styles.resultGroupTitle}>Top tracks</div>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
+                        {topTrackItems.map((item) => (
+                          <SearchResultButton
+                            key={item.external_urls.spotify}
+                            label={formatTopTrack(item)}
+                            artworkUrl={item.album.images[0]?.url}
+                            fallbackBrand="spotify"
+                            onSelect={handleUseSelection}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.libraryCollection}>
+                      <div className={styles.resultGroupTitle}>Top artists</div>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
+                        {topArtistItems.map((item) => (
+                          <SearchResultButton
+                            key={item.external_urls.spotify}
+                            label={formatTopArtist(item)}
+                            artworkUrl={item.images[0]?.url}
+                            fallbackBrand="spotify"
+                            onSelect={handleUseSelection}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.libraryCollection}>
+                      <div className={styles.resultGroupTitle}>Playlists</div>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
+                        {playlistItems.map((item) => (
+                          <SearchResultButton
+                            key={item.external_urls.spotify}
+                            label={formatSearchPlaylist(item)}
+                            artworkUrl={item.images[0]?.url}
+                            fallbackBrand="spotify"
+                            onSelect={handleUseSelection}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className={styles.libraryCollection}>
+                      <div className={styles.resultGroupTitle}>Saved albums</div>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
+                        {savedAlbumItems.map((item) => (
+                          <SearchResultButton
+                            key={item.album.external_urls.spotify}
+                            label={formatSavedAlbum(item)}
+                            artworkUrl={item.album.images[0]?.url}
+                            fallbackBrand="spotify"
+                            onSelect={handleUseSelection}
+                          />
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -498,7 +589,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                   </div>
                   {artistLoading ? <div className={styles.connectHint}>Loading artist tracks…</div> : null}
                   {artistError ? <div className={styles.error}>{artistError}</div> : null}
-                  <div className={styles.resultList}>
+                  <div className={[styles.resultList, styles.scrollList].join(' ')}>
                     {artistSnapshot.topTracks.slice(0, 5).map((item) => (
                       <SearchResultButton
                         key={item.external_urls.spotify}
@@ -519,7 +610,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                     <span className={styles.spotifyPill}>{recentPlayedItems.length}</span>
                   ) : null}
                 </div>
-                <div className={styles.resultList}>
+                <div className={[styles.resultList, styles.scrollList].join(' ')}>
                   {recentPlayedItems.map((item) => (
                     <button
                       key={`${item.playedAt}-${item.selection.url}`}
@@ -554,7 +645,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                   {searchResults?.tracks.length ? (
                     <div className={styles.resultGroup}>
                       <div className={styles.resultGroupTitle}>Tracks</div>
-                      <div className={styles.resultList}>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
                         {searchResults.tracks.map((item) => (
                           <SearchResultButton
                             key={item.external_urls.spotify}
@@ -571,7 +662,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                   {searchResults?.albums.length ? (
                     <div className={styles.resultGroup}>
                       <div className={styles.resultGroupTitle}>Albums</div>
-                      <div className={styles.resultList}>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
                         {searchResults.albums.map((item) => (
                           <SearchResultButton
                             key={item.external_urls.spotify}
@@ -588,7 +679,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                   {searchResults?.playlists.length ? (
                     <div className={styles.resultGroup}>
                       <div className={styles.resultGroupTitle}>Playlists</div>
-                      <div className={styles.resultList}>
+                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
                         {searchResults.playlists.map((item) => (
                           <SearchResultButton
                             key={item.external_urls.spotify}
