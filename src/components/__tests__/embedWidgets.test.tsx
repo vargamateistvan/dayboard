@@ -101,30 +101,12 @@ describe('SpotifyWidget', () => {
     localStorage.clear()
   })
 
-  it('updates the saved Spotify link list when a new url is added', () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ title: 'Fleetwood Mac - Dreams' }),
-    }))
-
+  it('shows a connect button when Spotify is not linked', () => {
     renderWithSettings(<SpotifyWidget />)
 
-    fireEvent.change(screen.getByPlaceholderText(/Paste another Spotify track/i), {
-      target: { value: 'https://open.spotify.com/track/7ouMYWpwJ422jRcDASZB7P' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
-
-    return waitFor(() => {
-      expect(
-        JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').spotifyEmbedUrl,
-      ).toBe('https://open.spotify.com/track/7ouMYWpwJ422jRcDASZB7P')
-      expect(screen.getByTitle('Spotify Player player')).toHaveAttribute(
-        'src',
-        expect.stringContaining('https://open.spotify.com/embed/track/7ouMYWpwJ422jRcDASZB7P'),
-      )
-    }).finally(() => {
-      vi.unstubAllGlobals()
-    })
+    expect(screen.getByRole('button', { name: /Connect Spotify/i })).toBeInTheDocument()
+    expect(screen.getByText(/Connect Spotify to show the player here/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Connect Spotify/i }).querySelector('img')).toBeTruthy()
   })
 
   it('shows connected Spotify playback details when an account is linked', async () => {
@@ -186,16 +168,11 @@ describe('SpotifyWidget', () => {
 
     renderWithSettings(<SpotifyWidget />)
 
-    expect(await screen.findByText('Connected Spotify')).toBeInTheDocument()
-    expect(screen.getByText('Dayboard')).toBeInTheDocument()
-    const historySection = screen.getByText(/Recently played/).parentElement
-    expect(historySection).not.toBeNull()
-    expect(historySection?.textContent).toContain('Dreams')
-    expect(historySection?.textContent).toContain('Fleetwood Mac')
-    expect(screen.getByRole('link', { name: /Open in Spotify/i })).toHaveAttribute(
-      'href',
-      'https://open.spotify.com/track/example',
+    expect(await screen.findByTitle('Spotify Player player')).toHaveAttribute(
+      'src',
+      expect.stringContaining('https://open.spotify.com/embed/track/example'),
     )
+    expect(screen.queryByRole('button', { name: /Connect Spotify/i })).not.toBeInTheDocument()
   })
 })
 

@@ -19,7 +19,6 @@ import {
 import {
   normalizeAppleMusicEmbedUrl,
   normalizeApplePodcastEmbedUrl,
-  normalizeSpotifyEmbedUrl,
 } from "../lib/musicEmbeds";
 import {
   WIDGET_GRID_COLUMNS,
@@ -1078,12 +1077,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
     string | null
   >(null);
-  const [spotifyEmbedUrl, setSpotifyEmbedUrl] = useState(settings.spotifyEmbedUrl);
-  const [spotifyEmbedLinks, setSpotifyEmbedLinks] = useState(
-    normalizeSavedMediaLinks(settings.spotifyEmbedLinks, settings.spotifyEmbedUrl),
-  );
-  const [spotifyAddUrl, setSpotifyAddUrl] = useState("");
-  const [spotifyLinkError, setSpotifyLinkError] = useState<string | null>(null);
   const [appleMusicEmbedUrl, setAppleMusicEmbedUrl] = useState(settings.appleMusicEmbedUrl);
   const [appleMusicEmbedLinks, setAppleMusicEmbedLinks] = useState(
     normalizeSavedMediaLinks(settings.appleMusicEmbedLinks, settings.appleMusicEmbedUrl),
@@ -1218,12 +1211,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
-    setSpotifyEmbedUrl(nextSettings.spotifyEmbedUrl);
-    setSpotifyEmbedLinks(
-      normalizeSavedMediaLinks(nextSettings.spotifyEmbedLinks, nextSettings.spotifyEmbedUrl),
-    );
-    setSpotifyAddUrl("");
-    setSpotifyLinkError(null);
     setAppleMusicEmbedUrl(nextSettings.appleMusicEmbedUrl);
     setAppleMusicEmbedLinks(
       normalizeSavedMediaLinks(nextSettings.appleMusicEmbedLinks, nextSettings.appleMusicEmbedUrl),
@@ -1280,11 +1267,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     flightsManualLongitude: flightsManualLongitude.trim(),
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
-    spotifyEmbedUrl,
-    spotifyEmbedLinks: normalizeSavedMediaLinks(
-      spotifyEmbedLinks,
-      spotifyEmbedUrl ? createSavedMediaLink(spotifyEmbedUrl) : undefined,
-    ),
+    spotifyEmbedUrl: settings.spotifyEmbedUrl,
+    spotifyEmbedLinks: settings.spotifyEmbedLinks,
     appleMusicEmbedUrl,
     appleMusicEmbedLinks: normalizeSavedMediaLinks(
       appleMusicEmbedLinks,
@@ -2951,14 +2935,15 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                               type="button"
                               disabled={spotifyAuthLoading}
                             >
+                              <MediaBrandIcon brand="spotify" size={14} className={styles.googleLogo} />
                               {spotifyAuthLoading ? "Connecting…" : "Connect Spotify"}
                             </button>
                           )}
                         </div>
                         <p className={styles.hint}>
                           {spotifyAuth
-                            ? "Spotify is connected in this browser. Your saved Spotify links still work as before."
-                            : "Connecting Spotify is optional. You can keep using pasted Spotify links without signing in."}
+                            ? "Spotify is connected in this browser."
+                            : "Connecting Spotify is optional."}
                         </p>
                         {spotifyAuthNotice && (
                           <p
@@ -2973,40 +2958,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             {spotifyAuthNotice.message}
                           </p>
                         )}
-                        <MediaLinkEditor
-                          title="Spotify"
-                          brand="spotify"
-                          activeUrl={spotifyEmbedUrl}
-                          savedLinks={spotifyEmbedLinks}
-                          addUrl={spotifyAddUrl}
-                          addPlaceholder="https://open.spotify.com/track/..."
-                          onSelectUrl={(url) => {
-                            setSpotifyEmbedUrl(url);
-                            setSpotifyLinkError(null);
-                          }}
-                          onRemoveSelected={() =>
-                            removeMediaLink(
-                              spotifyEmbedLinks,
-                              spotifyEmbedUrl,
-                              setSpotifyEmbedLinks,
-                              setSpotifyEmbedUrl,
-                            )
-                          }
-                          onAddUrlChange={setSpotifyAddUrl}
-                          onAddLink={() =>
-                            void addMediaLink({
-                              value: spotifyAddUrl,
-                              setValue: setSpotifyAddUrl,
-                              links: spotifyEmbedLinks,
-                              setLinks: setSpotifyEmbedLinks,
-                              validate: normalizeSpotifyEmbedUrl,
-                              setActiveUrl: setSpotifyEmbedUrl,
-                              setError: setSpotifyLinkError,
-                              errorMessage: "Please paste a valid Spotify track, album, playlist, artist, show or episode link.",
-                            })
-                          }
-                          error={spotifyLinkError}
-                        />
                       </>
                     )}
                     {isAppleMusicOnLayout && (

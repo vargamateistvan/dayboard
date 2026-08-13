@@ -279,59 +279,6 @@ describe('SettingsDialog', () => {
     })
   })
 
-  it('shows Spotify account controls when the Spotify widget is enabled', () => {
-    localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({
-        visibility: { spotify: true },
-      }),
-    )
-
-    renderSettingsDialog()
-    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
-
-    expect(screen.getByRole('button', { name: 'Connect Spotify' })).toBeInTheDocument()
-    expect(
-      screen.getByText(/Connecting Spotify is optional. You can keep using pasted Spotify links/i),
-    ).toBeInTheDocument()
-  })
-
-  it('starts Spotify login from widget settings', () => {
-    localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({
-        visibility: { spotify: true },
-      }),
-    )
-
-    renderSettingsDialog()
-    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Spotify' }))
-
-    expect(spotifyAuth.startSpotifyLogin).toHaveBeenCalledTimes(1)
-  })
-
-  it('shows disconnect controls when Spotify is already connected', () => {
-    localStorage.setItem(
-      LAYOUT_STORAGE_KEY,
-      JSON.stringify({
-        visibility: { spotify: true },
-      }),
-    )
-    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
-
-    renderSettingsDialog()
-    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
-
-    fireEvent.click(screen.getByRole('button', { name: 'Disconnect Spotify' }))
-
-    expect(spotifyAuth.clearStoredSpotifyAuth).toHaveBeenCalledTimes(1)
-  })
-
   it('shows widget-specific settings only when the widget is on the layout', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,

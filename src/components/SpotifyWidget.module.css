@@ -6,141 +6,37 @@
   min-height: 0;
 }
 
-.accountCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.75rem 0.85rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--bg-surface) 88%, var(--accent-primary) 12%);
-}
-
-.accountHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.accountIdentity {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  min-width: 0;
-}
-
-.accountAvatar {
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 999px;
-  object-fit: cover;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-color);
-  flex: 0 0 auto;
-}
-
-.accountLabel {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.accountName {
-  font-size: 0.95rem;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.accountBadge {
-  flex: 0 0 auto;
-  padding: 0.2rem 0.45rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
-  color: var(--text-primary);
-  font-size: 0.72rem;
-}
-
-.accountHint {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-.nowPlaying {
+.connectCard {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  padding-top: 0.15rem;
-}
-
-.nowPlayingRow {
-  display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: center;
+  min-height: 10rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 92%, var(--accent-primary) 8%);
 }
 
-.nowPlayingMain {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.nowPlayingTitle {
-  font-size: 0.9rem;
-  font-weight: 600;
+.connectButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
   color: var(--text-primary);
+  font-weight: 600;
 }
 
-.nowPlayingSubtitle {
-  font-size: 0.76rem;
-  color: var(--text-secondary);
-}
-
-.nowPlayingLink {
+.connectIcon {
   flex: 0 0 auto;
-  font-size: 0.76rem;
-  color: var(--accent-primary);
-  text-decoration: none;
 }
 
-.historySection {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.historyLabel {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.historyList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.historyItem {
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-  padding-top: 0.25rem;
-  border-top: 1px solid color-mix(in srgb, var(--text-secondary) 12%, transparent);
-}
-
-.historyTitle {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.historySubtitle {
-  font-size: 0.74rem;
+.connectHint {
+  font-size: 0.78rem;
   color: var(--text-secondary);
 }
 
