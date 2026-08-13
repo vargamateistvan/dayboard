@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { MediaBrandIcon } from './MediaBrandIcon'
-import { MusicEmbedWidget } from './MusicEmbedWidget'
+import { SpotifyIframePlayer } from './SpotifyIframePlayer'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { resolveColorScheme } from '../lib/settings'
@@ -182,8 +182,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const liveSelection = useMemo(() => formatPlaybackSummary(spotifyState), [spotifyState])
   const activeSelection = selectedSelection ?? liveSelection
   const activePlayerUrl = activeSelection?.url ?? ''
-  const activePlayerLabel = activeSelection?.title ?? 'Spotify player'
-  const activePlayerSubtitle = activeSelection?.subtitle ?? 'Open Spotify and start playing to show the player.'
   const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
   const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
 
@@ -257,37 +255,33 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
           <div className={styles.spotifyLayout}>
             <div className={[styles.embedArea, isFullscreen ? styles.embedAreaFullscreen : '', isLargeEmbed ? styles.embedAreaLarge : styles.embedAreaNormal].join(' ')}>
+              {selectedSelection ? (
+                <div className={styles.spotifySelectionBar}>
+                  <span className={styles.spotifySelectionText}>
+                    Showing {selectedSelection.title}
+                  </span>
+                  <button
+                    className={styles.actionButton}
+                    type="button"
+                    onClick={() => setSelectedSelection(null)}
+                  >
+                    Back to live
+                  </button>
+                </div>
+              ) : null}
               {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
               {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
               {!spotifyStateLoading && !spotifyStateError && activePlayerUrl ? (
-                <>
-                  <div className={styles.playerHeader}>
-                    <div>
-                      <div className={styles.playerLabel}>{activePlayerLabel}</div>
-                      <div className={styles.playerSubLabel}>{activePlayerSubtitle}</div>
-                    </div>
-                    <div className={styles.playerActions}>
-                      {selectedSelection ? (
-                        <button className={styles.actionButton} type="button" onClick={() => setSelectedSelection(null)}>
-                          Back to live
-                        </button>
-                      ) : null}
-                      <a className={styles.actionButtonLink} href={activePlayerUrl} target="_blank" rel="noreferrer">
-                        Open in Spotify
-                      </a>
-                    </div>
-                  </div>
-                  <MusicEmbedWidget
-                    title="Spotify Player"
-                    provider="spotify"
-                    shareUrl={activePlayerUrl}
-                    showHeader={false}
-                    showStatus={false}
-                    showActions={false}
-                    embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-                    colorScheme={resolvedColorScheme}
-                  />
-                </>
+                <SpotifyIframePlayer
+                  sourceUrl={activePlayerUrl}
+                  title={selectedSelection?.title ?? 'Spotify player'}
+                  subtitle={
+                    selectedSelection?.subtitle ??
+                    'Open Spotify and start playing to show the player.'
+                  }
+                  embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
+                  colorScheme={resolveColorScheme(settings.colorScheme)}
+                />
               ) : null}
               {!spotifyStateLoading && !spotifyStateError && !activePlayerUrl ? (
                 <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>

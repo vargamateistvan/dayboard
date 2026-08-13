@@ -6,6 +6,44 @@
   min-height: 0;
 }
 
+.spotifyPlayer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-height: 0;
+}
+
+.spotifyFallbackLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.spotifyIframeHost {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.spotifyMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.spotifySelectionBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem 0.65rem;
+}
+
+.spotifySelectionText {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
 .connectCard {
   display: flex;
   flex-direction: column;
@@ -299,6 +337,7 @@
   flex: 1 1 auto;
   min-height: 0;
   min-width: 0;
+  position: relative;
 }
 
 .embedAreaNormal {
