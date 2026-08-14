@@ -259,6 +259,51 @@ describe('SpotifyWidget', () => {
     })
   })
 
+  it('falls back to the embedded player for free accounts', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession)
+    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
+      ...baseSnapshot,
+      profile: {
+        ...baseSnapshot.profile,
+        product: 'free',
+      },
+    })
+    vi.mocked(spotifyApi.searchSpotifyCatalog).mockResolvedValue({
+      tracks: [
+        {
+          type: 'track',
+          name: 'Dreams',
+          artists: [{ name: 'Fleetwood Mac' }],
+          album: {
+            name: 'Rumours',
+            images: [],
+          },
+          external_urls: {
+            spotify: 'https://open.spotify.com/track/example',
+          },
+        },
+      ],
+      albums: [],
+      playlists: [],
+      shows: [],
+      episodes: [],
+    })
+
+    renderWithSettings(<SpotifyWidget />)
+
+    expect(await screen.findByText(/playing through Spotify's embedded player/i)).toBeInTheDocument()
+
+    const searchInput = screen.getByPlaceholderText(/Songs, albums, podcasts/i)
+    fireEvent.change(searchInput, { target: { value: 'dreams' } })
+    fireEvent.click(await screen.findByText('Dreams'))
+
+    expect(await screen.findByTitle('Spotify player: Dreams')).toHaveAttribute(
+      'src',
+      expect.stringContaining('https://open.spotify.com/embed/track/example'),
+    )
+    expect(playbackControls.activate).not.toHaveBeenCalled()
+  })
+
   it('ignores recently played entries missing track details', async () => {
     vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession)
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({

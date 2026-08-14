@@ -4,6 +4,8 @@ export interface SpotifyProfile {
   id: string
   display_name: string | null
   images: Array<{ url: string; width?: number; height?: number }>
+  /** Requires the `user-read-private` scope. `premium`, `free`, or `open`. */
+  product?: string
 }
 
 export interface SpotifyPlaybackArtist {
