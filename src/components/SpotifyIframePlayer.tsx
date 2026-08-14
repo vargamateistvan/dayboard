@@ -94,7 +94,7 @@ export function SpotifyIframePlayer({
     embedSize === 'fullscreen'
       ? '100%'
       : isCompactEntity
-        ? 80
+        ? 152
         : embedSize === 'large'
           ? 460
           : 232
