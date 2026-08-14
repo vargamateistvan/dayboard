@@ -400,8 +400,15 @@
 }
 
 .embedAreaFullscreen {
-  min-height: clamp(28rem, 68vh, 56rem);
+  min-height: clamp(30rem, 78vh, 64rem);
   height: auto;
+}
+
+/* Track/episode embeds max out at 352px of real content; anything taller
+   renders as blank filler inside Spotify's iframe. */
+.embedAreaTrack {
+  min-height: 352px;
+  height: 352px;
 }
 
 .embedFrame {

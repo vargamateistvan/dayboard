@@ -32,17 +32,24 @@ export function SpotifyEmbedPlayer({ selection, colorScheme, embedSize }: Spotif
   const themedUrl = new URL(embedUrl)
   themedUrl.searchParams.set('theme', colorScheme === 'dark' ? '0' : '1')
 
+  // Track and episode embeds cap their content at 352px — taller iframes just
+  // show blank filler. Context embeds (album/playlist/show/artist) render a
+  // scrollable tracklist, so they should fill all the space they can get.
+  const embedType = themedUrl.pathname.split('/')[2] ?? ''
+  const isFixedHeightEmbed = embedType === 'track' || embedType === 'episode'
+
+  const sizeClass = isFixedHeightEmbed
+    ? embedSize === 'normal'
+      ? styles.embedAreaNormal
+      : styles.embedAreaTrack
+    : embedSize === 'fullscreen'
+      ? styles.embedAreaFullscreen
+      : embedSize === 'large'
+        ? styles.embedAreaLarge
+        : styles.embedAreaNormal
+
   return (
-    <div
-      className={[
-        styles.embedArea,
-        embedSize === 'fullscreen'
-          ? styles.embedAreaFullscreen
-          : embedSize === 'large'
-            ? styles.embedAreaLarge
-            : styles.embedAreaNormal,
-      ].join(' ')}
-    >
+    <div className={[styles.embedArea, sizeClass].join(' ')}>
       <iframe
         className={styles.embedFrame}
         src={themedUrl.toString()}
