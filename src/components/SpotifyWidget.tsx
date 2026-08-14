@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import { SpotifyIframePlayer } from './SpotifyIframePlayer'
 import { useSettings } from '../lib/useSettings'
@@ -165,6 +165,24 @@ function getPlaylistCountLabel(results: SpotifySearchResults): string {
     : 'No results yet'
 }
 
+const SPOTIFY_ACCOUNT_REFRESH_MS = 120_000
+const SPOTIFY_AUTOCOMPLETE_DEBOUNCE_MS = 500
+const SPOTIFY_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3
+const SPOTIFY_SEARCH_CACHE_TTL_MS = 45_000
+
+function parseSpotifyRateLimitSeconds(message: string): number | null {
+  const retryMatch = message.match(/Retry after (\d+) seconds/i)
+  if (retryMatch?.[1]) {
+    return Math.max(1, Number.parseInt(retryMatch[1], 10))
+  }
+
+  if (/rate limit|too many requests|429/i.test(message)) {
+    return 30
+  }
+
+  return null
+}
+
 export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const { settings } = useSettings()
   const { placements } = useWidgetVisibility()
@@ -185,12 +203,19 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [artistError, setArtistError] = useState<string | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
   const [controlError, setControlError] = useState<string | null>(null)
+  const spotifyRateLimitUntilRef = useRef(0)
+  const searchCacheRef = useRef<Map<string, { expiresAt: number; results: SpotifySearchResults }>>(new Map())
+  const skipNextAutocompleteRef = useRef(false)
   const isLargeEmbed = placements.spotify.rowSpan >= 2
 
   useEffect(() => {
     let cancelled = false
 
     const syncSpotifyAccount = async () => {
+      if (Date.now() < spotifyRateLimitUntilRef.current) {
+        return
+      }
+
       const auth = getStoredSpotifyAuth()
       if (!auth) {
         if (!cancelled) {
@@ -224,9 +249,15 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       } catch (loadError) {
         if (!cancelled) {
           const errorMessage = loadError instanceof Error ? loadError.message : 'Failed to load Spotify data.'
-          if (errorMessage.includes('Insufficient client scope')) {
-            clearStoredSpotifyAuth()
-            setConnectError('Spotify permissions changed. Please reconnect Spotify.')
+        const rateLimitSeconds = parseSpotifyRateLimitSeconds(errorMessage)
+        if (rateLimitSeconds) {
+          spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+          setSpotifyStateError(`Spotify rate limit reached. Retrying in ${rateLimitSeconds}s.`)
+          return
+        }
+        if (errorMessage.includes('Insufficient client scope')) {
+          clearStoredSpotifyAuth()
+          setConnectError('Spotify permissions changed. Please reconnect Spotify.')
             setSpotifyStateError(null)
             return
           }
@@ -246,8 +277,11 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
     void syncSpotifyAccount()
     const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return
+      }
       void syncSpotifyAccount()
-    }, 60_000)
+    }, SPOTIFY_ACCOUNT_REFRESH_MS)
 
     return () => {
       cancelled = true
@@ -331,12 +365,19 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (Date.now() < spotifyRateLimitUntilRef.current) {
+      const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
+      setSearchError(`Spotify rate limit reached. Try again in ${waitSeconds}s.`)
+      return
+    }
+
     const auth = getStoredSpotifyAuth()
     if (!auth) {
       return
     }
 
     const trimmedQuery = searchQuery.trim()
+    const queryCacheKey = trimmedQuery.toLowerCase()
     if (!trimmedQuery) {
       setSearchResults(null)
       setSearchError(null)
@@ -347,11 +388,27 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     setSearchError(null)
 
     try {
-      const results = await searchSpotifyCatalog(auth, trimmedQuery)
+      const now = Date.now()
+      const cached = searchCacheRef.current.get(queryCacheKey)
+      const results =
+        cached && cached.expiresAt > now
+          ? cached.results
+          : await searchSpotifyCatalog(auth, trimmedQuery)
+      if (!cached || cached.expiresAt <= now) {
+        searchCacheRef.current.set(queryCacheKey, {
+          expiresAt: now + SPOTIFY_SEARCH_CACHE_TTL_MS,
+          results,
+        })
+      }
       setSearchResults(results)
     } catch (error) {
       setSearchResults(null)
-      setSearchError(error instanceof Error ? error.message : 'Failed to search Spotify.')
+      const message = error instanceof Error ? error.message : 'Failed to search Spotify.'
+      const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
+      if (rateLimitSeconds) {
+        spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+      }
+      setSearchError(message)
     } finally {
       setSearchLoading(false)
     }
@@ -360,8 +417,17 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   useEffect(() => {
     const auth = getStoredSpotifyAuth()
     const trimmedQuery = searchQuery.trim()
+    const queryCacheKey = trimmedQuery.toLowerCase()
 
-    if (!auth || trimmedQuery.length < 2) {
+    if (skipNextAutocompleteRef.current) {
+      skipNextAutocompleteRef.current = false
+      setAutocompleteResults(null)
+      setAutocompleteLoading(false)
+      setAutocompleteError(null)
+      return
+    }
+
+    if (!auth || trimmedQuery.length < SPOTIFY_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
       setAutocompleteResults(null)
       setAutocompleteLoading(false)
       setAutocompleteError(null)
@@ -373,16 +439,38 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     setAutocompleteError(null)
 
     const timer = window.setTimeout(() => {
+      if (Date.now() < spotifyRateLimitUntilRef.current) {
+        setAutocompleteLoading(false)
+        return
+      }
+
+      const now = Date.now()
+      const cached = searchCacheRef.current.get(queryCacheKey)
+      if (cached && cached.expiresAt > now) {
+        setAutocompleteResults(cached.results)
+        setAutocompleteLoading(false)
+        return
+      }
+
       void searchSpotifyCatalog(auth, trimmedQuery)
         .then((results) => {
           if (!cancelled) {
+            searchCacheRef.current.set(queryCacheKey, {
+              expiresAt: Date.now() + SPOTIFY_SEARCH_CACHE_TTL_MS,
+              results,
+            })
             setAutocompleteResults(results)
           }
         })
         .catch((error: unknown) => {
           if (!cancelled) {
+            const message = error instanceof Error ? error.message : 'Failed to load autocomplete.'
+            const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
+            if (rateLimitSeconds) {
+              spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+            }
             setAutocompleteResults(null)
-            setAutocompleteError(error instanceof Error ? error.message : 'Failed to load autocomplete.')
+            setAutocompleteError(message)
           }
         })
         .finally(() => {
@@ -390,7 +478,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             setAutocompleteLoading(false)
           }
         })
-    }, 250)
+    }, SPOTIFY_AUTOCOMPLETE_DEBOUNCE_MS)
 
     return () => {
       cancelled = true
@@ -400,6 +488,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
   const handleUseSelection = (selection: SpotifySelection) => {
     setControlError(null)
+    skipNextAutocompleteRef.current = true
     setSearchQuery(selection.title)
     setSelectedSelection(selection)
     const artistId = extractSpotifyArtistId(selection.url)
@@ -447,6 +536,12 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       return
     }
 
+    if (Date.now() < spotifyRateLimitUntilRef.current) {
+      const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
+      setControlError(`Spotify rate limit reached. Try again in ${waitSeconds}s.`)
+      return
+    }
+
     setControlLoading(true)
     setControlError(null)
     try {
@@ -454,6 +549,10 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       await refreshSpotifyPlayback()
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to control Spotify playback.'
+      const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
+      if (rateLimitSeconds) {
+        spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+      }
       if (message.includes('Insufficient client scope')) {
         clearStoredSpotifyAuth()
         setConnectError('Spotify permissions changed. Please reconnect Spotify.')

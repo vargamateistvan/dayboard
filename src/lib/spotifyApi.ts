@@ -199,7 +199,8 @@ async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T
   }
 
   if (!response.ok) {
-    throw new Error('Failed to load Spotify data.')
+    const details = await parseSpotifyError(response)
+    throw new Error(`Failed to load Spotify data. ${details}`)
   }
 
   return response.json() as Promise<T>
@@ -302,8 +303,18 @@ async function fetchSpotifyOptionalJson<T>(
     return null
   }
 
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    const retryAfterText =
+      retryAfter && Number.isFinite(Number(retryAfter))
+        ? ` Retry after ${Math.max(1, Number(retryAfter))} seconds.`
+        : ''
+    throw new Error(`Spotify API rate limit reached.${retryAfterText}`)
+  }
+
   if (!response.ok) {
-    throw new Error('Failed to load Spotify playback state.')
+    const details = await parseSpotifyError(response)
+    throw new Error(`Failed to load Spotify playback state. ${details}`)
   }
 
   return response.json() as Promise<T>
@@ -379,7 +390,16 @@ export async function searchSpotifyCatalog(
   })
 
   if (!response.ok) {
-    throw new Error('Failed to search Spotify.')
+    if (response.status === 429) {
+      const retryAfter = response.headers.get('Retry-After')
+      const retryAfterText =
+        retryAfter && Number.isFinite(Number(retryAfter))
+          ? ` Retry after ${Math.max(1, Number(retryAfter))} seconds.`
+          : ''
+      throw new Error(`Spotify API rate limit reached.${retryAfterText}`)
+    }
+    const details = await parseSpotifyError(response)
+    throw new Error(`Failed to search Spotify. ${details}`)
   }
 
   const data = await response.json() as {
@@ -438,6 +458,15 @@ async function sendSpotifyPlaybackCommand(
 
   if (response.ok) {
     return
+  }
+
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    const retryAfterText =
+      retryAfter && Number.isFinite(Number(retryAfter))
+        ? ` Retry after ${Math.max(1, Number(retryAfter))} seconds.`
+        : ''
+    throw new Error(`Spotify API rate limit reached.${retryAfterText}`)
   }
 
   const details = await parseSpotifyError(response)
