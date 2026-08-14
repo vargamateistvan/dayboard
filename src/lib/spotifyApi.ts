@@ -169,6 +169,24 @@ export interface SpotifyAccountSnapshot {
   library: SpotifyLibrarySnapshot | null
 }
 
+async function parseSpotifyError(response: Response): Promise<string> {
+  try {
+    const data = await response.json() as { error?: { message?: string } }
+    const message = data.error?.message?.trim()
+    if (message) {
+      return message
+    }
+  } catch {
+    // Ignore JSON parse errors and fall back to status text.
+  }
+
+  if (response.statusText) {
+    return response.statusText
+  }
+
+  return 'Spotify request failed.'
+}
+
 async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T> {
   const response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: {
@@ -399,4 +417,45 @@ export async function fetchSpotifyArtistSnapshot(
     artist: artistResponse,
     topTracks: topTracksResponse.tracks ?? [],
   }
+}
+
+async function sendSpotifyPlaybackCommand(
+  auth: SpotifyAuthSession,
+  path: string,
+  method: 'POST' | 'PUT' = 'POST',
+) {
+  const validAuth = await getValidSpotifyAuth(auth)
+  const response = await fetch(`https://api.spotify.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${validAuth.accessToken}`,
+    },
+  })
+
+  if (response.status === 204 || response.status === 202) {
+    return
+  }
+
+  if (response.ok) {
+    return
+  }
+
+  const details = await parseSpotifyError(response)
+  throw new Error(`Failed to control Spotify playback. ${details}`)
+}
+
+export async function skipToNextSpotifyTrack(auth: SpotifyAuthSession) {
+  await sendSpotifyPlaybackCommand(auth, '/me/player/next')
+}
+
+export async function skipToPreviousSpotifyTrack(auth: SpotifyAuthSession) {
+  await sendSpotifyPlaybackCommand(auth, '/me/player/previous')
+}
+
+export async function pauseSpotifyPlayback(auth: SpotifyAuthSession) {
+  await sendSpotifyPlaybackCommand(auth, '/me/player/pause', 'PUT')
+}
+
+export async function resumeSpotifyPlayback(auth: SpotifyAuthSession) {
+  await sendSpotifyPlaybackCommand(auth, '/me/player/play', 'PUT')
 }

@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fetchSpotifyAccountSnapshot, searchSpotifyCatalog } from '../spotifyApi'
+import {
+  fetchSpotifyAccountSnapshot,
+  pauseSpotifyPlayback,
+  resumeSpotifyPlayback,
+  searchSpotifyCatalog,
+  skipToNextSpotifyTrack,
+  skipToPreviousSpotifyTrack,
+} from '../spotifyApi'
 import * as spotifyAuth from '../spotifyAuth'
 
 vi.mock('../spotifyAuth', () => ({
@@ -245,6 +252,48 @@ describe('searchSpotifyCatalog', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/search?')
     expect(fetchMock.mock.calls[0]?.[0]).toContain('q=dreams')
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('playback controls', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('sends pause/play/next/previous commands to Spotify', async () => {
+    vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      statusText: 'No Content',
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const auth = {
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    }
+
+    await skipToPreviousSpotifyTrack(auth)
+    await resumeSpotifyPlayback(auth)
+    await pauseSpotifyPlayback(auth)
+    await skipToNextSpotifyTrack(auth)
+
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me/player/previous')
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player/play')
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('https://api.spotify.com/v1/me/player/pause')
+    expect(fetchMock.mock.calls[3]?.[0]).toBe('https://api.spotify.com/v1/me/player/next')
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'PUT' })
+    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'PUT' })
     vi.unstubAllGlobals()
   })
 })

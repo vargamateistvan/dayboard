@@ -73,6 +73,161 @@
   padding: 0;
 }
 
+.customPlayerCard {
+  display: flex;
+  align-items: stretch;
+  gap: 0.65rem;
+  padding: 0.65rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-surface) 88%, #111827 12%);
+}
+
+.customPlayerCardLight {
+  background: color-mix(in srgb, var(--bg-surface) 96%, #d1d5db 4%);
+}
+
+.customPlayerCardLarge {
+  align-items: center;
+  min-height: 12rem;
+}
+
+.customPlayerArtwork {
+  width: 3.65rem;
+  height: 3.65rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--bg-surface) 70%, #111827 30%);
+  flex: 0 0 auto;
+}
+
+.customPlayerArtworkImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.customPlayerBody {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex: 1 1 auto;
+}
+
+.customPlayerTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.customPlayerTitleGroup {
+  min-width: 0;
+}
+
+.customPlayerTitle {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customPlayerSubtitle {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customPlayerLiveBadge {
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.14rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.customPlayerProgressWrap {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.customPlayerTime {
+  font-size: 0.67rem;
+  color: var(--text-secondary);
+}
+
+.customPlayerProgressTrack {
+  height: 0.3rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text-secondary) 22%, transparent);
+}
+
+.customPlayerProgressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent-primary);
+}
+
+.customPlayerControls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.customPlayerIconButton {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.customPlayerIconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.customPlayerVolume {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-secondary);
+}
+
+.customPlayerOpenLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.26rem 0.55rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  text-decoration: none;
+}
+
 .spotifyHeader {
   display: flex;
   align-items: center;
@@ -482,5 +637,15 @@
 
   .embedAreaFullscreen {
     min-height: min(24rem, 58dvh);
+  }
+
+  .customPlayerCard {
+    gap: 0.5rem;
+    padding: 0.55rem;
+  }
+
+  .customPlayerArtwork {
+    width: 3rem;
+    height: 3rem;
   }
 }

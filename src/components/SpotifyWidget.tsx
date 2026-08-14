@@ -7,7 +7,11 @@ import { resolveColorScheme } from '../lib/settings'
 import {
   fetchSpotifyAccountSnapshot,
   fetchSpotifyArtistSnapshot,
+  pauseSpotifyPlayback,
+  resumeSpotifyPlayback,
   searchSpotifyCatalog,
+  skipToNextSpotifyTrack,
+  skipToPreviousSpotifyTrack,
   type SpotifyAccountSnapshot,
   type SpotifyArtistSnapshot,
   type SpotifySavedAlbumItem,
@@ -24,6 +28,7 @@ import {
   getStoredSpotifyAuth,
   onSpotifyAuthChanged,
   startSpotifyLogin,
+  type SpotifyAuthSession,
 } from '../lib/spotifyAuth'
 import styles from './SpotifyWidget.module.css'
 
@@ -35,6 +40,7 @@ type SpotifySelection = {
   readonly url: string
   readonly title: string
   readonly subtitle: string
+  readonly artworkUrl?: string
 }
 
 function formatPlaybackSummary(snapshot: SpotifyAccountSnapshot | null): SpotifySelection | null {
@@ -51,6 +57,7 @@ function formatPlaybackSummary(snapshot: SpotifyAccountSnapshot | null): Spotify
       url: item.external_urls.spotify,
       title: item.name,
       subtitle: item.artists.map((artist) => artist.name).join(' · '),
+      artworkUrl: item.album.images[0]?.url,
     }
   }
 
@@ -70,6 +77,7 @@ function formatRecentSummary(item: SpotifyRecentPlayedItem): SpotifySelection | 
     url: item.track.external_urls.spotify,
     title: item.track.name,
     subtitle: item.track.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.track.album.images[0]?.url,
   }
 }
 
@@ -78,6 +86,7 @@ function formatSearchTrack(item: SpotifySearchTrackItem): SpotifySelection {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.album.images[0]?.url,
   }
 }
 
@@ -86,6 +95,7 @@ function formatSearchAlbum(item: SpotifySearchAlbumItem): SpotifySelection {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.images[0]?.url,
   }
 }
 
@@ -94,6 +104,7 @@ function formatSearchPlaylist(item: SpotifySearchPlaylistItem): SpotifySelection
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.owner.display_name ?? `${item.tracks.total} tracks`,
+    artworkUrl: item.images[0]?.url,
   }
 }
 
@@ -107,6 +118,7 @@ function formatTopTrack(item: SpotifyTopTrackItem): SpotifySelection {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: item.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.album.images[0]?.url,
   }
 }
 
@@ -115,6 +127,7 @@ function formatTopArtist(item: SpotifyTopArtistItem): SpotifySelection {
     url: item.external_urls.spotify,
     title: item.name,
     subtitle: 'Top artist',
+    artworkUrl: item.images[0]?.url,
   }
 }
 
@@ -123,6 +136,7 @@ function formatSavedAlbum(item: SpotifySavedAlbumItem): SpotifySelection {
     url: item.album.external_urls.spotify,
     title: item.album.name,
     subtitle: item.album.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.album.images[0]?.url,
   }
 }
 
@@ -169,7 +183,8 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [artistSnapshot, setArtistSnapshot] = useState<SpotifyArtistSnapshot | null>(null)
   const [artistLoading, setArtistLoading] = useState(false)
   const [artistError, setArtistError] = useState<string | null>(null)
-  const [stablePlayerUrl, setStablePlayerUrl] = useState('')
+  const [controlLoading, setControlLoading] = useState(false)
+  const [controlError, setControlError] = useState<string | null>(null)
   const isLargeEmbed = placements.spotify.rowSpan >= 2
 
   useEffect(() => {
@@ -192,7 +207,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           setArtistSnapshot(null)
           setArtistLoading(false)
           setArtistError(null)
-          setStablePlayerUrl('')
         }
         return
       }
@@ -214,7 +228,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             clearStoredSpotifyAuth()
             setConnectError('Spotify permissions changed. Please reconnect Spotify.')
             setSpotifyStateError(null)
-            setStablePlayerUrl('')
             return
           }
           setSpotifyState(null)
@@ -246,9 +259,15 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const isConnected = Boolean(spotifyState)
   const liveSelection = useMemo(() => formatPlaybackSummary(spotifyState), [spotifyState])
   const activeSelection = selectedSelection ?? liveSelection
-  const activePlayerUrl = activeSelection?.url ?? ''
   const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
   const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
+  const livePlaybackItem = spotifyState?.playback?.item ?? null
+  const livePlaybackUrl = livePlaybackItem?.external_urls.spotify ?? ''
+  const isLivePlaybackSelection = Boolean(activeSelection?.url && activeSelection.url === livePlaybackUrl)
+  const currentProgressMs = isLivePlaybackSelection ? spotifyState?.playback?.progress_ms ?? null : null
+  const currentDurationMs = isLivePlaybackSelection ? livePlaybackItem?.duration_ms ?? null : null
+  const isCurrentlyPlaying = isLivePlaybackSelection ? Boolean(spotifyState?.playback?.is_playing) : false
+  const canControlPlayback = isLivePlaybackSelection && Boolean(spotifyState?.playback?.device)
   const library = spotifyState?.library
   const topTrackItems = useMemo(
     () =>
@@ -302,13 +321,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         .slice(0, 3),
     [spotifyState?.recentlyPlayed],
   )
-
-  useEffect(() => {
-    if (!activePlayerUrl) {
-      return
-    }
-    setStablePlayerUrl((current) => (current === activePlayerUrl ? current : activePlayerUrl))
-  }, [activePlayerUrl])
 
   const handleConnectSpotify = () => {
     setConnectError(null)
@@ -387,6 +399,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   }, [searchQuery])
 
   const handleUseSelection = (selection: SpotifySelection) => {
+    setControlError(null)
     setSearchQuery(selection.title)
     setSelectedSelection(selection)
     const artistId = extractSpotifyArtistId(selection.url)
@@ -412,6 +425,59 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       setArtistLoading(false)
       setArtistError(null)
     }
+  }
+
+  const refreshSpotifyPlayback = async () => {
+    const auth = getStoredSpotifyAuth()
+    if (!auth) {
+      setSpotifyState(null)
+      return
+    }
+
+    const snapshot = await fetchSpotifyAccountSnapshot(auth)
+    setSpotifyState(snapshot)
+  }
+
+  const handlePlaybackControl = async (
+    action: (auth: SpotifyAuthSession) => Promise<void>,
+  ) => {
+    const auth = getStoredSpotifyAuth()
+    if (!auth) {
+      setControlError('Spotify session expired. Please reconnect Spotify.')
+      return
+    }
+
+    setControlLoading(true)
+    setControlError(null)
+    try {
+      await action(auth)
+      await refreshSpotifyPlayback()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to control Spotify playback.'
+      if (message.includes('Insufficient client scope')) {
+        clearStoredSpotifyAuth()
+        setConnectError('Spotify permissions changed. Please reconnect Spotify.')
+        setSpotifyStateError(null)
+        setControlError(null)
+        return
+      }
+      setControlError(message)
+    } finally {
+      setControlLoading(false)
+    }
+  }
+
+  const handlePrevious = () => {
+    void handlePlaybackControl(skipToPreviousSpotifyTrack)
+  }
+
+  const handleTogglePlay = () => {
+    const action = isCurrentlyPlaying ? pauseSpotifyPlayback : resumeSpotifyPlayback
+    void handlePlaybackControl(action)
+  }
+
+  const handleNext = () => {
+    void handlePlaybackControl(skipToNextSpotifyTrack)
   }
 
   return (
@@ -447,14 +513,26 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             <div className={styles.playerPane}>
               {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
               {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
-              {!spotifyStateError && stablePlayerUrl ? (
+              {!spotifyStateError && activeSelection ? (
                 <SpotifyIframePlayer
-                  sourceUrl={stablePlayerUrl}
+                  sourceUrl={activeSelection.url}
+                  title={activeSelection.title}
+                  subtitle={activeSelection.subtitle}
+                  artworkUrl={activeSelection.artworkUrl}
+                  isPlaying={isCurrentlyPlaying}
+                  progressMs={currentProgressMs}
+                  durationMs={currentDurationMs}
+                  isLivePlayback={isLivePlaybackSelection}
+                  controlsDisabled={!canControlPlayback || controlLoading}
+                  onPrevious={handlePrevious}
+                  onTogglePlay={handleTogglePlay}
+                  onNext={handleNext}
                   embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
                   colorScheme={resolveColorScheme(settings.colorScheme)}
                 />
               ) : null}
-              {!spotifyStateLoading && !spotifyStateError && !stablePlayerUrl ? (
+              {controlError ? <div className={styles.error}>{controlError}</div> : null}
+              {!spotifyStateLoading && !spotifyStateError && !activeSelection ? (
                 <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>
               ) : null}
             </div>
