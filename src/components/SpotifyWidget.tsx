@@ -185,6 +185,31 @@ function parseSpotifyRateLimitSeconds(message: string): number | null {
   return null
 }
 
+const SPOTIFY_RATE_LIMIT_STORAGE_KEY = 'dayboard_spotify_rate_limit_until'
+
+function readPersistedRateLimitUntil(): number {
+  if (typeof window === 'undefined') {
+    return 0
+  }
+  const raw = window.localStorage.getItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY)
+  const parsed = raw ? Number(raw) : 0
+  if (!Number.isFinite(parsed) || parsed <= Date.now()) {
+    return 0
+  }
+  return parsed
+}
+
+function persistRateLimitUntil(until: number) {
+  if (typeof window === 'undefined') {
+    return
+  }
+  if (until > Date.now()) {
+    window.localStorage.setItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY, String(until))
+  } else {
+    window.localStorage.removeItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY)
+  }
+}
+
 export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const { settings } = useSettings()
   const { placements } = useWidgetVisibility()
@@ -207,7 +232,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [controlError, setControlError] = useState<string | null>(null)
   const [authSession, setAuthSession] = useState<SpotifyAuthSession | null>(() => getStoredSpotifyAuth())
   const [browserPlaybackEnabled, setBrowserPlaybackEnabled] = useState(false)
-  const spotifyRateLimitUntilRef = useRef(0)
+  const spotifyRateLimitUntilRef = useRef(readPersistedRateLimitUntil())
   const searchCacheRef = useRef<Map<string, { expiresAt: number; results: SpotifySearchResults }>>(new Map())
   const skipNextAutocompleteRef = useRef(false)
   const isLargeEmbed = placements.spotify.rowSpan >= 2
@@ -217,6 +242,10 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
     const syncSpotifyAccount = async () => {
       if (Date.now() < spotifyRateLimitUntilRef.current) {
+        if (!cancelled) {
+          const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
+          setSpotifyStateError(`Spotify rate limit reached. Retrying in ${waitSeconds}s.`)
+        }
         return
       }
 
@@ -256,6 +285,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         const rateLimitSeconds = parseSpotifyRateLimitSeconds(errorMessage)
         if (rateLimitSeconds) {
           spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+          persistRateLimitUntil(spotifyRateLimitUntilRef.current)
           setSpotifyStateError(`Spotify rate limit reached. Retrying in ${rateLimitSeconds}s.`)
           return
         }
@@ -436,6 +466,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
       if (rateLimitSeconds) {
         spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+        persistRateLimitUntil(spotifyRateLimitUntilRef.current)
       }
       setSearchError(message)
     } finally {
@@ -497,6 +528,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
             if (rateLimitSeconds) {
               spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+              persistRateLimitUntil(spotifyRateLimitUntilRef.current)
             }
             setAutocompleteResults(null)
             setAutocompleteError(message)
@@ -581,6 +613,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
       if (rateLimitSeconds) {
         spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+        persistRateLimitUntil(spotifyRateLimitUntilRef.current)
       }
       if (message.includes('Insufficient client scope')) {
         clearStoredSpotifyAuth()
@@ -617,6 +650,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             <span>Connect Spotify</span>
           </button>
           <p className={styles.connectHint}>Connect Spotify to show the player here.</p>
+          {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
           {connectError && <div className={styles.error}>{connectError}</div>}
         </section>
       ) : (
