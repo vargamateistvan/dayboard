@@ -275,7 +275,16 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       }
     }
 
+    let hadAuth = Boolean(getStoredSpotifyAuth())
     const stopListening = onSpotifyAuthChanged(() => {
+      const hasAuth = Boolean(getStoredSpotifyAuth())
+      // Token refreshes (e.g. from the Web Playback SDK) fire this event too,
+      // but the account snapshot only needs refetching when we connect or
+      // disconnect. Ignoring refresh-only changes avoids request storms.
+      if (hasAuth === hadAuth) {
+        return
+      }
+      hadAuth = hasAuth
       void syncSpotifyAccount()
     })
 
@@ -295,7 +304,17 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   }, [])
 
   useEffect(() => {
-    const updateAuthSession = () => setAuthSession(getStoredSpotifyAuth())
+    const updateAuthSession = () => {
+      setAuthSession((previous) => {
+        const next = getStoredSpotifyAuth()
+        // Preserve the previous object identity across token refreshes so the
+        // Web Playback SDK player is not torn down and reconnected repeatedly.
+        if (previous?.refreshToken && previous.refreshToken === next?.refreshToken) {
+          return previous
+        }
+        return next
+      })
+    }
     updateAuthSession()
     return onSpotifyAuthChanged(updateAuthSession)
   }, [])

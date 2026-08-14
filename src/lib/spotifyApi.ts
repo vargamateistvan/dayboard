@@ -198,6 +198,15 @@ async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T
     throw new Error('Spotify request returned no content.')
   }
 
+  if (response.status === 429) {
+    const retryAfter = response.headers.get('Retry-After')
+    const retryAfterText =
+      retryAfter && Number.isFinite(Number(retryAfter))
+        ? ` Retry after ${Math.max(1, Number(retryAfter))} seconds.`
+        : ''
+    throw new Error(`Spotify API rate limit reached.${retryAfterText}`)
+  }
+
   if (!response.ok) {
     const details = await parseSpotifyError(response)
     throw new Error(`Failed to load Spotify data. ${details}`)
