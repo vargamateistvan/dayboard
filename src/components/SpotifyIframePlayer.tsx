@@ -133,6 +133,7 @@ export function SpotifyIframePlayer({
               controllerRef.current = controller
               loadedSourceUrlRef.current = sourceUrl
               loadedEntityKeyRef.current = sourceEntityKey
+              setIsApiReady(true)
               controller.addListener('ready', () => {
                 if (!cancelled) {
                   setIsApiReady(true)
