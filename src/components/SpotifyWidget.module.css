@@ -172,19 +172,6 @@
   color: var(--text-secondary);
 }
 
-.customPlayerProgressTrack {
-  height: 0.3rem;
-  border-radius: 999px;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--text-secondary) 22%, transparent);
-}
-
-.customPlayerProgressFill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent-primary);
-}
-
 .customPlayerControls {
   display: flex;
   align-items: center;
@@ -209,13 +196,6 @@
   cursor: not-allowed;
 }
 
-.customPlayerVolume {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  color: var(--text-secondary);
-}
-
 .customPlayerOpenLink {
   display: inline-flex;
   align-items: center;
@@ -228,31 +208,45 @@
   text-decoration: none;
 }
 
-.browserPlayerToggleRow {
+.tabRow {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  margin-bottom: 0.4rem;
+  gap: 0.35rem;
 }
 
-.browserPlayerToggle {
+.tabButton {
+  flex: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
-  padding: 0.24rem 0.55rem;
+  padding: 0.3rem 0.55rem;
   border: 1px solid var(--border-color);
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
 }
 
-.browserPlayerToggleActive {
+.tabButtonActive {
   color: var(--text-primary);
   border-color: var(--accent-primary);
   background: color-mix(in srgb, var(--accent-primary) 14%, transparent);
+}
+
+.disconnectButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.16rem 0.45rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .browserPlayerReady {
@@ -410,17 +404,6 @@
   height: auto;
 }
 
-.spotifySelectionBar {
-  display: none;
-}
-
-.spotifySelectionText {
-  font-size: 0.74rem;
-  color: var(--text-secondary);
-}
-
-.actionButton,
-.actionButtonLink,
 .button {
   display: inline-flex;
   align-items: center;
@@ -434,32 +417,6 @@
   font-size: 0.76rem;
   font-weight: 600;
   text-decoration: none;
-}
-
-.playerHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.7rem;
-}
-
-.playerLabel {
-  font-size: 0.93rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.playerSubLabel {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
-.playerActions {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .spotifySidebar {
@@ -521,42 +478,6 @@
   color: var(--text-primary);
 }
 
-.autocompleteWrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.38rem;
-}
-
-.autocompletePanel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.35rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-}
-
-.spotifyFallbackLayer {
-  position: absolute;
-  inset: 0;
-  background: var(--bg-surface);
-}
-
-.spotifyIframeHost {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background: var(--bg-surface);
-}
-
-.spotifyIframeHost > iframe {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.resultGroup,
 .resultList {
   display: flex;
   flex-direction: column;
@@ -626,62 +547,6 @@
   text-overflow: ellipsis;
 }
 
-.spotifyMetaRow {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.progressTrack {
-  overflow: hidden;
-  height: 0.35rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
-}
-
-.progressFill {
-  height: 100%;
-  border-radius: inherit;
-  background: var(--accent-primary);
-}
-
-.artistHero {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-}
-
-.artistHeroImage {
-  width: 2.7rem;
-  height: 2.7rem;
-  border: 1px solid var(--border-color);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-}
-
-.artistHeroCopy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.artistHeroTitle {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.artistHeroSubtitle {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
-
 .error {
   border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: var(--radius-sm);
@@ -703,8 +568,8 @@
 
 @media (max-width: 700px) {
   .spotifyHeader,
-  .searchPanel,
-  .librarySection {
+.searchPanel,
+.librarySection {
     padding: 0.65rem;
   }
 

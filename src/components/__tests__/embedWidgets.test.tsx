@@ -11,18 +11,43 @@ import { ApplePodcastWidget } from '../ApplePodcastWidget'
 import * as spotifyAuth from '../../lib/spotifyAuth'
 import * as spotifyApi from '../../lib/spotifyApi'
 
+const playbackControls = vi.hoisted(() => ({
+  activate: vi.fn(async () => {}),
+  togglePlay: vi.fn(async () => {}),
+  next: vi.fn(async () => {}),
+  previous: vi.fn(async () => {}),
+  seek: vi.fn(async () => {}),
+  setVolume: vi.fn(async () => {}),
+}))
+
 vi.mock('../../lib/spotifyAuth', () => ({
   getStoredSpotifyAuth: vi.fn(() => null),
   onSpotifyAuthChanged: vi.fn(() => () => {}),
+  clearStoredSpotifyAuth: vi.fn(),
+  startSpotifyLogin: vi.fn(async () => {}),
 }))
 
-vi.mock('../../lib/spotifyApi', () => ({
+vi.mock('../../lib/spotifyApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../lib/spotifyApi')>()),
   fetchSpotifyAccountSnapshot: vi.fn(),
   searchSpotifyCatalog: vi.fn(),
-  skipToPreviousSpotifyTrack: vi.fn(),
-  pauseSpotifyPlayback: vi.fn(),
-  resumeSpotifyPlayback: vi.fn(),
-  skipToNextSpotifyTrack: vi.fn(),
+}))
+
+vi.mock('../../lib/spotifyWebPlayback', () => ({
+  useSpotifyWebPlayback: vi.fn(() => [
+    {
+      status: 'ready',
+      deviceId: 'device-1',
+      isActive: false,
+      isPaused: true,
+      nowPlaying: null,
+      positionMs: 0,
+      durationMs: 0,
+      volume: 0.5,
+      error: null,
+    },
+    playbackControls,
+  ]),
 }))
 
 function renderWithSettings(ui: ReactElement, settingsPatch: Partial<typeof DEFAULT_SETTINGS> = {}) {
@@ -97,6 +122,23 @@ describe('PodcastEmbedWidget', () => {
 })
 
 describe('SpotifyWidget', () => {
+  const authSession = {
+    accessToken: 'token',
+    refreshToken: 'refresh',
+    expiresAt: Date.now() + 60_000,
+  }
+
+  const baseSnapshot = {
+    profile: {
+      id: 'dayboard',
+      display_name: 'Dayboard',
+      images: [],
+    },
+    playback: null,
+    recentlyPlayed: null,
+    library: null,
+  }
+
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
@@ -114,44 +156,10 @@ describe('SpotifyWidget', () => {
     expect(screen.getByRole('button', { name: /Connect Spotify/i }).querySelector('img')).toBeTruthy()
   })
 
-  it('shows connected Spotify playback details when an account is linked', async () => {
-    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
+  it('shows the browser player and library when an account is linked', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession)
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
-      profile: {
-        id: 'dayboard',
-        display_name: 'Dayboard',
-        images: [],
-      },
-      playback: {
-        device: {
-          id: 'device',
-          is_active: true,
-          is_private_session: false,
-          is_restricted: false,
-          name: 'Browser',
-          type: 'computer',
-          volume_percent: 75,
-        },
-        is_playing: true,
-        progress_ms: 90_000,
-        item: {
-          type: 'track',
-          name: 'Dreams',
-          artists: [{ name: 'Fleetwood Mac' }],
-          album: {
-            name: 'Rumours',
-            images: [],
-          },
-          external_urls: {
-            spotify: 'https://open.spotify.com/track/example',
-          },
-          duration_ms: 257_000,
-        },
-      },
+      ...baseSnapshot,
       recentlyPlayed: [
         {
           played_at: '2026-08-13T10:00:00.000Z',
@@ -170,16 +178,7 @@ describe('SpotifyWidget', () => {
         },
       ],
       library: {
-        topArtists: [
-          {
-            id: 'artist-example',
-            name: 'Fleetwood Mac',
-            images: [],
-            external_urls: {
-              spotify: 'https://open.spotify.com/artist/example',
-            },
-          },
-        ],
+        topArtists: [],
         topTracks: [
           {
             name: 'Dreams',
@@ -194,90 +193,37 @@ describe('SpotifyWidget', () => {
           },
         ],
         savedAlbums: [],
+        savedShows: [
+          {
+            show: {
+              name: 'Dreams Podcast',
+              publisher: 'Dreamer FM',
+              images: [],
+              external_urls: {
+                spotify: 'https://open.spotify.com/show/example',
+              },
+            },
+          },
+        ],
         playlists: [],
       },
     })
 
     renderWithSettings(<SpotifyWidget />)
 
-    expect(await screen.findByRole('link', { name: /Open/i })).toHaveAttribute(
-      'href',
-      expect.stringContaining('https://open.spotify.com/track/example'),
-    )
-    expect(screen.getByText('Your Spotify library')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Connect Spotify/i })).not.toBeInTheDocument()
+    expect(await screen.findByText('Dayboard')).toBeInTheDocument()
+    expect(screen.getByText(/Ready to stream in this browser/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Connect Spotify$/i })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('tab', { name: /Library/i }))
+    expect(await screen.findByText('Your Spotify library')).toBeInTheDocument()
+    expect(screen.getByText('Dreams')).toBeInTheDocument()
+    expect(screen.getByText('Dreams Podcast')).toBeInTheDocument()
   })
 
-  it('sends playback control commands from the custom player', async () => {
-    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
-    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
-      profile: {
-        id: 'dayboard',
-        display_name: 'Dayboard',
-        images: [],
-      },
-      playback: {
-        device: {
-          id: 'device',
-          is_active: true,
-          is_private_session: false,
-          is_restricted: false,
-          name: 'Browser',
-          type: 'computer',
-          volume_percent: 75,
-        },
-        is_playing: false,
-        progress_ms: 90_000,
-        item: {
-          type: 'track',
-          name: 'Dreams',
-          artists: [{ name: 'Fleetwood Mac' }],
-          album: {
-            name: 'Rumours',
-            images: [],
-          },
-          external_urls: {
-            spotify: 'https://open.spotify.com/track/example',
-          },
-          duration_ms: 257_000,
-        },
-      },
-      recentlyPlayed: [],
-      library: null,
-    })
-    vi.mocked(spotifyApi.resumeSpotifyPlayback).mockResolvedValue(undefined)
-
-    renderWithSettings(<SpotifyWidget />)
-
-    const playButton = await screen.findByRole('button', { name: /Play or pause/i })
-    fireEvent.click(playButton)
-
-    await waitFor(() => {
-      expect(spotifyApi.resumeSpotifyPlayback).toHaveBeenCalledTimes(1)
-    })
-  })
-
-  it('shows autocomplete suggestions while typing a search query', async () => {
-    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
-    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
-      profile: {
-        id: 'dayboard',
-        display_name: 'Dayboard',
-        images: [],
-      },
-      playback: null,
-      recentlyPlayed: null,
-      library: null,
-    })
+  it('plays a search result through the browser player', async () => {
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession)
+    vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue(baseSnapshot)
     vi.mocked(spotifyApi.searchSpotifyCatalog).mockResolvedValue({
       tracks: [
         {
@@ -295,54 +241,41 @@ describe('SpotifyWidget', () => {
       ],
       albums: [],
       playlists: [],
+      shows: [],
+      episodes: [],
     })
 
     renderWithSettings(<SpotifyWidget />)
 
-    expect(await screen.findByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
+    const searchInput = await screen.findByPlaceholderText(/Songs, albums, podcasts/i)
+    fireEvent.change(searchInput, { target: { value: 'dreams' } })
 
-    fireEvent.change(screen.getByPlaceholderText(/Tracks, albums, or playlists/i), {
-      target: { value: 'dre' },
+    fireEvent.click(await screen.findByText('Dreams'))
+
+    await waitFor(() => {
+      expect(playbackControls.activate).toHaveBeenCalledWith({
+        uris: ['spotify:track:example'],
+      })
     })
-
-    expect(await screen.findByText('Dreams')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Dreams'))
-    expect(await screen.findByRole('link', { name: /Open/i })).toHaveAttribute(
-      'href',
-      expect.stringContaining('https://open.spotify.com/track/example'),
-    )
   })
 
   it('ignores recently played entries missing track details', async () => {
-    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
+    vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession)
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
-      profile: {
-        id: 'dayboard',
-        display_name: 'Dayboard',
-        images: [],
-      },
-      playback: null,
+      ...baseSnapshot,
       recentlyPlayed: [
         {
           played_at: '2026-08-13T10:00:00.000Z',
           track: null,
         },
       ],
-      library: {
-        topArtists: [],
-        topTracks: [],
-        savedAlbums: [],
-        playlists: [],
-      },
     })
 
     renderWithSettings(<SpotifyWidget />)
 
-    expect(await screen.findByPlaceholderText(/Tracks, albums, or playlists/i)).toBeInTheDocument()
+    expect(await screen.findByText('Dayboard')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /Recent/i }))
+    expect(await screen.findByText(/Nothing played recently/i)).toBeInTheDocument()
     expect(screen.queryByText(/TypeError/i)).not.toBeInTheDocument()
   })
 })

@@ -1,86 +1,55 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
-import { Laptop } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { History, Library, LogOut, Search } from 'lucide-react'
 import { MediaBrandIcon } from './MediaBrandIcon'
-import { SpotifyIframePlayer } from './SpotifyIframePlayer'
 import { SpotifyWebPlayer } from './SpotifyWebPlayer'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { resolveColorScheme } from '../lib/settings'
 import {
   fetchSpotifyAccountSnapshot,
-  fetchSpotifyArtistSnapshot,
-  pauseSpotifyPlayback,
-  resumeSpotifyPlayback,
   searchSpotifyCatalog,
-  skipToNextSpotifyTrack,
-  skipToPreviousSpotifyTrack,
+  spotifyUrlToPlayRequest,
   type SpotifyAccountSnapshot,
-  type SpotifyArtistSnapshot,
-  type SpotifySavedAlbumItem,
-  type SpotifyTopArtistItem,
-  type SpotifyTopTrackItem,
   type SpotifyRecentPlayedItem,
+  type SpotifySavedAlbumItem,
+  type SpotifySavedShowItem,
   type SpotifySearchAlbumItem,
+  type SpotifySearchEpisodeItem,
   type SpotifySearchPlaylistItem,
   type SpotifySearchResults,
+  type SpotifySearchShowItem,
   type SpotifySearchTrackItem,
+  type SpotifyTopArtistItem,
+  type SpotifyTopTrackItem,
 } from '../lib/spotifyApi'
 import {
   clearStoredSpotifyAuth,
   getStoredSpotifyAuth,
   onSpotifyAuthChanged,
   startSpotifyLogin,
-  type SpotifyAuthSession,
 } from '../lib/spotifyAuth'
+import { useSpotifyWebPlayback } from '../lib/spotifyWebPlayback'
 import styles from './SpotifyWidget.module.css'
 
 interface SpotifyWidgetProps {
   readonly isFullscreen?: boolean
 }
 
-type SpotifySelection = {
+type SpotifyBrowseTab = 'search' | 'recent' | 'library'
+
+interface SpotifySelection {
   readonly url: string
   readonly title: string
   readonly subtitle: string
   readonly artworkUrl?: string
 }
 
-function formatPlaybackSummary(snapshot: SpotifyAccountSnapshot | null): SpotifySelection | null {
-  const item = snapshot?.playback?.item
-  if (!item) {
-    const firstRecentWithTrack = snapshot?.recentlyPlayed?.find(
-      (recentlyPlayedItem) => Boolean(recentlyPlayedItem.track?.external_urls.spotify),
-    )
-    return firstRecentWithTrack ? formatRecentSummary(firstRecentWithTrack) : null
-  }
-
-  if (item.type === 'track') {
-    return {
-      url: item.external_urls.spotify,
-      title: item.name,
-      subtitle: item.artists.map((artist) => artist.name).join(' · '),
-      artworkUrl: item.album.images[0]?.url,
-    }
-  }
-
-  return {
-    url: item.external_urls.spotify,
-    title: item.name,
-    subtitle: `${item.show.name} · ${item.show.publisher}`,
-  }
-}
-
-function formatRecentSummary(item: SpotifyRecentPlayedItem): SpotifySelection | null {
-  if (!item.track?.external_urls.spotify) {
-    return null
-  }
-
-  return {
-    url: item.track.external_urls.spotify,
-    title: item.track.name,
-    subtitle: item.track.artists.map((artist) => artist.name).join(' · '),
-    artworkUrl: item.track.album.images[0]?.url,
-  }
+const EMPTY_SEARCH_RESULTS: SpotifySearchResults = {
+  tracks: [],
+  albums: [],
+  playlists: [],
+  shows: [],
+  episodes: [],
 }
 
 function formatSearchTrack(item: SpotifySearchTrackItem): SpotifySelection {
@@ -110,9 +79,22 @@ function formatSearchPlaylist(item: SpotifySearchPlaylistItem): SpotifySelection
   }
 }
 
-function extractSpotifyArtistId(value: string): string | null {
-  const match = value.match(/open\.spotify\.com\/artist\/([A-Za-z0-9]+)/)
-  return match?.[1] ?? null
+function formatSearchShow(item: SpotifySearchShowItem): SpotifySelection {
+  return {
+    url: item.external_urls.spotify,
+    title: item.name,
+    subtitle: item.publisher,
+    artworkUrl: item.images[0]?.url,
+  }
+}
+
+function formatSearchEpisode(item: SpotifySearchEpisodeItem): SpotifySelection {
+  return {
+    url: item.external_urls.spotify,
+    title: item.name,
+    subtitle: item.release_date ? `Episode · ${item.release_date}` : 'Episode',
+    artworkUrl: item.images[0]?.url,
+  }
 }
 
 function formatTopTrack(item: SpotifyTopTrackItem): SpotifySelection {
@@ -142,6 +124,28 @@ function formatSavedAlbum(item: SpotifySavedAlbumItem): SpotifySelection {
   }
 }
 
+function formatSavedShow(item: SpotifySavedShowItem): SpotifySelection {
+  return {
+    url: item.show.external_urls.spotify,
+    title: item.show.name,
+    subtitle: item.show.publisher,
+    artworkUrl: item.show.images[0]?.url,
+  }
+}
+
+function formatRecent(item: SpotifyRecentPlayedItem): SpotifySelection | null {
+  if (!item.track?.external_urls.spotify) {
+    return null
+  }
+
+  return {
+    url: item.track.external_urls.spotify,
+    title: item.track.name,
+    subtitle: item.track.artists.map((artist) => artist.name).join(' · '),
+    artworkUrl: item.track.album.images[0]?.url,
+  }
+}
+
 function formatRelativeTime(iso: string): string {
   const deltaMinutes = Math.round((Date.now() - new Date(iso).getTime()) / 60_000)
   if (deltaMinutes <= 1) {
@@ -160,17 +164,11 @@ function formatRelativeTime(iso: string): string {
   return `${deltaDays}d ago`
 }
 
-function getPlaylistCountLabel(results: SpotifySearchResults): string {
-  const counts = [results.tracks.length, results.albums.length, results.playlists.length]
-  return counts.some((count) => count > 0)
-    ? `${counts.reduce((sum, count) => sum + count, 0)} results`
-    : 'No results yet'
-}
-
 const SPOTIFY_ACCOUNT_REFRESH_MS = 120_000
-const SPOTIFY_AUTOCOMPLETE_DEBOUNCE_MS = 500
-const SPOTIFY_AUTOCOMPLETE_MIN_QUERY_LENGTH = 3
-const SPOTIFY_SEARCH_CACHE_TTL_MS = 45_000
+const SEARCH_DEBOUNCE_MS = 450
+const SEARCH_MIN_QUERY_LENGTH = 2
+const SEARCH_CACHE_TTL_MS = 45_000
+const RATE_LIMIT_STORAGE_KEY = 'dayboard_spotify_rate_limit_until'
 
 function parseSpotifyRateLimitSeconds(message: string): number | null {
   const retryMatch = message.match(/Retry after (\d+) seconds/i)
@@ -185,13 +183,11 @@ function parseSpotifyRateLimitSeconds(message: string): number | null {
   return null
 }
 
-const SPOTIFY_RATE_LIMIT_STORAGE_KEY = 'dayboard_spotify_rate_limit_until'
-
 function readPersistedRateLimitUntil(): number {
   if (typeof window === 'undefined') {
     return 0
   }
-  const raw = window.localStorage.getItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY)
+  const raw = window.localStorage.getItem(RATE_LIMIT_STORAGE_KEY)
   const parsed = raw ? Number(raw) : 0
   if (!Number.isFinite(parsed) || parsed <= Date.now()) {
     return 0
@@ -204,134 +200,82 @@ function persistRateLimitUntil(until: number) {
     return
   }
   if (until > Date.now()) {
-    window.localStorage.setItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY, String(until))
+    window.localStorage.setItem(RATE_LIMIT_STORAGE_KEY, String(until))
   } else {
-    window.localStorage.removeItem(SPOTIFY_RATE_LIMIT_STORAGE_KEY)
+    window.localStorage.removeItem(RATE_LIMIT_STORAGE_KEY)
   }
+}
+
+interface ResultRowProps {
+  readonly selection: SpotifySelection
+  readonly meta?: string
+  readonly onPlay: (selection: SpotifySelection) => void
+}
+
+function ResultRow({ selection, meta, onPlay }: ResultRowProps) {
+  return (
+    <button type="button" className={styles.resultButton} onClick={() => onPlay(selection)}>
+      <div className={styles.resultArtwork}>
+        {selection.artworkUrl ? (
+          <img className={styles.resultImage} src={selection.artworkUrl} alt="" />
+        ) : (
+          <MediaBrandIcon brand="spotify" size={16} />
+        )}
+      </div>
+      <div className={styles.resultCopy}>
+        <div className={styles.resultTitle}>{selection.title}</div>
+        <div className={styles.resultSubtitle}>
+          {meta ? `${selection.subtitle} · ${meta}` : selection.subtitle}
+        </div>
+      </div>
+    </button>
+  )
+}
+
+interface ResultGroupProps {
+  readonly title: string
+  readonly selections: SpotifySelection[]
+  readonly onPlay: (selection: SpotifySelection) => void
+}
+
+function ResultGroup({ title, selections, onPlay }: ResultGroupProps) {
+  if (selections.length === 0) {
+    return null
+  }
+
+  return (
+    <div className={styles.libraryCollection}>
+      <div className={styles.resultGroupTitle}>{title}</div>
+      <div className={[styles.resultList, styles.scrollList].join(' ')}>
+        {selections.map((selection) => (
+          <ResultRow key={selection.url} selection={selection} onPlay={onPlay} />
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const { settings } = useSettings()
   const { placements } = useWidgetVisibility()
-  const [spotifyState, setSpotifyState] = useState<SpotifyAccountSnapshot | null>(null)
-  const [spotifyStateLoading, setSpotifyStateLoading] = useState(false)
-  const [spotifyStateError, setSpotifyStateError] = useState<string | null>(null)
+  const [authSession, setAuthSession] = useState(() => getStoredSpotifyAuth())
+  const [snapshot, setSnapshot] = useState<SpotifyAccountSnapshot | null>(null)
+  const [snapshotLoading, setSnapshotLoading] = useState(false)
+  const [snapshotError, setSnapshotError] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
-  const [selectedSelection, setSelectedSelection] = useState<SpotifySelection | null>(null)
+  const [activeTab, setActiveTab] = useState<SpotifyBrowseTab>('search')
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SpotifySearchResults | null>(null)
   const [searchLoading, setSearchLoading] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
-  const [autocompleteResults, setAutocompleteResults] = useState<SpotifySearchResults | null>(null)
-  const [autocompleteLoading, setAutocompleteLoading] = useState(false)
-  const [autocompleteError, setAutocompleteError] = useState<string | null>(null)
-  const [artistSnapshot, setArtistSnapshot] = useState<SpotifyArtistSnapshot | null>(null)
-  const [artistLoading, setArtistLoading] = useState(false)
-  const [artistError, setArtistError] = useState<string | null>(null)
-  const [controlLoading, setControlLoading] = useState(false)
-  const [controlError, setControlError] = useState<string | null>(null)
-  const [authSession, setAuthSession] = useState<SpotifyAuthSession | null>(() => getStoredSpotifyAuth())
-  const [browserPlaybackEnabled, setBrowserPlaybackEnabled] = useState(false)
-  const spotifyRateLimitUntilRef = useRef(readPersistedRateLimitUntil())
-  const searchCacheRef = useRef<Map<string, { expiresAt: number; results: SpotifySearchResults }>>(new Map())
-  const skipNextAutocompleteRef = useRef(false)
+  const [playError, setPlayError] = useState<string | null>(null)
+  const rateLimitUntilRef = useRef(readPersistedRateLimitUntil())
+  const searchCacheRef = useRef<Map<string, { expiresAt: number; results: SpotifySearchResults }>>(
+    new Map(),
+  )
   const isLargeEmbed = placements.spotify.rowSpan >= 2
 
-  useEffect(() => {
-    let cancelled = false
-
-    const syncSpotifyAccount = async () => {
-      if (Date.now() < spotifyRateLimitUntilRef.current) {
-        if (!cancelled) {
-          const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
-          setSpotifyStateError(`Spotify rate limit reached. Retrying in ${waitSeconds}s.`)
-        }
-        return
-      }
-
-      const auth = getStoredSpotifyAuth()
-      if (!auth) {
-        if (!cancelled) {
-          setSpotifyState(null)
-          setSpotifyStateError(null)
-          setSpotifyStateLoading(false)
-          setSelectedSelection(null)
-          setSearchResults(null)
-          setSearchError(null)
-          setSearchLoading(false)
-          setAutocompleteResults(null)
-          setAutocompleteLoading(false)
-          setAutocompleteError(null)
-          setArtistSnapshot(null)
-          setArtistLoading(false)
-          setArtistError(null)
-        }
-        return
-      }
-
-      if (!cancelled) {
-        setSpotifyStateLoading(true)
-        setSpotifyStateError(null)
-      }
-
-      try {
-        const snapshot = await fetchSpotifyAccountSnapshot(auth)
-        if (!cancelled) {
-          setSpotifyState(snapshot)
-        }
-      } catch (loadError) {
-        if (!cancelled) {
-          const errorMessage = loadError instanceof Error ? loadError.message : 'Failed to load Spotify data.'
-        const rateLimitSeconds = parseSpotifyRateLimitSeconds(errorMessage)
-        if (rateLimitSeconds) {
-          spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
-          persistRateLimitUntil(spotifyRateLimitUntilRef.current)
-          setSpotifyStateError(`Spotify rate limit reached. Retrying in ${rateLimitSeconds}s.`)
-          return
-        }
-        if (errorMessage.includes('Insufficient client scope')) {
-          clearStoredSpotifyAuth()
-          setConnectError('Spotify permissions changed. Please reconnect Spotify.')
-            setSpotifyStateError(null)
-            return
-          }
-          setSpotifyState(null)
-          setSpotifyStateError(errorMessage)
-        }
-      } finally {
-        if (!cancelled) {
-          setSpotifyStateLoading(false)
-        }
-      }
-    }
-
-    let hadAuth = Boolean(getStoredSpotifyAuth())
-    const stopListening = onSpotifyAuthChanged(() => {
-      const hasAuth = Boolean(getStoredSpotifyAuth())
-      // Token refreshes (e.g. from the Web Playback SDK) fire this event too,
-      // but the account snapshot only needs refetching when we connect or
-      // disconnect. Ignoring refresh-only changes avoids request storms.
-      if (hasAuth === hadAuth) {
-        return
-      }
-      hadAuth = hasAuth
-      void syncSpotifyAccount()
-    })
-
-    void syncSpotifyAccount()
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState === 'hidden') {
-        return
-      }
-      void syncSpotifyAccount()
-    }, SPOTIFY_ACCOUNT_REFRESH_MS)
-
-    return () => {
-      cancelled = true
-      stopListening()
-      window.clearInterval(intervalId)
-    }
-  }, [])
+  const [playback, playbackControls] = useSpotifyWebPlayback(authSession, Boolean(authSession))
 
   useEffect(() => {
     const updateAuthSession = () => {
@@ -349,672 +293,399 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     return onSpotifyAuthChanged(updateAuthSession)
   }, [])
 
-  const isConnected = Boolean(spotifyState)
-  const liveSelection = useMemo(() => formatPlaybackSummary(spotifyState), [spotifyState])
-  const activeSelection = selectedSelection ?? liveSelection
-  const profileName = spotifyState?.profile.display_name ?? spotifyState?.profile.id ?? 'Spotify'
-  const deviceLabel = spotifyState?.playback?.device?.name ?? 'This browser'
-  const livePlaybackItem = spotifyState?.playback?.item ?? null
-  const livePlaybackUrl = livePlaybackItem?.external_urls.spotify ?? ''
-  const isLivePlaybackSelection = Boolean(activeSelection?.url && activeSelection.url === livePlaybackUrl)
-  const currentProgressMs = isLivePlaybackSelection ? spotifyState?.playback?.progress_ms ?? null : null
-  const currentDurationMs = isLivePlaybackSelection ? livePlaybackItem?.duration_ms ?? null : null
-  const isCurrentlyPlaying = isLivePlaybackSelection ? Boolean(spotifyState?.playback?.is_playing) : false
-  const canControlPlayback = isLivePlaybackSelection && Boolean(spotifyState?.playback?.device)
-  const library = spotifyState?.library
-  const topTrackItems = useMemo(
-    () =>
-      (library?.topTracks ?? []).filter(
-        (track): track is SpotifyTopTrackItem =>
-          typeof track.external_urls.spotify === 'string' && track.external_urls.spotify.length > 0,
-      ),
-    [library?.topTracks],
-  )
-  const topArtistItems = useMemo(
-    () =>
-      (library?.topArtists ?? []).filter(
-        (artist): artist is SpotifyTopArtistItem =>
-          typeof artist.external_urls.spotify === 'string' && artist.external_urls.spotify.length > 0,
-      ),
-    [library?.topArtists],
-  )
-  const playlistItems = useMemo(
-    () =>
-      (library?.playlists ?? []).filter(
-        (playlist): playlist is SpotifySearchPlaylistItem =>
-          typeof playlist.external_urls.spotify === 'string' && playlist.external_urls.spotify.length > 0,
-      ),
-    [library?.playlists],
-  )
-  const savedAlbumItems = useMemo(
-    () =>
-      (library?.savedAlbums ?? []).filter(
-        (savedAlbum): savedAlbum is SpotifySavedAlbumItem =>
-          typeof savedAlbum.album.external_urls.spotify === 'string' &&
-          savedAlbum.album.external_urls.spotify.length > 0,
-      ),
-    [library?.savedAlbums],
-  )
-  const recentPlayedItems = useMemo(
-    () =>
-      (spotifyState?.recentlyPlayed ?? [])
-        .map((item) => {
-          const selection = formatRecentSummary(item)
-          if (!selection) {
-            return null
-          }
+  useEffect(() => {
+    let cancelled = false
 
-          return {
-            playedAt: item.played_at,
-            selection,
-            artworkUrl: item.track?.album.images[0]?.url,
-          }
+    const syncAccount = async () => {
+      const auth = getStoredSpotifyAuth()
+      if (!auth) {
+        if (!cancelled) {
+          setSnapshot(null)
+          setSnapshotError(null)
+          setSnapshotLoading(false)
+          setSearchResults(null)
+          setSearchError(null)
+          setSearchLoading(false)
+        }
+        return
+      }
+
+      if (Date.now() < rateLimitUntilRef.current) {
+        if (!cancelled) {
+          const waitSeconds = Math.max(1, Math.ceil((rateLimitUntilRef.current - Date.now()) / 1000))
+          setSnapshotError(`Spotify rate limit reached. Retrying in ${waitSeconds}s.`)
+        }
+        return
+      }
+
+      if (!cancelled) {
+        setSnapshotLoading(true)
+        setSnapshotError(null)
+      }
+
+      try {
+        const nextSnapshot = await fetchSpotifyAccountSnapshot(auth)
+        if (!cancelled) {
+          setSnapshot(nextSnapshot)
+        }
+      } catch (loadError) {
+        if (cancelled) {
+          return
+        }
+        const message = loadError instanceof Error ? loadError.message : 'Failed to load Spotify data.'
+        const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
+        if (rateLimitSeconds) {
+          rateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+          persistRateLimitUntil(rateLimitUntilRef.current)
+          setSnapshotError(`Spotify rate limit reached. Retrying in ${rateLimitSeconds}s.`)
+          return
+        }
+        if (message.includes('Insufficient client scope')) {
+          clearStoredSpotifyAuth()
+          setConnectError('Spotify permissions changed. Please reconnect Spotify.')
+          setSnapshotError(null)
+          return
+        }
+        setSnapshot(null)
+        setSnapshotError(message)
+      } finally {
+        if (!cancelled) {
+          setSnapshotLoading(false)
+        }
+      }
+    }
+
+    let hadAuth = Boolean(getStoredSpotifyAuth())
+    const stopListening = onSpotifyAuthChanged(() => {
+      const hasAuth = Boolean(getStoredSpotifyAuth())
+      // Token refreshes fire this event too; the snapshot only needs
+      // refetching when we connect or disconnect.
+      if (hasAuth === hadAuth) {
+        return
+      }
+      hadAuth = hasAuth
+      void syncAccount()
+    })
+
+    void syncAccount()
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') {
+        return
+      }
+      void syncAccount()
+    }, SPOTIFY_ACCOUNT_REFRESH_MS)
+
+    return () => {
+      cancelled = true
+      stopListening()
+      window.clearInterval(intervalId)
+    }
+  }, [])
+
+  const runSearch = (query: string): boolean => {
+    const auth = getStoredSpotifyAuth()
+    const trimmedQuery = query.trim()
+    if (!auth || trimmedQuery.length < SEARCH_MIN_QUERY_LENGTH) {
+      setSearchResults(null)
+      setSearchError(null)
+      setSearchLoading(false)
+      return false
+    }
+
+    if (Date.now() < rateLimitUntilRef.current) {
+      const waitSeconds = Math.max(1, Math.ceil((rateLimitUntilRef.current - Date.now()) / 1000))
+      setSearchError(`Spotify rate limit reached. Try again in ${waitSeconds}s.`)
+      setSearchLoading(false)
+      return false
+    }
+
+    const cacheKey = trimmedQuery.toLowerCase()
+    const cached = searchCacheRef.current.get(cacheKey)
+    if (cached && cached.expiresAt > Date.now()) {
+      setSearchResults(cached.results)
+      setSearchError(null)
+      setSearchLoading(false)
+      return false
+    }
+
+    setSearchLoading(true)
+    setSearchError(null)
+
+    void searchSpotifyCatalog(auth, trimmedQuery)
+      .then((results) => {
+        searchCacheRef.current.set(cacheKey, {
+          expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+          results,
         })
-        .filter((item): item is { playedAt: string; selection: SpotifySelection; artworkUrl: string | undefined } => item !== null)
-        .slice(0, 3),
-    [spotifyState?.recentlyPlayed],
-  )
+        setSearchResults(results)
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : 'Failed to search Spotify.'
+        const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
+        if (rateLimitSeconds) {
+          rateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
+          persistRateLimitUntil(rateLimitUntilRef.current)
+        }
+        setSearchResults(null)
+        setSearchError(message)
+      })
+      .finally(() => {
+        setSearchLoading(false)
+      })
+    return true
+  }
 
-  const handleConnectSpotify = () => {
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      runSearch(searchQuery)
+    }, SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [searchQuery])
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    runSearch(searchQuery)
+  }
+
+  const handleConnect = () => {
     setConnectError(null)
     void startSpotifyLogin().catch((error: unknown) => {
       setConnectError(error instanceof Error ? error.message : 'Spotify login failed.')
     })
   }
 
-  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (Date.now() < spotifyRateLimitUntilRef.current) {
-      const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
-      setSearchError(`Spotify rate limit reached. Try again in ${waitSeconds}s.`)
-      return
-    }
-
-    const auth = getStoredSpotifyAuth()
-    if (!auth) {
-      return
-    }
-
-    const trimmedQuery = searchQuery.trim()
-    const queryCacheKey = trimmedQuery.toLowerCase()
-    if (!trimmedQuery) {
-      setSearchResults(null)
-      setSearchError(null)
-      return
-    }
-
-    setSearchLoading(true)
-    setSearchError(null)
-
-    try {
-      const now = Date.now()
-      const cached = searchCacheRef.current.get(queryCacheKey)
-      const results =
-        cached && cached.expiresAt > now
-          ? cached.results
-          : await searchSpotifyCatalog(auth, trimmedQuery)
-      if (!cached || cached.expiresAt <= now) {
-        searchCacheRef.current.set(queryCacheKey, {
-          expiresAt: now + SPOTIFY_SEARCH_CACHE_TTL_MS,
-          results,
-        })
-      }
-      setSearchResults(results)
-    } catch (error) {
-      setSearchResults(null)
-      const message = error instanceof Error ? error.message : 'Failed to search Spotify.'
-      const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
-      if (rateLimitSeconds) {
-        spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
-        persistRateLimitUntil(spotifyRateLimitUntilRef.current)
-      }
-      setSearchError(message)
-    } finally {
-      setSearchLoading(false)
-    }
+  const handleDisconnect = () => {
+    clearStoredSpotifyAuth()
+    setSnapshot(null)
+    setSearchQuery('')
+    setSearchResults(null)
+    setPlayError(null)
   }
 
-  useEffect(() => {
-    const auth = getStoredSpotifyAuth()
-    const trimmedQuery = searchQuery.trim()
-    const queryCacheKey = trimmedQuery.toLowerCase()
-
-    if (skipNextAutocompleteRef.current) {
-      skipNextAutocompleteRef.current = false
-      setAutocompleteResults(null)
-      setAutocompleteLoading(false)
-      setAutocompleteError(null)
+  const handlePlay = (selection: SpotifySelection) => {
+    const request = spotifyUrlToPlayRequest(selection.url)
+    if (!request) {
+      setPlayError(`“${selection.title}” cannot be played here.`)
       return
     }
 
-    if (!auth || trimmedQuery.length < SPOTIFY_AUTOCOMPLETE_MIN_QUERY_LENGTH) {
-      setAutocompleteResults(null)
-      setAutocompleteLoading(false)
-      setAutocompleteError(null)
-      return
-    }
-
-    let cancelled = false
-    setAutocompleteLoading(true)
-    setAutocompleteError(null)
-
-    const timer = window.setTimeout(() => {
-      if (Date.now() < spotifyRateLimitUntilRef.current) {
-        setAutocompleteLoading(false)
-        return
-      }
-
-      const now = Date.now()
-      const cached = searchCacheRef.current.get(queryCacheKey)
-      if (cached && cached.expiresAt > now) {
-        setAutocompleteResults(cached.results)
-        setAutocompleteLoading(false)
-        return
-      }
-
-      void searchSpotifyCatalog(auth, trimmedQuery)
-        .then((results) => {
-          if (!cancelled) {
-            searchCacheRef.current.set(queryCacheKey, {
-              expiresAt: Date.now() + SPOTIFY_SEARCH_CACHE_TTL_MS,
-              results,
-            })
-            setAutocompleteResults(results)
-          }
-        })
-        .catch((error: unknown) => {
-          if (!cancelled) {
-            const message = error instanceof Error ? error.message : 'Failed to load autocomplete.'
-            const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
-            if (rateLimitSeconds) {
-              spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
-              persistRateLimitUntil(spotifyRateLimitUntilRef.current)
-            }
-            setAutocompleteResults(null)
-            setAutocompleteError(message)
-          }
-        })
-        .finally(() => {
-          if (!cancelled) {
-            setAutocompleteLoading(false)
-          }
-        })
-    }, SPOTIFY_AUTOCOMPLETE_DEBOUNCE_MS)
-
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [searchQuery])
-
-  const handleUseSelection = (selection: SpotifySelection) => {
-    setControlError(null)
-    skipNextAutocompleteRef.current = true
-    setSearchQuery(selection.title)
-    setSelectedSelection(selection)
-    const artistId = extractSpotifyArtistId(selection.url)
-    if (artistId) {
-      setArtistLoading(true)
-      setArtistError(null)
-      const auth = getStoredSpotifyAuth()
-      if (auth) {
-        void fetchSpotifyArtistSnapshot(auth, artistId)
-          .then((snapshot) => {
-            setArtistSnapshot(snapshot)
-          })
-          .catch((error: unknown) => {
-            setArtistSnapshot(null)
-            setArtistError(error instanceof Error ? error.message : 'Failed to load artist details.')
-          })
-          .finally(() => {
-            setArtistLoading(false)
-          })
-      }
-    } else {
-      setArtistSnapshot(null)
-      setArtistLoading(false)
-      setArtistError(null)
-    }
+    setPlayError(null)
+    void playbackControls.activate(request).catch((error: unknown) => {
+      setPlayError(error instanceof Error ? error.message : 'Failed to start playback.')
+    })
   }
 
-  const refreshSpotifyPlayback = async () => {
-    const auth = getStoredSpotifyAuth()
-    if (!auth) {
-      setSpotifyState(null)
-      return
-    }
-
-    const snapshot = await fetchSpotifyAccountSnapshot(auth)
-    setSpotifyState(snapshot)
-  }
-
-  const handlePlaybackControl = async (
-    action: (auth: SpotifyAuthSession) => Promise<void>,
-  ) => {
-    const auth = getStoredSpotifyAuth()
-    if (!auth) {
-      setControlError('Spotify session expired. Please reconnect Spotify.')
-      return
-    }
-
-    if (Date.now() < spotifyRateLimitUntilRef.current) {
-      const waitSeconds = Math.max(1, Math.ceil((spotifyRateLimitUntilRef.current - Date.now()) / 1000))
-      setControlError(`Spotify rate limit reached. Try again in ${waitSeconds}s.`)
-      return
-    }
-
-    setControlLoading(true)
-    setControlError(null)
-    try {
-      await action(auth)
-      await refreshSpotifyPlayback()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to control Spotify playback.'
-      const rateLimitSeconds = parseSpotifyRateLimitSeconds(message)
-      if (rateLimitSeconds) {
-        spotifyRateLimitUntilRef.current = Date.now() + rateLimitSeconds * 1000
-        persistRateLimitUntil(spotifyRateLimitUntilRef.current)
-      }
-      if (message.includes('Insufficient client scope')) {
-        clearStoredSpotifyAuth()
-        setConnectError('Spotify permissions changed. Please reconnect Spotify.')
-        setSpotifyStateError(null)
-        setControlError(null)
-        return
-      }
-      setControlError(message)
-    } finally {
-      setControlLoading(false)
-    }
-  }
-
-  const handlePrevious = () => {
-    void handlePlaybackControl(skipToPreviousSpotifyTrack)
-  }
-
-  const handleTogglePlay = () => {
-    const action = isCurrentlyPlaying ? pauseSpotifyPlayback : resumeSpotifyPlayback
-    void handlePlaybackControl(action)
-  }
-
-  const handleNext = () => {
-    void handlePlaybackControl(skipToNextSpotifyTrack)
-  }
-
-  return (
-    <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
-      {!isConnected ? (
+  if (!authSession) {
+    return (
+      <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
         <section className={styles.connectCard}>
-          <button className={styles.connectButton} type="button" onClick={handleConnectSpotify}>
+          <button className={styles.connectButton} type="button" onClick={handleConnect}>
             <MediaBrandIcon brand="spotify" size={14} className={styles.connectIcon} />
             <span>Connect Spotify</span>
           </button>
           <p className={styles.connectHint}>Connect Spotify to show the player here.</p>
-          {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
           {connectError && <div className={styles.error}>{connectError}</div>}
         </section>
-      ) : (
-        <section className={styles.spotifyShell}>
-          <header className={styles.spotifyHeader}>
-            <div className={styles.spotifyIdentity}>
-              <div className={styles.spotifyAvatar}>
-                <MediaBrandIcon brand="spotify" size={18} className={styles.spotifyLogo} />
-              </div>
-              <div className={styles.spotifyIdentityCopy}>
-                <div className={styles.spotifyTitle}>Spotify</div>
-                <div className={styles.spotifySubtitle}>{profileName}</div>
-              </div>
-            </div>
-            <div className={styles.spotifyPills}>
-              <span className={styles.spotifyPill}>Connected</span>
-              <span className={styles.spotifyPill}>{deviceLabel}</span>
-            </div>
-          </header>
+      </div>
+    )
+  }
 
-          <div className={styles.spotifyLayout}>
-            <div className={styles.playerPane}>
-              {isConnected && authSession ? (
-                <div className={styles.browserPlayerToggleRow}>
-                  <button
-                    type="button"
-                    className={[
-                      styles.browserPlayerToggle,
-                      browserPlaybackEnabled ? styles.browserPlayerToggleActive : '',
-                    ].join(' ')}
-                    onClick={() => setBrowserPlaybackEnabled((enabled) => !enabled)}
-                    aria-pressed={browserPlaybackEnabled}
-                  >
-                    <Laptop size={13} />
-                    {browserPlaybackEnabled ? 'Browser player on' : 'Play in browser'}
+  const profileName = snapshot?.profile.display_name ?? snapshot?.profile.id ?? 'Spotify'
+  const library = snapshot?.library
+  const recentSelections = (snapshot?.recentlyPlayed ?? [])
+    .map((item) => {
+      const selection = formatRecent(item)
+      return selection ? { playedAt: item.played_at, selection } : null
+    })
+    .filter((item): item is { playedAt: string; selection: SpotifySelection } => item !== null)
+  const results = searchResults ?? EMPTY_SEARCH_RESULTS
+  const hasSearchResults =
+    results.tracks.length > 0 ||
+    results.albums.length > 0 ||
+    results.playlists.length > 0 ||
+    results.shows.length > 0 ||
+    results.episodes.length > 0
+
+  const tabs: Array<{ id: SpotifyBrowseTab; label: string; Icon: typeof Search }> = [
+    { id: 'search', label: 'Search', Icon: Search },
+    { id: 'recent', label: 'Recent', Icon: History },
+    { id: 'library', label: 'Library', Icon: Library },
+  ]
+
+  return (
+    <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
+      <section className={styles.spotifyShell}>
+        <header className={styles.spotifyHeader}>
+          <div className={styles.spotifyIdentity}>
+            <div className={styles.spotifyAvatar}>
+              <MediaBrandIcon brand="spotify" size={18} className={styles.spotifyLogo} />
+            </div>
+            <div className={styles.spotifyIdentityCopy}>
+              <div className={styles.spotifyTitle}>Spotify</div>
+              <div className={styles.spotifySubtitle}>{profileName}</div>
+            </div>
+          </div>
+          <div className={styles.spotifyPills}>
+            <span className={styles.spotifyPill}>
+              {playback.isActive ? 'Playing in browser' : 'Browser player'}
+            </span>
+            <button
+              type="button"
+              className={styles.disconnectButton}
+              onClick={handleDisconnect}
+              aria-label="Disconnect Spotify"
+            >
+              <LogOut size={12} />
+              Disconnect
+            </button>
+          </div>
+        </header>
+
+        <div className={styles.spotifyLayout}>
+          <div className={styles.playerPane}>
+            <SpotifyWebPlayer
+              state={playback}
+              controls={playbackControls}
+              colorScheme={resolveColorScheme(settings.colorScheme)}
+              embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
+            />
+            {playError ? <div className={styles.error}>{playError}</div> : null}
+            {snapshotError ? <div className={styles.error}>{snapshotError}</div> : null}
+            {connectError ? <div className={styles.error}>{connectError}</div> : null}
+          </div>
+
+          <aside className={styles.spotifySidebar}>
+            <div className={styles.tabRow} role="tablist" aria-label="Browse Spotify">
+              {tabs.map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === id}
+                  className={[styles.tabButton, activeTab === id ? styles.tabButtonActive : ''].join(' ')}
+                  onClick={() => setActiveTab(id)}
+                >
+                  <Icon size={13} />
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {activeTab === 'search' ? (
+              <form className={styles.searchPanel} onSubmit={handleSearchSubmit}>
+                <div className={styles.searchRow}>
+                  <input
+                    className={styles.input}
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Songs, albums, podcasts…"
+                    aria-label="Search Spotify"
+                  />
+                  <button className={styles.button} type="submit" disabled={searchLoading}>
+                    {searchLoading ? 'Searching…' : 'Search'}
                   </button>
                 </div>
-              ) : null}
-
-              {browserPlaybackEnabled && authSession ? (
-                <SpotifyWebPlayer
-                  auth={authSession}
-                  enabled={browserPlaybackEnabled}
-                  colorScheme={resolveColorScheme(settings.colorScheme)}
-                  embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-                  selectionUrl={activeSelection?.url}
-                  selectionLabel={activeSelection?.title}
-                />
-              ) : (
-                <>
-                  {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
-                  {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
-                  {!spotifyStateError && activeSelection ? (
-                    <SpotifyIframePlayer
-                      sourceUrl={activeSelection.url}
-                      title={activeSelection.title}
-                      subtitle={activeSelection.subtitle}
-                      artworkUrl={activeSelection.artworkUrl}
-                      isPlaying={isCurrentlyPlaying}
-                      progressMs={currentProgressMs}
-                      durationMs={currentDurationMs}
-                      isLivePlayback={isLivePlaybackSelection}
-                      controlsDisabled={!canControlPlayback || controlLoading}
-                      onPrevious={handlePrevious}
-                      onTogglePlay={handleTogglePlay}
-                      onNext={handleNext}
-                      embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
-                      colorScheme={resolveColorScheme(settings.colorScheme)}
-                    />
-                  ) : null}
-                  {controlError ? <div className={styles.error}>{controlError}</div> : null}
-                  {!spotifyStateLoading && !spotifyStateError && !activeSelection ? (
-                    <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>
-                  ) : null}
-                </>
-              )}
-            </div>
-
-            <aside className={styles.spotifySidebar}>
-              <form className={styles.searchPanel} onSubmit={handleSearch}>
-                <div className={styles.sectionHeader}>
-                  <span className={styles.sectionTitle}>Search Spotify</span>
-                  <span className={styles.spotifyPill}>
-                    {getPlaylistCountLabel(searchResults ?? { tracks: [], albums: [], playlists: [] })}
-                  </span>
-                </div>
-                <div className={styles.autocompleteWrap}>
-                  <div className={styles.searchRow}>
-                    <input
-                      className={styles.input}
-                      type="search"
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      placeholder="Tracks, albums, or playlists"
-                    />
-                    <button className={styles.button} type="submit" disabled={searchLoading}>
-                      {searchLoading ? 'Searching…' : 'Search'}
-                    </button>
-                  </div>
-                  {autocompleteLoading ? <div className={styles.connectHint}>Searching as you type…</div> : null}
-                  {autocompleteError ? <div className={styles.error}>{autocompleteError}</div> : null}
-                  {searchQuery.trim().length >= 2 && autocompleteResults ? (
-                    <div className={styles.autocompletePanel}>
-                      {autocompleteResults.tracks.slice(0, 3).map((item) => (
-                        <SearchResultButton
-                          key={item.external_urls.spotify}
-                          label={formatSearchTrack(item)}
-                          artworkUrl={item.album.images[0]?.url}
-                          fallbackBrand="spotify"
-                          onSelect={handleUseSelection}
-                        />
-                      ))}
-                      {autocompleteResults.albums.slice(0, 2).map((item) => (
-                        <SearchResultButton
-                          key={item.external_urls.spotify}
-                          label={formatSearchAlbum(item)}
-                          artworkUrl={item.images[0]?.url}
-                          fallbackBrand="spotify"
-                          onSelect={handleUseSelection}
-                        />
-                      ))}
-                      {autocompleteResults.playlists.slice(0, 2).map((item) => (
-                        <SearchResultButton
-                          key={item.external_urls.spotify}
-                          label={formatSearchPlaylist(item)}
-                          artworkUrl={item.images[0]?.url}
-                          fallbackBrand="spotify"
-                          onSelect={handleUseSelection}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                {searchError && <div className={styles.error}>{searchError}</div>}
-              </form>
-
-              {library ? (
-                <div className={styles.librarySection}>
-                  <div className={styles.sectionHeader}>
-                    <span className={styles.sectionTitle}>Your Spotify library</span>
-                    <span className={styles.spotifyPill}>
-                      {topTrackItems.length + topArtistItems.length + playlistItems.length + savedAlbumItems.length}
-                    </span>
-                  </div>
+                {searchError ? <div className={styles.error}>{searchError}</div> : null}
+                {hasSearchResults ? (
                   <div className={styles.libraryCollections}>
-                    <div className={styles.libraryCollection}>
-                      <div className={styles.resultGroupTitle}>Top tracks</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {topTrackItems.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatTopTrack(item)}
-                            artworkUrl={item.album.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className={styles.libraryCollection}>
-                      <div className={styles.resultGroupTitle}>Top artists</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {topArtistItems.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatTopArtist(item)}
-                            artworkUrl={item.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className={styles.libraryCollection}>
-                      <div className={styles.resultGroupTitle}>Playlists</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {playlistItems.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatSearchPlaylist(item)}
-                            artworkUrl={item.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    <div className={styles.libraryCollection}>
-                      <div className={styles.resultGroupTitle}>Saved albums</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {savedAlbumItems.map((item) => (
-                          <SearchResultButton
-                            key={item.album.external_urls.spotify}
-                            label={formatSavedAlbum(item)}
-                            artworkUrl={item.album.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
+                    <ResultGroup title="Songs" selections={results.tracks.map(formatSearchTrack)} onPlay={handlePlay} />
+                    <ResultGroup title="Albums" selections={results.albums.map(formatSearchAlbum)} onPlay={handlePlay} />
+                    <ResultGroup
+                      title="Playlists"
+                      selections={results.playlists.map(formatSearchPlaylist)}
+                      onPlay={handlePlay}
+                    />
+                    <ResultGroup title="Podcasts" selections={results.shows.map(formatSearchShow)} onPlay={handlePlay} />
+                    <ResultGroup
+                      title="Episodes"
+                      selections={results.episodes.map(formatSearchEpisode)}
+                      onPlay={handlePlay}
+                    />
                   </div>
-                </div>
-              ) : null}
+                ) : (
+                  <div className={styles.connectHint}>
+                    {searchQuery.trim().length >= SEARCH_MIN_QUERY_LENGTH && !searchLoading
+                      ? 'No results found.'
+                      : 'Search songs, albums, playlists, and podcasts, then tap to play.'}
+                  </div>
+                )}
+              </form>
+            ) : null}
 
-              {artistSnapshot ? (
-                <div className={styles.librarySection}>
-                  <div className={styles.sectionHeader}>
-                    <span className={styles.sectionTitle}>Artist focus</span>
-                    <span className={styles.spotifyPill}>Top tracks</span>
-                  </div>
-                  <div className={styles.artistHero}>
-                    <div className={styles.artistHeroImage}>
-                      {artistSnapshot.artist.images[0]?.url ? (
-                        <img
-                          className={styles.resultImage}
-                          src={artistSnapshot.artist.images[0].url}
-                          alt=""
-                        />
-                      ) : (
-                        <MediaBrandIcon brand="spotify" size={20} />
-                      )}
-                    </div>
-                    <div className={styles.artistHeroCopy}>
-                      <div className={styles.artistHeroTitle}>{artistSnapshot.artist.name}</div>
-                      <div className={styles.artistHeroSubtitle}>Tap a top track to load it in the player</div>
-                    </div>
-                  </div>
-                  {artistLoading ? <div className={styles.connectHint}>Loading artist tracks…</div> : null}
-                  {artistError ? <div className={styles.error}>{artistError}</div> : null}
-                  <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                    {artistSnapshot.topTracks.slice(0, 5).map((item) => (
-                      <SearchResultButton
-                        key={item.external_urls.spotify}
-                        label={formatTopTrack(item)}
-                        artworkUrl={item.album.images[0]?.url}
-                        fallbackBrand="spotify"
-                        onSelect={handleUseSelection}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
+            {activeTab === 'recent' ? (
               <div className={styles.librarySection}>
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>Recently played</span>
-                  {recentPlayedItems.length ? (
-                    <span className={styles.spotifyPill}>{recentPlayedItems.length}</span>
+                  {recentSelections.length ? (
+                    <span className={styles.spotifyPill}>{recentSelections.length}</span>
                   ) : null}
                 </div>
-                <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                  {recentPlayedItems.map((item) => (
-                    <button
-                      key={`${item.playedAt}-${item.selection.url}`}
-                      type="button"
-                      className={styles.resultButton}
-                      onClick={() => handleUseSelection(item.selection)}
-                    >
-                      <div className={styles.resultArtwork}>
-                        {item.artworkUrl ? (
-                          <img className={styles.resultImage} src={item.artworkUrl} alt="" />
-                        ) : (
-                          <MediaBrandIcon brand="spotify" size={16} />
-                        )}
-                      </div>
-                      <div className={styles.resultCopy}>
-                        <div className={styles.resultTitle}>{item.selection.title}</div>
-                        <div className={styles.resultSubtitle}>
-                          {item.selection.subtitle} · {formatRelativeTime(item.playedAt)}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {(searchResults?.tracks.length || searchResults?.albums.length || searchResults?.playlists.length) ? (
-                <div className={styles.librarySection}>
-                  <div className={styles.sectionHeader}>
-                    <span className={styles.sectionTitle}>Search results</span>
+                {recentSelections.length ? (
+                  <div className={[styles.resultList, styles.scrollList].join(' ')}>
+                    {recentSelections.map((item) => (
+                      <ResultRow
+                        key={`${item.playedAt}-${item.selection.url}`}
+                        selection={item.selection}
+                        meta={formatRelativeTime(item.playedAt)}
+                        onPlay={handlePlay}
+                      />
+                    ))}
                   </div>
+                ) : (
+                  <div className={styles.connectHint}>
+                    {snapshotLoading ? 'Loading your history…' : 'Nothing played recently.'}
+                  </div>
+                )}
+              </div>
+            ) : null}
 
-                  {searchResults?.tracks.length ? (
-                    <div className={styles.resultGroup}>
-                      <div className={styles.resultGroupTitle}>Tracks</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {searchResults.tracks.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatSearchTrack(item)}
-                            artworkUrl={item.album.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {searchResults?.albums.length ? (
-                    <div className={styles.resultGroup}>
-                      <div className={styles.resultGroupTitle}>Albums</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {searchResults.albums.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatSearchAlbum(item)}
-                            artworkUrl={item.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  {searchResults?.playlists.length ? (
-                    <div className={styles.resultGroup}>
-                      <div className={styles.resultGroupTitle}>Playlists</div>
-                      <div className={[styles.resultList, styles.scrollList].join(' ')}>
-                        {searchResults.playlists.map((item) => (
-                          <SearchResultButton
-                            key={item.external_urls.spotify}
-                            label={formatSearchPlaylist(item)}
-                            artworkUrl={item.images[0]?.url}
-                            fallbackBrand="spotify"
-                            onSelect={handleUseSelection}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
+            {activeTab === 'library' ? (
+              <div className={styles.librarySection}>
+                <div className={styles.sectionHeader}>
+                  <span className={styles.sectionTitle}>Your Spotify library</span>
                 </div>
-              ) : null}
-            </aside>
-          </div>
-        </section>
-      )}
+                {library ? (
+                  <div className={styles.libraryCollections}>
+                    <ResultGroup
+                      title="Playlists"
+                      selections={library.playlists.map(formatSearchPlaylist)}
+                      onPlay={handlePlay}
+                    />
+                    <ResultGroup
+                      title="Saved albums"
+                      selections={library.savedAlbums.map(formatSavedAlbum)}
+                      onPlay={handlePlay}
+                    />
+                    <ResultGroup
+                      title="Podcasts"
+                      selections={library.savedShows.map(formatSavedShow)}
+                      onPlay={handlePlay}
+                    />
+                    <ResultGroup
+                      title="Top tracks"
+                      selections={library.topTracks.map(formatTopTrack)}
+                      onPlay={handlePlay}
+                    />
+                    <ResultGroup
+                      title="Top artists"
+                      selections={library.topArtists.map(formatTopArtist)}
+                      onPlay={handlePlay}
+                    />
+                  </div>
+                ) : (
+                  <div className={styles.connectHint}>
+                    {snapshotLoading ? 'Loading your library…' : 'Your library is not available yet.'}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </aside>
+        </div>
+      </section>
     </div>
-  )
-}
-
-interface SearchResultButtonProps {
-  readonly label: SpotifySelection
-  readonly artworkUrl?: string
-  readonly fallbackBrand: 'spotify'
-  readonly onSelect: (selection: SpotifySelection) => void
-}
-
-function SearchResultButton({ label, artworkUrl, fallbackBrand, onSelect }: SearchResultButtonProps) {
-  return (
-    <button type="button" className={styles.resultButton} onClick={() => onSelect(label)}>
-      <div className={styles.resultArtwork}>
-        {artworkUrl ? (
-          <img className={styles.resultImage} src={artworkUrl} alt="" />
-        ) : (
-          <MediaBrandIcon brand={fallbackBrand} size={16} />
-        )}
-      </div>
-      <div className={styles.resultCopy}>
-        <div className={styles.resultTitle}>{label.title}</div>
-        <div className={styles.resultSubtitle}>{label.subtitle}</div>
-      </div>
-    </button>
   )
 }

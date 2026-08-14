@@ -1,12 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchSpotifyAccountSnapshot,
-  pauseSpotifyPlayback,
-  resumeSpotifyPlayback,
   searchSpotifyCatalog,
   setSpotifyPlaybackVolume,
-  skipToNextSpotifyTrack,
-  skipToPreviousSpotifyTrack,
   spotifyUrlToPlayRequest,
   startSpotifyPlayback,
   transferSpotifyPlayback,
@@ -100,6 +96,13 @@ describe('fetchSpotifyAccountSnapshot', () => {
           items: [],
         }),
       })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({
+          items: [],
+        }),
+      })
 
     vi.stubGlobal('fetch', fetchMock)
 
@@ -121,12 +124,13 @@ describe('fetchSpotifyAccountSnapshot', () => {
       topArtists: [],
       topTracks: [],
       savedAlbums: [],
+      savedShows: [],
       playlists: [],
     })
-    expect(fetchMock).toHaveBeenCalledTimes(7)
+    expect(fetchMock).toHaveBeenCalledTimes(8)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me')
     expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player')
-    expect(fetchMock.mock.calls[2]?.[0]).toContain('/me/player/recently-played?limit=3')
+    expect(fetchMock.mock.calls[2]?.[0]).toContain('/me/player/recently-played?limit=10')
     vi.unstubAllGlobals()
   })
 
@@ -153,7 +157,7 @@ describe('fetchSpotifyAccountSnapshot', () => {
           json: async () => ({ device: null, is_playing: false, progress_ms: null, item: null }),
         }
       }
-      if (url.includes('/me/player/recently-played?limit=3')) {
+      if (url.includes('/me/player/recently-played?limit=10')) {
         return {
           ok: true,
           status: 200,
@@ -164,6 +168,7 @@ describe('fetchSpotifyAccountSnapshot', () => {
         url.includes('/me/top/artists?limit=5') ||
         url.includes('/me/top/tracks?limit=5') ||
         url.includes('/me/albums?limit=5') ||
+        url.includes('/me/shows?limit=5') ||
         url.includes('/me/playlists?limit=5')
       ) {
         return {
@@ -189,11 +194,12 @@ describe('fetchSpotifyAccountSnapshot', () => {
       expiresAt: Date.now() + 60_000,
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(10)
+    expect(fetchMock).toHaveBeenCalledTimes(11)
     const requestedUrls = fetchMock.mock.calls.map((call) => String(call[0]))
     expect(requestedUrls.filter((url) => url.includes('/me/top/artists?limit=5'))).toHaveLength(1)
     expect(requestedUrls.filter((url) => url.includes('/me/top/tracks?limit=5'))).toHaveLength(1)
     expect(requestedUrls.filter((url) => url.includes('/me/albums?limit=5'))).toHaveLength(1)
+    expect(requestedUrls.filter((url) => url.includes('/me/shows?limit=5'))).toHaveLength(1)
     expect(requestedUrls.filter((url) => url.includes('/me/playlists?limit=5'))).toHaveLength(1)
     vi.unstubAllGlobals()
   })
@@ -204,7 +210,7 @@ describe('searchSpotifyCatalog', () => {
     vi.clearAllMocks()
   })
 
-  it('searches tracks, albums, and playlists', async () => {
+  it('searches tracks, albums, playlists, shows, and episodes', async () => {
     vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
       accessToken: 'token',
       refreshToken: 'refresh',
@@ -237,6 +243,22 @@ describe('searchSpotifyCatalog', () => {
         playlists: {
           items: [],
         },
+        shows: {
+          items: [
+            {
+              type: 'show',
+              name: 'Dreams Podcast',
+              publisher: 'Dreamer FM',
+              images: [],
+              external_urls: {
+                spotify: 'https://open.spotify.com/show/example',
+              },
+            },
+          ],
+        },
+        episodes: {
+          items: [],
+        },
       }),
     })
 
@@ -253,51 +275,15 @@ describe('searchSpotifyCatalog', () => {
 
     expect(results.tracks).toHaveLength(1)
     expect(results.tracks[0]?.name).toBe('Dreams')
+    expect(results.shows).toHaveLength(1)
+    expect(results.shows[0]?.name).toBe('Dreams Podcast')
+    expect(results.episodes).toHaveLength(0)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/search?')
     expect(fetchMock.mock.calls[0]?.[0]).toContain('q=dreams')
-    vi.unstubAllGlobals()
-  })
-})
-
-describe('playback controls', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('sends pause/play/next/previous commands to Spotify', async () => {
-    vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    })
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 204,
-      statusText: 'No Content',
-      json: async () => ({}),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-
-    const auth = {
-      accessToken: 'token',
-      refreshToken: 'refresh',
-      expiresAt: Date.now() + 60_000,
-    }
-
-    await skipToPreviousSpotifyTrack(auth)
-    await resumeSpotifyPlayback(auth)
-    await pauseSpotifyPlayback(auth)
-    await skipToNextSpotifyTrack(auth)
-
-    expect(fetchMock).toHaveBeenCalledTimes(4)
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me/player/previous')
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player/play')
-    expect(fetchMock.mock.calls[2]?.[0]).toBe('https://api.spotify.com/v1/me/player/pause')
-    expect(fetchMock.mock.calls[3]?.[0]).toBe('https://api.spotify.com/v1/me/player/next')
-    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'PUT' })
-    expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'PUT' })
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+      `type=${encodeURIComponent('track,album,playlist,show,episode')}`,
+    )
     vi.unstubAllGlobals()
   })
 })

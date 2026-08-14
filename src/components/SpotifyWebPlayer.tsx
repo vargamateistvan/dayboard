@@ -1,18 +1,17 @@
 import { useState, type ChangeEvent } from 'react'
 import { Pause, Play, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react'
 import { MediaBrandIcon } from './MediaBrandIcon'
-import { spotifyUrlToPlayRequest } from '../lib/spotifyApi'
-import { useSpotifyWebPlayback } from '../lib/spotifyWebPlayback'
-import type { SpotifyAuthSession } from '../lib/spotifyAuth'
+import type {
+  SpotifyWebPlaybackControls,
+  SpotifyWebPlaybackState,
+} from '../lib/spotifyWebPlayback'
 import styles from './SpotifyWidget.module.css'
 
 interface SpotifyWebPlayerProps {
-  readonly auth: SpotifyAuthSession
-  readonly enabled: boolean
+  readonly state: SpotifyWebPlaybackState
+  readonly controls: SpotifyWebPlaybackControls
   readonly colorScheme: 'light' | 'dark'
   readonly embedSize: 'normal' | 'large' | 'fullscreen'
-  readonly selectionUrl?: string
-  readonly selectionLabel?: string
 }
 
 function formatDuration(milliseconds: number): string {
@@ -26,21 +25,21 @@ function formatDuration(milliseconds: number): string {
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
 
-export function SpotifyWebPlayer({
-  auth,
-  enabled,
-  colorScheme,
-  embedSize,
-  selectionUrl,
-  selectionLabel,
-}: SpotifyWebPlayerProps) {
-  const [state, controls] = useSpotifyWebPlayback(auth, enabled)
-  const [actionError, setActionError] = useState<string | null>(null)
-  const [scrubMs, setScrubMs] = useState<number | null>(null)
-
-  if (!enabled) {
+function spotifyUriToUrl(uri: string): string | null {
+  const match = uri.match(/^spotify:([a-z]+):([A-Za-z0-9]+)$/)
+  if (!match) {
     return null
   }
+  return `https://open.spotify.com/${match[1]}/${match[2]}`
+}
+
+/**
+ * Presentational card for the in-browser Spotify player. Playback state and
+ * controls come from the `useSpotifyWebPlayback` hook owned by the widget.
+ */
+export function SpotifyWebPlayer({ state, controls, colorScheme, embedSize }: SpotifyWebPlayerProps) {
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [scrubMs, setScrubMs] = useState<number | null>(null)
 
   const cardClassName = [
     styles.spotifyPlayer,
@@ -65,8 +64,6 @@ export function SpotifyWebPlayer({
     return <div className={styles.error}>{state.error ?? 'The in-browser player is unavailable.'}</div>
   }
 
-  const playSelectionRequest = selectionUrl ? spotifyUrlToPlayRequest(selectionUrl) : null
-
   const runAction = (action: () => Promise<void>) => {
     setActionError(null)
     void action().catch((error: unknown) => {
@@ -77,17 +74,10 @@ export function SpotifyWebPlayer({
   if (!state.isActive) {
     return (
       <div className={styles.browserPlayerReady}>
-        <div className={styles.connectHint}>Ready to stream in this browser.</div>
+        <div className={styles.connectHint}>
+          Ready to stream in this browser. Pick something to play it here.
+        </div>
         <div className={styles.browserPlayerActions}>
-          {playSelectionRequest ? (
-            <button
-              className={styles.button}
-              type="button"
-              onClick={() => runAction(() => controls.activate(playSelectionRequest))}
-            >
-              Play{selectionLabel ? ` “${selectionLabel}”` : ''} here
-            </button>
-          ) : null}
           <button
             className={styles.buttonGhost}
             type="button"
@@ -104,6 +94,7 @@ export function SpotifyWebPlayer({
   const durationMs = state.durationMs
   const positionMs = scrubMs ?? state.positionMs
   const artworkUrl = state.nowPlaying?.artworkUrl
+  const openUrl = state.nowPlaying ? spotifyUriToUrl(state.nowPlaying.uri) : null
   const volumePercent = Math.round(state.volume * 100)
   const VolumeIcon = state.volume === 0 ? VolumeX : state.volume < 0.5 ? Volume1 : Volume2
 
@@ -142,6 +133,16 @@ export function SpotifyWebPlayer({
               {state.nowPlaying?.artists || state.nowPlaying?.albumName || 'Spotify'}
             </div>
           </div>
+          {openUrl ? (
+            <a
+              className={styles.customPlayerOpenLink}
+              href={openUrl}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open
+            </a>
+          ) : null}
           <span className={styles.customPlayerLiveBadge}>{state.isPaused ? 'Paused' : 'In browser'}</span>
         </div>
 

@@ -112,6 +112,26 @@ export interface SpotifySearchPlaylistItem {
   }
 }
 
+export interface SpotifySearchShowItem {
+  type: 'show'
+  name: string
+  publisher: string
+  images: Array<{ url: string; width?: number; height?: number }>
+  external_urls: {
+    spotify: string
+  }
+}
+
+export interface SpotifySearchEpisodeItem {
+  type: 'episode'
+  name: string
+  release_date?: string
+  images: Array<{ url: string; width?: number; height?: number }>
+  external_urls: {
+    spotify: string
+  }
+}
+
 export interface SpotifyTopArtistItem {
   id: string
   name: string
@@ -144,22 +164,31 @@ export interface SpotifySavedAlbumItem {
   }
 }
 
+export interface SpotifySavedShowItem {
+  show: {
+    name: string
+    publisher: string
+    images: Array<{ url: string; width?: number; height?: number }>
+    external_urls: {
+      spotify: string
+    }
+  }
+}
+
 export interface SpotifyLibrarySnapshot {
   topArtists: SpotifyTopArtistItem[]
   topTracks: SpotifyTopTrackItem[]
   savedAlbums: SpotifySavedAlbumItem[]
+  savedShows: SpotifySavedShowItem[]
   playlists: SpotifySearchPlaylistItem[]
-}
-
-export interface SpotifyArtistSnapshot {
-  artist: SpotifyTopArtistItem
-  topTracks: SpotifyTopTrackItem[]
 }
 
 export interface SpotifySearchResults {
   tracks: SpotifySearchTrackItem[]
   albums: SpotifySearchAlbumItem[]
   playlists: SpotifySearchPlaylistItem[]
+  shows: SpotifySearchShowItem[]
+  episodes: SpotifySearchEpisodeItem[]
 }
 
 export interface SpotifyAccountSnapshot {
@@ -336,7 +365,7 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
     fetchSpotifyOptionalJson<SpotifyPlaybackState>(validAuth.accessToken, '/me/player'),
     fetchSpotifyOptionalJson<{ items?: SpotifyRecentPlayedItem[] }>(
       validAuth.accessToken,
-      '/me/player/recently-played?limit=3',
+      '/me/player/recently-played?limit=10',
     ),
     Promise.all([
       fetchSpotifyOptionalJson<{ items?: SpotifyTopArtistItem[] }>(
@@ -354,6 +383,11 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
         '/me/albums?limit=5',
         { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
       ),
+      fetchSpotifyOptionalJson<{ items?: SpotifySavedShowItem[] }>(
+        validAuth.accessToken,
+        '/me/shows?limit=5',
+        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+      ),
       fetchSpotifyOptionalJson<{ items?: SpotifySearchPlaylistItem[] }>(
         validAuth.accessToken,
         '/me/playlists?limit=5',
@@ -362,7 +396,7 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
     ]),
   ])
 
-  const [topArtists, topTracks, savedAlbums, playlists] = library
+  const [topArtists, topTracks, savedAlbums, savedShows, playlists] = library
 
   return {
     profile,
@@ -372,6 +406,7 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
       topArtists: filterNonNullItems(topArtists?.items),
       topTracks: filterNonNullItems(topTracks?.items),
       savedAlbums: filterNonNullItems(savedAlbums?.items),
+      savedShows: filterNonNullItems(savedShows?.items),
       playlists: filterNonNullItems(playlists?.items),
     },
   }
@@ -383,13 +418,13 @@ export async function searchSpotifyCatalog(
 ): Promise<SpotifySearchResults> {
   const trimmedQuery = query.trim()
   if (!trimmedQuery) {
-    return { tracks: [], albums: [], playlists: [] }
+    return { tracks: [], albums: [], playlists: [], shows: [], episodes: [] }
   }
 
   const validAuth = await getValidSpotifyAuth(auth)
   const params = new URLSearchParams({
     q: trimmedQuery,
-    type: 'track,album,playlist',
+    type: 'track,album,playlist,show,episode',
     limit: '4',
   })
   const response = await fetch(`https://api.spotify.com/v1/search?${params.toString()}`, {
@@ -415,87 +450,17 @@ export async function searchSpotifyCatalog(
     tracks?: { items?: Array<SpotifySearchTrackItem | null> }
     albums?: { items?: Array<SpotifySearchAlbumItem | null> }
     playlists?: { items?: Array<SpotifySearchPlaylistItem | null> }
+    shows?: { items?: Array<SpotifySearchShowItem | null> }
+    episodes?: { items?: Array<SpotifySearchEpisodeItem | null> }
   }
 
   return {
     tracks: filterNonNullItems(data.tracks?.items),
     albums: filterNonNullItems(data.albums?.items),
     playlists: filterNonNullItems(data.playlists?.items),
+    shows: filterNonNullItems(data.shows?.items),
+    episodes: filterNonNullItems(data.episodes?.items),
   }
-}
-
-export async function fetchSpotifyArtistSnapshot(
-  auth: SpotifyAuthSession,
-  artistId: string,
-): Promise<SpotifyArtistSnapshot> {
-  const trimmedArtistId = artistId.trim()
-  if (!trimmedArtistId) {
-    throw new Error('Spotify artist id is required.')
-  }
-
-  const validAuth = await getValidSpotifyAuth(auth)
-  const [artistResponse, topTracksResponse] = await Promise.all([
-    fetchSpotifyJson<SpotifyTopArtistItem>(validAuth.accessToken, `/artists/${trimmedArtistId}`),
-    fetchSpotifyJson<{ tracks?: SpotifyTopTrackItem[] }>(
-      validAuth.accessToken,
-      `/artists/${trimmedArtistId}/top-tracks?market=from_token`,
-    ),
-  ])
-
-  return {
-    artist: artistResponse,
-    topTracks: topTracksResponse.tracks ?? [],
-  }
-}
-
-async function sendSpotifyPlaybackCommand(
-  auth: SpotifyAuthSession,
-  path: string,
-  method: 'POST' | 'PUT' = 'POST',
-) {
-  const validAuth = await getValidSpotifyAuth(auth)
-  const response = await fetch(`https://api.spotify.com/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${validAuth.accessToken}`,
-    },
-  })
-
-  if (response.status === 204 || response.status === 202) {
-    return
-  }
-
-  if (response.ok) {
-    return
-  }
-
-  if (response.status === 429) {
-    const retryAfter = response.headers.get('Retry-After')
-    const retryAfterText =
-      retryAfter && Number.isFinite(Number(retryAfter))
-        ? ` Retry after ${Math.max(1, Number(retryAfter))} seconds.`
-        : ''
-    throw new Error(`Spotify API rate limit reached.${retryAfterText}`)
-  }
-
-  const details = await parseSpotifyError(response)
-  throw new Error(`Failed to control Spotify playback. ${details}`)
-}
-
-export async function skipToNextSpotifyTrack(auth: SpotifyAuthSession) {
-  await sendSpotifyPlaybackCommand(auth, '/me/player/next')
-}
-
-export async function skipToPreviousSpotifyTrack(auth: SpotifyAuthSession) {
-  await sendSpotifyPlaybackCommand(auth, '/me/player/previous')
-}
-
-export async function pauseSpotifyPlayback(auth: SpotifyAuthSession) {
-  await sendSpotifyPlaybackCommand(auth, '/me/player/pause', 'PUT')
-}
-
-export async function resumeSpotifyPlayback(auth: SpotifyAuthSession) {
-  await sendSpotifyPlaybackCommand(auth, '/me/player/play', 'PUT')
 }
 
 export interface SpotifyPlayRequest {
