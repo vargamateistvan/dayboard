@@ -81,6 +81,12 @@ VITE_SPOTIFY_CLIENT_ID=your-spotify-client-id
 
 Dayboard uses Spotify Authorization Code with PKCE in the browser, so the Spotify client secret must not be added to frontend environment variables.
 
+#### Play in the browser (Web Playback SDK)
+
+Once connected, the Spotify widget has a **Play in browser** toggle that streams audio directly in the tab using the [Spotify Web Playback SDK](https://developer.spotify.com/documentation/web-playback-sdk) — no external device required. This registers a "Dayboard" Spotify Connect device you can transfer playback to, with play/pause, skip, seek, and volume controls.
+
+The Web Playback SDK requires a **Spotify Premium** account. Free accounts can still connect and browse, but the in-browser player is disabled (Spotify returns an account error). The extra `streaming` scope is requested automatically, so existing users may need to reconnect Spotify once to grant it.
+
 If you deploy through GitHub Actions/GitHub Pages, add `VITE_SPOTIFY_CLIENT_ID` as a repository secret too; the build workflow injects it during `yarn build`.
 
 ### Build

@@ -12,6 +12,7 @@ export interface SpotifyAuthNotice {
 const SPOTIFY_SCOPES = [
   'user-read-email',
   'user-read-private',
+  'streaming',
   'user-read-playback-state',
   'user-modify-playback-state',
   'user-read-currently-playing',

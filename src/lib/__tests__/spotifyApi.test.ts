@@ -4,8 +4,12 @@ import {
   pauseSpotifyPlayback,
   resumeSpotifyPlayback,
   searchSpotifyCatalog,
+  setSpotifyPlaybackVolume,
   skipToNextSpotifyTrack,
   skipToPreviousSpotifyTrack,
+  spotifyUrlToPlayRequest,
+  startSpotifyPlayback,
+  transferSpotifyPlayback,
 } from '../spotifyApi'
 import * as spotifyAuth from '../spotifyAuth'
 
@@ -294,6 +298,92 @@ describe('playback controls', () => {
     expect(fetchMock.mock.calls[3]?.[0]).toBe('https://api.spotify.com/v1/me/player/next')
     expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'PUT' })
     expect(fetchMock.mock.calls[2]?.[1]).toMatchObject({ method: 'PUT' })
+    vi.unstubAllGlobals()
+  })
+})
+
+describe('spotifyUrlToPlayRequest', () => {
+  it('converts track URLs and URIs to a uris request', () => {
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/track/abc123')).toEqual({
+      uris: ['spotify:track:abc123'],
+    })
+    expect(spotifyUrlToPlayRequest('spotify:track:abc123')).toEqual({
+      uris: ['spotify:track:abc123'],
+    })
+  })
+
+  it('converts album, playlist, and artist URLs to a context_uri request', () => {
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/album/alb1')).toEqual({
+      context_uri: 'spotify:album:alb1',
+    })
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/playlist/pl1?si=x')).toEqual({
+      context_uri: 'spotify:playlist:pl1',
+    })
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/artist/art1')).toEqual({
+      context_uri: 'spotify:artist:art1',
+    })
+  })
+
+  it('handles embed URLs', () => {
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/embed/track/xyz')).toEqual({
+      uris: ['spotify:track:xyz'],
+    })
+  })
+
+  it('returns null for empty or unsupported values', () => {
+    expect(spotifyUrlToPlayRequest('')).toBeNull()
+    expect(spotifyUrlToPlayRequest('https://example.com/track/abc')).toBeNull()
+    expect(spotifyUrlToPlayRequest('https://open.spotify.com/user/someone')).toBeNull()
+  })
+})
+
+describe('web playback commands', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('transfers playback, starts a context, and sets volume on a device', async () => {
+    vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    })
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 204,
+      statusText: 'No Content',
+      json: async () => ({}),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const auth = {
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      expiresAt: Date.now() + 60_000,
+    }
+
+    await transferSpotifyPlayback(auth, 'device-1', true)
+    await startSpotifyPlayback(auth, 'device-1', { context_uri: 'spotify:album:alb1' })
+    await setSpotifyPlaybackVolume(auth, 42, 'device-1')
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me/player')
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ method: 'PUT' })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      device_ids: ['device-1'],
+      play: true,
+    })
+
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(
+      'https://api.spotify.com/v1/me/player/play?device_id=device-1',
+    )
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({
+      context_uri: 'spotify:album:alb1',
+    })
+
+    expect(fetchMock.mock.calls[2]?.[0]).toBe(
+      'https://api.spotify.com/v1/me/player/volume?volume_percent=42&device_id=device-1',
+    )
     vi.unstubAllGlobals()
   })
 })

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Laptop } from 'lucide-react'
 import { MediaBrandIcon } from './MediaBrandIcon'
 import { SpotifyIframePlayer } from './SpotifyIframePlayer'
+import { SpotifyWebPlayer } from './SpotifyWebPlayer'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { resolveColorScheme } from '../lib/settings'
@@ -203,6 +205,8 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [artistError, setArtistError] = useState<string | null>(null)
   const [controlLoading, setControlLoading] = useState(false)
   const [controlError, setControlError] = useState<string | null>(null)
+  const [authSession, setAuthSession] = useState<SpotifyAuthSession | null>(() => getStoredSpotifyAuth())
+  const [browserPlaybackEnabled, setBrowserPlaybackEnabled] = useState(false)
   const spotifyRateLimitUntilRef = useRef(0)
   const searchCacheRef = useRef<Map<string, { expiresAt: number; results: SpotifySearchResults }>>(new Map())
   const skipNextAutocompleteRef = useRef(false)
@@ -288,6 +292,12 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
       stopListening()
       window.clearInterval(intervalId)
     }
+  }, [])
+
+  useEffect(() => {
+    const updateAuthSession = () => setAuthSession(getStoredSpotifyAuth())
+    updateAuthSession()
+    return onSpotifyAuthChanged(updateAuthSession)
   }, [])
 
   const isConnected = Boolean(spotifyState)
@@ -610,30 +620,60 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
           <div className={styles.spotifyLayout}>
             <div className={styles.playerPane}>
-              {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
-              {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
-              {!spotifyStateError && activeSelection ? (
-                <SpotifyIframePlayer
-                  sourceUrl={activeSelection.url}
-                  title={activeSelection.title}
-                  subtitle={activeSelection.subtitle}
-                  artworkUrl={activeSelection.artworkUrl}
-                  isPlaying={isCurrentlyPlaying}
-                  progressMs={currentProgressMs}
-                  durationMs={currentDurationMs}
-                  isLivePlayback={isLivePlaybackSelection}
-                  controlsDisabled={!canControlPlayback || controlLoading}
-                  onPrevious={handlePrevious}
-                  onTogglePlay={handleTogglePlay}
-                  onNext={handleNext}
-                  embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
+              {isConnected && authSession ? (
+                <div className={styles.browserPlayerToggleRow}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.browserPlayerToggle,
+                      browserPlaybackEnabled ? styles.browserPlayerToggleActive : '',
+                    ].join(' ')}
+                    onClick={() => setBrowserPlaybackEnabled((enabled) => !enabled)}
+                    aria-pressed={browserPlaybackEnabled}
+                  >
+                    <Laptop size={13} />
+                    {browserPlaybackEnabled ? 'Browser player on' : 'Play in browser'}
+                  </button>
+                </div>
+              ) : null}
+
+              {browserPlaybackEnabled && authSession ? (
+                <SpotifyWebPlayer
+                  auth={authSession}
+                  enabled={browserPlaybackEnabled}
                   colorScheme={resolveColorScheme(settings.colorScheme)}
+                  embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
+                  selectionUrl={activeSelection?.url}
+                  selectionLabel={activeSelection?.title}
                 />
-              ) : null}
-              {controlError ? <div className={styles.error}>{controlError}</div> : null}
-              {!spotifyStateLoading && !spotifyStateError && !activeSelection ? (
-                <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>
-              ) : null}
+              ) : (
+                <>
+                  {spotifyStateLoading && <div className={styles.connectHint}>Refreshing Spotify…</div>}
+                  {spotifyStateError && <div className={styles.error}>{spotifyStateError}</div>}
+                  {!spotifyStateError && activeSelection ? (
+                    <SpotifyIframePlayer
+                      sourceUrl={activeSelection.url}
+                      title={activeSelection.title}
+                      subtitle={activeSelection.subtitle}
+                      artworkUrl={activeSelection.artworkUrl}
+                      isPlaying={isCurrentlyPlaying}
+                      progressMs={currentProgressMs}
+                      durationMs={currentDurationMs}
+                      isLivePlayback={isLivePlaybackSelection}
+                      controlsDisabled={!canControlPlayback || controlLoading}
+                      onPrevious={handlePrevious}
+                      onTogglePlay={handleTogglePlay}
+                      onNext={handleNext}
+                      embedSize={isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'}
+                      colorScheme={resolveColorScheme(settings.colorScheme)}
+                    />
+                  ) : null}
+                  {controlError ? <div className={styles.error}>{controlError}</div> : null}
+                  {!spotifyStateLoading && !spotifyStateError && !activeSelection ? (
+                    <div className={styles.connectHint}>Open Spotify and start playing to show the player.</div>
+                  ) : null}
+                </>
+              )}
             </div>
 
             <aside className={styles.spotifySidebar}>
