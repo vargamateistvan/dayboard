@@ -46,6 +46,35 @@ function getSpotifyEntityType(sourceUrl: string): SpotifyEntityType | null {
   }
 }
 
+function getSpotifyEntityKey(sourceUrl: string): string | null {
+  try {
+    const parsed = new URL(sourceUrl)
+    if (parsed.hostname !== 'open.spotify.com') {
+      return null
+    }
+
+    const segments = parsed.pathname.split('/').filter(Boolean)
+    if (segments.length < 2) {
+      return null
+    }
+
+    const normalizedSegments = segments[0]?.startsWith('intl-') ? segments.slice(1) : segments
+    const firstSegment = normalizedSegments[0]
+    const secondSegment = normalizedSegments[1]
+    const thirdSegment = normalizedSegments[2]
+    const type = firstSegment === 'embed' ? secondSegment : firstSegment
+    const id = firstSegment === 'embed' ? thirdSegment : secondSegment
+
+    if (!type || !id || !SPOTIFY_ENTITY_TYPES.has(type as SpotifyEntityType)) {
+      return null
+    }
+
+    return `${type}:${id}`
+  } catch {
+    return null
+  }
+}
+
 export function SpotifyIframePlayer({
   sourceUrl,
   colorScheme,
@@ -54,16 +83,18 @@ export function SpotifyIframePlayer({
   const hostRef = useRef<HTMLDivElement | null>(null)
   const controllerRef = useRef<SpotifyIframeController | null>(null)
   const loadedSourceUrlRef = useRef<string | null>(null)
+  const loadedEntityKeyRef = useRef<string | null>(null)
   const [isApiReady, setIsApiReady] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
   const entityType = getSpotifyEntityType(sourceUrl)
+  const sourceEntityKey = getSpotifyEntityKey(sourceUrl)
   const isCompactEntity = entityType === 'track' || entityType === 'episode'
   const embedHeight =
     embedSize === 'fullscreen'
       ? '100%'
       : isCompactEntity
-        ? 152
+        ? 80
         : embedSize === 'large'
           ? 460
           : 232
@@ -76,9 +107,8 @@ export function SpotifyIframePlayer({
       return () => {}
     }
 
-    setApiError(null)
-
     if (!controllerRef.current) {
+      setApiError(null)
       controllerHost.innerHTML = ''
       setIsApiReady(false)
 
@@ -102,6 +132,7 @@ export function SpotifyIframePlayer({
 
               controllerRef.current = controller
               loadedSourceUrlRef.current = sourceUrl
+              loadedEntityKeyRef.current = sourceEntityKey
               controller.addListener('ready', () => {
                 if (!cancelled) {
                   setIsApiReady(true)
@@ -120,22 +151,32 @@ export function SpotifyIframePlayer({
     return () => {
       cancelled = true
     }
-  }, [embedHeight, sourceUrl])
+  }, [embedHeight, sourceEntityKey, sourceUrl])
 
   useEffect(() => {
-    if (!isApiReady || !controllerRef.current || loadedSourceUrlRef.current === sourceUrl) {
+    if (!isApiReady || !controllerRef.current) {
+      return
+    }
+
+    if (sourceEntityKey && loadedEntityKeyRef.current === sourceEntityKey) {
+      return
+    }
+
+    if (!sourceEntityKey && loadedSourceUrlRef.current === sourceUrl) {
       return
     }
 
     controllerRef.current.loadEntity(sourceUrl)
     loadedSourceUrlRef.current = sourceUrl
-  }, [isApiReady, sourceUrl])
+    loadedEntityKeyRef.current = sourceEntityKey
+  }, [isApiReady, sourceEntityKey, sourceUrl])
 
   useEffect(() => {
     return () => {
       controllerRef.current?.destroy()
       controllerRef.current = null
       loadedSourceUrlRef.current = null
+      loadedEntityKeyRef.current = null
     }
   }, [])
 
