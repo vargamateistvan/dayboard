@@ -127,6 +127,15 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   const isLargeEmbed = placements[config.placementKey]?.rowSpan >= 2
   const resolvedColorScheme = resolveColorScheme(settings.colorScheme)
   const embedSize = isFullscreen ? 'fullscreen' : isLargeEmbed ? 'large' : 'normal'
+  // Song and episode links carry an `i=<id>` query param; their embeds render
+  // a fixed 175px player. Collection embeds (album/playlist/show/artist) max
+  // out at 450px of real content, so anything taller shows white filler.
+  const isItemEmbed = /[?&]i=\d/.test(activeUrl)
+  const embedSizeClass = isItemEmbed
+    ? appleStyles.embedAreaItem
+    : embedSize === 'normal'
+      ? styles.embedAreaNormal
+      : appleStyles.embedAreaCollection
 
   const applySelection = (url: string, title?: string | null) => {
     const nextLinks = normalizeSavedMediaLinks([
@@ -264,18 +273,13 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
         <div className={styles.spotifyLayout}>
           <div className={styles.playerPane}>
             <div
-              className={[
-                styles.embedArea,
-                embedSize === 'fullscreen'
-                  ? styles.embedAreaFullscreen
-                  : embedSize === 'large'
-                    ? styles.embedAreaLarge
-                    : styles.embedAreaNormal,
-              ].join(' ')}
+              className={[styles.embedArea, appleStyles.embedHost, embedSizeClass].join(' ')}
             >
               {config.renderEmbed({
                 shareUrl: activeUrl,
-                embedSize,
+                // The outer card always owns the height now; the inner
+                // widget's large/fullscreen min-heights would overflow it.
+                embedSize: 'normal',
                 colorScheme: resolvedColorScheme,
               })}
             </div>

@@ -5,6 +5,43 @@
   min-width: 0;
 }
 
+/* Makes the inner embed widget stretch to the card's resolved height —
+   height: 100% alone does not resolve against a min-height-only parent.
+   Class is doubled to reliably out-rank the embed widget's own root class. */
+.embedHost {
+  display: flex;
+  align-items: stretch;
+}
+
+.embedHost.embedHost > * {
+  flex: 1 1 auto;
+  /* The embed widgets set height: 100%, which cannot resolve against this
+     min-height-sized card and blocks flex stretching; auto lets stretch win. */
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  border-radius: inherit;
+}
+
+/* Apple song/episode embeds render 175px of real content; anything taller
+   shows blank filler inside the iframe. */
+.embedAreaItem {
+  height: 175px;
+  min-height: 175px;
+  flex: 0 0 auto;
+}
+
+/* Apple album/playlist/show/artist embeds max out at 450px of real content;
+   taller iframes (e.g. in fullscreen) just show white filler below. */
+.embedAreaCollection {
+  height: 450px;
+  min-height: 450px;
+  flex: 0 0 auto;
+}
+
 .savedRowButton {
   flex: 1 1 auto;
 }
