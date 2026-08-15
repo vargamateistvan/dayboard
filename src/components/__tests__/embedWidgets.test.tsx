@@ -10,6 +10,7 @@ import { AppleMusicWidget } from "../AppleMusicWidget";
 import { ApplePodcastWidget } from "../ApplePodcastWidget";
 import * as spotifyAuth from "../../lib/spotifyAuth";
 import * as spotifyApi from "../../lib/spotifyApi";
+import * as appleSearchApi from "../../lib/appleSearchApi";
 
 const playbackControls = vi.hoisted(() => ({
   activate: vi.fn(async () => {}),
@@ -31,6 +32,11 @@ vi.mock("../../lib/spotifyApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/spotifyApi")>()),
   fetchSpotifyAccountSnapshot: vi.fn(),
   searchSpotifyCatalog: vi.fn(),
+}));
+
+vi.mock("../../lib/appleSearchApi", () => ({
+  searchAppleMusicCatalog: vi.fn(),
+  searchApplePodcastCatalog: vi.fn(),
 }));
 
 vi.mock("../../lib/spotifyWebPlayback", () => ({
@@ -375,6 +381,7 @@ describe("SpotifyWidget", () => {
 describe("AppleMusicWidget", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -384,6 +391,7 @@ describe("AppleMusicWidget", () => {
   it("updates the saved Apple Music link list when a new url is added", async () => {
     renderWithSettings(<AppleMusicWidget />);
 
+    fireEvent.click(screen.getByRole("tab", { name: /Saved/i }));
     fireEvent.change(
       screen.getByPlaceholderText(/Paste another Apple Music song/i),
       {
@@ -407,11 +415,56 @@ describe("AppleMusicWidget", () => {
       );
     });
   });
+
+  it("plays and saves an Apple Music search result", async () => {
+    vi.mocked(appleSearchApi.searchAppleMusicCatalog).mockResolvedValue({
+      songs: [
+        {
+          url: "https://music.apple.com/us/album/dreams/202271826?i=202272624",
+          title: "Dreams",
+          subtitle: "Fleetwood Mac",
+          artworkUrl: "https://example.com/artwork.jpg",
+        },
+      ],
+      albums: [],
+      artists: [],
+    });
+
+    renderWithSettings(<AppleMusicWidget />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Songs, albums, artists/i), {
+      target: { value: "dreams" },
+    });
+
+    fireEvent.click(await screen.findByText("Dreams"));
+
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem("dayboard:settings") ?? "{}",
+      );
+      expect(stored.appleMusicEmbedUrl).toBe(
+        "https://music.apple.com/us/album/dreams/202271826?i=202272624",
+      );
+      expect(stored.appleMusicEmbedLinks).toEqual([
+        {
+          url: "https://music.apple.com/us/album/dreams/202271826?i=202272624",
+          title: "Dreams",
+        },
+      ]);
+      expect(screen.getByTitle("Apple Music Player player")).toHaveAttribute(
+        "src",
+        expect.stringContaining(
+          "https://embed.music.apple.com/us/album/dreams/202271826?i=202272624",
+        ),
+      );
+    });
+  });
 });
 
 describe("ApplePodcastWidget", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -421,6 +474,7 @@ describe("ApplePodcastWidget", () => {
   it("updates the saved Apple Podcast link list when a new url is added", async () => {
     renderWithSettings(<ApplePodcastWidget />);
 
+    fireEvent.click(screen.getByRole("tab", { name: /Saved/i }));
     fireEvent.change(
       screen.getByPlaceholderText(/Paste another Apple Podcast show/i),
       {
@@ -437,6 +491,49 @@ describe("ApplePodcastWidget", () => {
         JSON.parse(localStorage.getItem("dayboard:settings") ?? "{}")
           .applePodcastEmbedUrl,
       ).toBe("https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110");
+      expect(screen.getByTitle("Apple Podcast player")).toHaveAttribute(
+        "src",
+        expect.stringContaining(
+          "https://embed.podcasts.apple.com/us/podcast/huberman-lab/id1545953110",
+        ),
+      );
+    });
+  });
+
+  it("plays and saves an Apple Podcast search result", async () => {
+    vi.mocked(appleSearchApi.searchApplePodcastCatalog).mockResolvedValue({
+      shows: [
+        {
+          url: "https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110",
+          title: "Huberman Lab",
+          subtitle: "Scicomm Media",
+          artworkUrl: "https://example.com/artwork.jpg",
+        },
+      ],
+      episodes: [],
+    });
+
+    renderWithSettings(<ApplePodcastWidget />);
+
+    fireEvent.change(screen.getByPlaceholderText(/Podcasts, episodes/i), {
+      target: { value: "huberman" },
+    });
+
+    fireEvent.click(await screen.findByText("Huberman Lab"));
+
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem("dayboard:settings") ?? "{}",
+      );
+      expect(stored.applePodcastEmbedUrl).toBe(
+        "https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110",
+      );
+      expect(stored.applePodcastEmbedLinks).toEqual([
+        {
+          url: "https://podcasts.apple.com/us/podcast/huberman-lab/id1545953110",
+          title: "Huberman Lab",
+        },
+      ]);
       expect(screen.getByTitle("Apple Podcast player")).toHaveAttribute(
         "src",
         expect.stringContaining(
