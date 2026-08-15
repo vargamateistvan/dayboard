@@ -137,12 +137,14 @@ These proxies make remote requests work reliably during development and preview.
 
 ### Flights
 
-The Flights widget calls a local `/api/flights` endpoint in dev/preview, which proxies the public OpenSky Network API to avoid browser CORS issues. In production, you can either keep the same proxy setup or override the base URL with `VITE_FLIGHTS_API_BASE` if you host a compatible endpoint.
+The Flights widget calls a local `/api/flights` endpoint in dev/preview, which proxies the public OpenSky Network API to avoid browser CORS issues. On static deployments such as GitHub Pages, the browser cannot call OpenSky directly because the API rejects non-matching origins, so the production default uses a CORS-safe proxy (`api.allorigins.win/raw`) in front of the OpenSky endpoint.
+
+If you host your own proxy or another compatible source, you can override the base URL with `VITE_FLIGHTS_API_BASE`.
 
 Example:
 
 ```bash
-VITE_FLIGHTS_API_BASE=https://opensky-network.org/api
+VITE_FLIGHTS_API_BASE=https://api.allorigins.win/raw?url=https://opensky-network.org/api
 ```
 
 ## Project Structure

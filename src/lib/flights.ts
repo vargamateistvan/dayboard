@@ -1,4 +1,4 @@
-const DEFAULT_FLIGHTS_API_BASE = import.meta.env.DEV ? '/api/flights' : 'https://opensky-network.org/api'
+const DEFAULT_FLIGHTS_API_BASE = import.meta.env.DEV ? '/api/flights' : 'https://api.allorigins.win/raw?url='
 const KM_PER_NAUTICAL_MILE = 1.852
 const METERS_PER_FOOT = 0.3048
 const EARTH_RADIUS_KM = 6371
@@ -255,30 +255,54 @@ function parseAirplanesLiveFlight(
   }
 }
 
-function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): string {
+function buildOpenSkyFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): URL {
   const latitudeDelta = Math.min(2, Math.max(0.15, radiusKm / 111))
   const longitudeDelta = Math.min(
     2,
     Math.max(0.15, radiusKm / (111 * Math.cos(toRadians(latitude)))),
   )
 
-  if (/^https?:\/\//i.test(FLIGHTS_API_BASE)) {
-    const baseUrl = new URL(FLIGHTS_API_BASE)
-    const pathname = baseUrl.pathname.replace(/\/$/, '')
-    baseUrl.pathname = pathname.endsWith('/api') ? `${pathname}/states/all` : pathname
-    baseUrl.search = ''
-    baseUrl.searchParams.set('lamin', (latitude - latitudeDelta).toFixed(4))
-    baseUrl.searchParams.set('lomin', (longitude - longitudeDelta).toFixed(4))
-    baseUrl.searchParams.set('lamax', (latitude + latitudeDelta).toFixed(4))
-    baseUrl.searchParams.set('lomax', (longitude + longitudeDelta).toFixed(4))
-    return baseUrl.toString()
-  }
-
-  const requestUrl = new URL(FLIGHTS_API_BASE, 'http://localhost')
+  const requestUrl = new URL('https://opensky-network.org/api/states/all')
   requestUrl.searchParams.set('lamin', (latitude - latitudeDelta).toFixed(4))
   requestUrl.searchParams.set('lomin', (longitude - longitudeDelta).toFixed(4))
   requestUrl.searchParams.set('lamax', (latitude + latitudeDelta).toFixed(4))
   requestUrl.searchParams.set('lomax', (longitude + longitudeDelta).toFixed(4))
+  return requestUrl
+}
+
+function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): string {
+  const openSkyUrl = buildOpenSkyFlightRequestUrl(latitude, longitude, radiusKm)
+
+  if (/^https?:\/\//i.test(FLIGHTS_API_BASE)) {
+    const baseUrl = new URL(FLIGHTS_API_BASE)
+
+    if (baseUrl.hostname.includes('allorigins.win') && baseUrl.pathname === '/raw') {
+      const proxyUrl = new URL(baseUrl.toString())
+      proxyUrl.searchParams.set('url', openSkyUrl.toString())
+      return proxyUrl.toString()
+    }
+
+    if (baseUrl.searchParams.has('url')) {
+      const proxyUrl = new URL(baseUrl.toString())
+      proxyUrl.searchParams.set('url', openSkyUrl.toString())
+      return proxyUrl.toString()
+    }
+
+    const pathname = baseUrl.pathname.replace(/\/$/, '')
+    baseUrl.pathname = pathname.endsWith('/api') ? `${pathname}/states/all` : pathname
+    baseUrl.search = ''
+    baseUrl.searchParams.set('lamin', openSkyUrl.searchParams.get('lamin') ?? '')
+    baseUrl.searchParams.set('lomin', openSkyUrl.searchParams.get('lomin') ?? '')
+    baseUrl.searchParams.set('lamax', openSkyUrl.searchParams.get('lamax') ?? '')
+    baseUrl.searchParams.set('lomax', openSkyUrl.searchParams.get('lomax') ?? '')
+    return baseUrl.toString()
+  }
+
+  const requestUrl = new URL(FLIGHTS_API_BASE, 'http://localhost')
+  requestUrl.searchParams.set('lamin', openSkyUrl.searchParams.get('lamin') ?? '')
+  requestUrl.searchParams.set('lomin', openSkyUrl.searchParams.get('lomin') ?? '')
+  requestUrl.searchParams.set('lamax', openSkyUrl.searchParams.get('lamax') ?? '')
+  requestUrl.searchParams.set('lomax', openSkyUrl.searchParams.get('lomax') ?? '')
   const relativeUrl = requestUrl.pathname + requestUrl.search
   return relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
 }
