@@ -1,11 +1,11 @@
-const AIRPLANES_LIVE_API_BASE = 'https://api.airplanes.live/v2'
+const DEFAULT_FLIGHTS_API_BASE = import.meta.env.DEV ? '/api/flights' : 'https://opensky-network.org/api'
 const KM_PER_NAUTICAL_MILE = 1.852
 const METERS_PER_FOOT = 0.3048
 const EARTH_RADIUS_KM = 6371
 const MIN_FETCH_INTERVAL_MS = 10_000
 const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000
 const MAX_RATE_LIMIT_BACKOFF_MS = 300_000
-const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() || AIRPLANES_LIVE_API_BASE
+const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() || DEFAULT_FLIGHTS_API_BASE
 
 interface CachedFlightPayload {
   readonly flights: NearbyFlight[]
@@ -256,12 +256,31 @@ function parseAirplanesLiveFlight(
 }
 
 function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): string {
-  const baseUrl = new URL(FLIGHTS_API_BASE)
-  const radiusNm = Math.min(250, Math.max(1, radiusKm / KM_PER_NAUTICAL_MILE))
-  const basePath = baseUrl.pathname.replace(/\/$/, '')
-  baseUrl.pathname = `${basePath}/point/${latitude.toFixed(4)}/${longitude.toFixed(4)}/${radiusNm.toFixed(1)}`
-  baseUrl.search = ''
-  return baseUrl.toString()
+  const latitudeDelta = Math.min(2, Math.max(0.15, radiusKm / 111))
+  const longitudeDelta = Math.min(
+    2,
+    Math.max(0.15, radiusKm / (111 * Math.cos(toRadians(latitude)))),
+  )
+
+  if (/^https?:\/\//i.test(FLIGHTS_API_BASE)) {
+    const baseUrl = new URL(FLIGHTS_API_BASE)
+    const pathname = baseUrl.pathname.replace(/\/$/, '')
+    baseUrl.pathname = pathname.endsWith('/api') ? `${pathname}/states/all` : pathname
+    baseUrl.search = ''
+    baseUrl.searchParams.set('lamin', (latitude - latitudeDelta).toFixed(4))
+    baseUrl.searchParams.set('lomin', (longitude - longitudeDelta).toFixed(4))
+    baseUrl.searchParams.set('lamax', (latitude + latitudeDelta).toFixed(4))
+    baseUrl.searchParams.set('lomax', (longitude + longitudeDelta).toFixed(4))
+    return baseUrl.toString()
+  }
+
+  const requestUrl = new URL(FLIGHTS_API_BASE, 'http://localhost')
+  requestUrl.searchParams.set('lamin', (latitude - latitudeDelta).toFixed(4))
+  requestUrl.searchParams.set('lomin', (longitude - longitudeDelta).toFixed(4))
+  requestUrl.searchParams.set('lamax', (latitude + latitudeDelta).toFixed(4))
+  requestUrl.searchParams.set('lomax', (longitude + longitudeDelta).toFixed(4))
+  const relativeUrl = requestUrl.pathname + requestUrl.search
+  return relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
 }
 
 function buildRequestKey({

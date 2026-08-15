@@ -135,11 +135,15 @@ The Vite dev server exposes:
 
 These proxies make remote requests work reliably during development and preview.
 
-### Flights in production
+### Flights
 
-The Flights widget uses the free public `airplanes.live` API directly from the browser in production. The app requests the nearby-aircraft endpoint under `https://api.airplanes.live/v2/point/...`, which supports browser CORS.
+The Flights widget calls a local `/api/flights` endpoint in dev/preview, which proxies the public OpenSky Network API to avoid browser CORS issues. In production, you can either keep the same proxy setup or override the base URL with `VITE_FLIGHTS_API_BASE` if you host a compatible endpoint.
 
-If you need to override that endpoint, set `VITE_FLIGHTS_API_BASE` to another compatible base URL.
+Example:
+
+```bash
+VITE_FLIGHTS_API_BASE=https://opensky-network.org/api
+```
 
 ## Project Structure
 
