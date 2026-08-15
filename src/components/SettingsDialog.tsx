@@ -167,6 +167,38 @@ function parseOptionalFontSizeRem(value: string): number | null {
   return Math.min(40, Math.max(0.5, Math.round(parsed * 10) / 10))
 }
 
+function getClockAutoSizeRem(rowCount: number): string {
+  if (rowCount === 2) {
+    return "22";
+  }
+
+  if (rowCount === 3) {
+    return "16";
+  }
+
+  if (rowCount === 4) {
+    return "11";
+  }
+
+  return "";
+}
+
+function getClockAutoDateSizeRem(rowCount: number): string {
+  if (rowCount === 2) {
+    return "1.5";
+  }
+
+  if (rowCount === 3) {
+    return "1.2";
+  }
+
+  if (rowCount === 4) {
+    return "1";
+  }
+
+  return "";
+}
+
 function formatOptionalStretchPercent(value: number | null): string {
   return value == null ? "" : String(value)
 }
@@ -1270,6 +1302,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [clockTimeStretch, setClockTimeStretch] = useState(
     formatOptionalStretchPercent(settings.clockTimeStretchPercent),
   );
+  const [clockFontColor, setClockFontColor] = useState(settings.clockFontColor ?? "");
   const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
     string | null
   >(null);
@@ -1411,6 +1444,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setClockTimeFontSize(formatOptionalFontSizeRem(nextSettings.clockTimeFontSizeRem));
     setClockDateFontSize(formatOptionalFontSizeRem(nextSettings.clockDateFontSizeRem));
     setClockTimeStretch(formatOptionalStretchPercent(nextSettings.clockTimeStretchPercent));
+    setClockFontColor(nextSettings.clockFontColor ?? "");
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
@@ -1471,6 +1505,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     clockTimeFontSizeRem: parseOptionalFontSizeRem(clockTimeFontSize),
     clockDateFontSizeRem: parseOptionalFontSizeRem(clockDateFontSize),
     clockTimeStretchPercent: parseOptionalStretchPercent(clockTimeStretch),
+    clockFontColor: clockFontColor.trim(),
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl: settings.spotifyEmbedUrl,
@@ -1513,11 +1548,13 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     const nextClockTimeFontSizeRem = parseOptionalFontSizeRem(clockTimeFontSize);
     const nextClockDateFontSizeRem = parseOptionalFontSizeRem(clockDateFontSize);
     const nextClockTimeStretchPercent = parseOptionalStretchPercent(clockTimeStretch);
+    const nextClockFontColor = clockFontColor.trim();
 
     if (
       settings.clockTimeFontSizeRem === nextClockTimeFontSizeRem
       && settings.clockDateFontSizeRem === nextClockDateFontSizeRem
       && settings.clockTimeStretchPercent === nextClockTimeStretchPercent
+      && settings.clockFontColor === nextClockFontColor
     ) {
       return;
     }
@@ -1526,12 +1563,15 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       clockTimeFontSizeRem: nextClockTimeFontSizeRem,
       clockDateFontSizeRem: nextClockDateFontSizeRem,
       clockTimeStretchPercent: nextClockTimeStretchPercent,
+      clockFontColor: nextClockFontColor,
     });
   }, [
     clockDateFontSize,
+    clockFontColor,
     clockTimeFontSize,
     clockTimeStretch,
     settings.clockDateFontSizeRem,
+    settings.clockFontColor,
     settings.clockTimeFontSizeRem,
     settings.clockTimeStretchPercent,
     updateSettings,
@@ -2837,6 +2877,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           step={0.1}
                           value={clockTimeFontSize}
                           placeholder="Auto"
+                          onFocus={() => {
+                            if (!clockTimeFontSize) {
+                              setClockTimeFontSize(getClockAutoSizeRem(rowCount));
+                            }
+                          }}
                           onChange={(e) => setClockTimeFontSize(e.target.value)}
                         />
                       </label>
@@ -2850,6 +2895,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           step={0.1}
                           value={clockDateFontSize}
                           placeholder="Auto"
+                          onFocus={() => {
+                            if (!clockDateFontSize) {
+                              setClockDateFontSize(getClockAutoDateSizeRem(rowCount));
+                            }
+                          }}
                           onChange={(e) => setClockDateFontSize(e.target.value)}
                         />
                       </label>
@@ -2863,12 +2913,32 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           step={1}
                           value={clockTimeStretch}
                           placeholder="100"
+                          onFocus={() => {
+                            if (!clockTimeStretch) {
+                              setClockTimeStretch("100");
+                            }
+                          }}
                           onChange={(e) => setClockTimeStretch(e.target.value)}
+                        />
+                      </label>
+                      <label className={styles.intervalLabel}>
+                        <span>Clock font color</span>
+                        <input
+                          className={styles.input}
+                          type="text"
+                          value={clockFontColor}
+                          placeholder="#f5f5f5 or linear-gradient(90deg, #fff, #7dd3fc)"
+                          onFocus={() => {
+                            if (!clockFontColor) {
+                              setClockFontColor(customColors.fontColor);
+                            }
+                          }}
+                          onChange={(e) => setClockFontColor(e.target.value)}
                         />
                       </label>
                     </div>
                     <p className={styles.hint}>
-                      Leave size fields empty to keep automatic sizing based on the clock row height. Stretch uses 100% by default.
+                      Leave size fields empty to keep automatic sizing based on the clock row height. Stretch starts at 100% when blank. Use a solid color or a CSS gradient for the clock text.
                     </p>
                   </section>
                 )}

@@ -166,6 +166,16 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('prefills the current auto clock size when the field is focused', () => {
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    const timeInput = screen.getByLabelText('Time font size (rem)')
+    fireEvent.focus(timeInput)
+
+    expect((timeInput as HTMLInputElement).value).toBe('16')
+  })
+
   it('persists manual clock font-size settings', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))

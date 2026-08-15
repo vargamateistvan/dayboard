@@ -66,6 +66,7 @@ export interface Settings {
   clockTimeFontSizeRem: number | null
   clockDateFontSizeRem: number | null
   clockTimeStretchPercent: number | null
+  clockFontColor?: string
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
   globalCalendarFeeds: CalendarFeed[]
@@ -201,6 +202,7 @@ export const DEFAULT_SETTINGS: Settings = {
   clockTimeFontSizeRem: null,
   clockDateFontSizeRem: null,
   clockTimeStretchPercent: null,
+  clockFontColor: '',
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
   globalCalendarFeeds: [],
@@ -692,6 +694,15 @@ function normalizeCustomColors(value: unknown): CustomColors {
   }
 }
 
+function normalizeClockFontColor(value: unknown): string {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const trimmed = value.trim()
+  return trimmed
+}
+
 function normalizeStoredSettings(value: unknown): Settings | null {
   if (!value || typeof value !== 'object') {
     return null
@@ -712,6 +723,7 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     clockTimeFontSizeRem: normalizeClockFontSizeRem((rest as { clockTimeFontSizeRem?: unknown }).clockTimeFontSizeRem),
     clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
     clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
+    clockFontColor: normalizeClockFontColor((rest as { clockFontColor?: unknown }).clockFontColor),
     showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
     calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
     globalCalendarFeeds: normalizeCalendarFeeds((rest as { globalCalendarFeeds?: unknown }).globalCalendarFeeds),
@@ -819,6 +831,7 @@ export function saveSettings(settings: Settings): void {
       clockTimeFontSizeRem: normalizeClockFontSizeRem(settings.clockTimeFontSizeRem),
       clockDateFontSizeRem: normalizeClockFontSizeRem(settings.clockDateFontSizeRem),
       clockTimeStretchPercent: normalizeClockTimeStretchPercent(settings.clockTimeStretchPercent),
+      clockFontColor: normalizeClockFontColor(settings.clockFontColor),
       showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
       globalCalendarFeeds: normalizeCalendarFeeds(settings.globalCalendarFeeds),
@@ -943,6 +956,10 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
     (settings.clockTimeStretchPercent < 50 || settings.clockTimeStretchPercent > 200)
   ) {
     errors.push('clockTimeStretchPercent must be between 50 and 200 when provided')
+  }
+
+  if (settings.clockFontColor && !/^(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgba?\(|hsla?\(|(?:linear|radial|conic)-gradient\()/i.test(settings.clockFontColor.trim())) {
+    errors.push('clockFontColor must be a valid CSS color or gradient string')
   }
 
   if (typeof settings.showBuyMeACoffeeWidget !== 'boolean') {
