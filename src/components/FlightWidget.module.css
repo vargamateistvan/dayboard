@@ -111,8 +111,10 @@
 
 .radarScope {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1;
+  width: min(100%, 30rem);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
   border-radius: 50%;
   overflow: hidden;
   background:
@@ -130,7 +132,9 @@
 .radar {
   position: relative;
   z-index: 2;
+  display: block;
   width: 100%;
+  height: 100%;
   aspect-ratio: 1;
   overflow: visible;
 }
@@ -486,8 +490,46 @@
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .content {
     grid-template-columns: 1fr;
+  }
+
+  .radarScope {
+    width: min(100%, 22rem);
+  }
+}
+
+@media (min-width: 1200px) {
+  .radarPanel {
+    align-items: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .summaryBar {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .selectedFlightGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rowHeader,
+  .rowMeta,
+  .rowFooter {
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+}
+
+@media (max-height: 700px) {
+  .flightList {
+    gap: 0.3rem;
+  }
+
+  .selectedFlightCard {
+    padding: 0.4rem;
   }
 }
