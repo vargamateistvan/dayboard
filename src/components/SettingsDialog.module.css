@@ -844,7 +844,11 @@
   font-size: var(--font-size-xs);
   font-weight: 600;
   user-select: none;
-  transition: border-color var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast);
+  font: inherit;
+  line-height: 1.2;
+  text-align: left;
+  appearance: none;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
 }
 
 .widgetSizeLabel {
@@ -868,10 +872,17 @@
   cursor: grab;
 }
 
-.widgetChipHidden:hover {
+.widgetChipHidden:hover,
+.widgetChipHidden:focus-visible {
   border-color: var(--color-accent);
   color: var(--color-accent);
   background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  transform: translateY(-1px);
+}
+
+.widgetChipVisible:focus-visible,
+.widgetChipVisible:hover {
+  outline: none;
 }
 
 /* ── 3x2 Layout grid ──────────────────────────────── */

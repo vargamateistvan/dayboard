@@ -70,6 +70,16 @@ describe('SettingsDialog', () => {
     expect(screen.getByTestId('layout-widget-tasks')).toBeInTheDocument()
   })
 
+  it('adds a hidden widget from the palette with one click', () => {
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Tasks to dashboard' }))
+
+    expect(screen.getByTestId('layout-widget-tasks')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Tasks is on the dashboard' })).toBeInTheDocument()
+  })
+
   it('removes a widget from the grid when the × button is clicked', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
@@ -85,7 +95,7 @@ describe('SettingsDialog', () => {
     expect(screen.queryByTestId('layout-widget-weather')).not.toBeInTheDocument()
 
     // The palette should show weather as a hidden chip (with grip icon present)
-    expect(screen.getByTitle('Drag to add Weather')).toBeInTheDocument()
+    expect(screen.getByTitle('Add Weather to dashboard')).toBeInTheDocument()
   })
 
   it('persists the calendar extra info preview mode', () => {

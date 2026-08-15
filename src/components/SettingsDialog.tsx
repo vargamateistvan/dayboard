@@ -624,6 +624,86 @@ function WidgetLayoutEditor({
     window.addEventListener("mouseup", onMouseUp);
   };
 
+  const handleAddWidget = (widget: Widget) => {
+    const currentPlacement = placements[widget];
+    const candidateSizes = Array.from(
+      new Map(
+        [
+          { columnSpan: currentPlacement.columnSpan, rowSpan: currentPlacement.rowSpan },
+          {
+            columnSpan: MIN_WIDGET_SIZE[widget].columnSpan,
+            rowSpan: MIN_WIDGET_SIZE[widget].rowSpan,
+          },
+          { columnSpan: 1, rowSpan: 1 },
+        ].map((size) => [`${size.columnSpan}:${size.rowSpan}`, size]),
+      ).values(),
+    );
+
+    let nextPlacement: WidgetPlacement | null = null;
+
+    for (const size of candidateSizes) {
+      for (let row = 1; row <= rowCount; row += 1) {
+        for (let column = 1; column <= WIDGET_GRID_COLUMNS; column += 1) {
+          const candidatePlacement = {
+            ...currentPlacement,
+            column: column as WidgetGridColumn,
+            row,
+            columnSpan: size.columnSpan as WidgetColumnSpan,
+            rowSpan: size.rowSpan as WidgetRowSpan,
+          };
+
+          if (canUsePlacement(widget, candidatePlacement)) {
+            nextPlacement = candidatePlacement;
+            break;
+          }
+        }
+
+        if (nextPlacement) {
+          break;
+        }
+      }
+
+      if (nextPlacement) {
+        break;
+      }
+    }
+
+    if (!nextPlacement && rowCount < MAX_GRID_ROWS) {
+      onAddRow();
+      const expandedPlacement = {
+        ...currentPlacement,
+        column: 1 as WidgetGridColumn,
+        row: rowCount + 1,
+        columnSpan: MIN_WIDGET_SIZE[widget].columnSpan,
+        rowSpan: MIN_WIDGET_SIZE[widget].rowSpan,
+      };
+
+      onSetWidgetPlacement(widget, expandedPlacement);
+      if (!visibility[widget]) {
+        onToggleWidget(widget, true);
+      }
+      return;
+    }
+
+    if (!nextPlacement) {
+      return;
+    }
+
+    onSetWidgetPlacement(widget, nextPlacement);
+    if (!visibility[widget]) {
+      onToggleWidget(widget, true);
+    }
+  };
+
+  const handlePaletteWidgetClick = (widget: Widget) => {
+    if (visibility[widget]) {
+      onToggleWidget(widget, false);
+      return;
+    }
+
+    handleAddWidget(widget);
+  };
+
   const handleRemoveWidget = (widget: Widget) => {
     onToggleWidget(widget, false);
   };
@@ -642,25 +722,34 @@ function WidgetLayoutEditor({
               <div className={styles.widgetPaletteChips}>
                 {group.widgets.map((widget) => {
                   const isVisible = visibility[widget];
+                  const label = getWidgetLabel(widget);
                   return (
-                    <div
+                    <button
                       key={widget}
+                      type="button"
                       className={[
                         styles.widgetChip,
                         isVisible ? styles.widgetChipVisible : styles.widgetChipHidden,
                       ].join(" ")}
                       draggable={!isVisible}
+                      onClick={() => handlePaletteWidgetClick(widget)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          handlePaletteWidgetClick(widget);
+                        }
+                      }}
                       onDragStart={!isVisible ? handlePaletteDragStart(widget) : undefined}
                       onDragEnd={!isVisible ? handlePaletteDragEnd : undefined}
-                      aria-label={isVisible ? `${getWidgetLabel(widget)} is on the dashboard` : `Drag ${getWidgetLabel(widget)} onto the grid`}
-                      title={isVisible ? `${getWidgetLabel(widget)} (on grid)` : `Drag to add ${getWidgetLabel(widget)}`}
+                      aria-label={isVisible ? `${label} is on the dashboard` : `Add ${label} to dashboard`}
+                      title={isVisible ? `${label} is on the dashboard` : `Add ${label} to dashboard`}
                     >
                       {!isVisible && <GripVertical size={12} />}
-                      <span>{getWidgetLabel(widget)}</span>
+                      <span>{label}</span>
                       <span className={styles.widgetSizeLabel}>
                         {MIN_WIDGET_SIZE[widget].columnSpan}×{MIN_WIDGET_SIZE[widget].rowSpan}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -778,7 +867,7 @@ function WidgetLayoutEditor({
       </div>
 
       <p className={styles.layoutEditorHint}>
-        Drag widgets onto the grid &bull; drag the corner handle to resize &bull; &times; to remove
+        Click a widget to add or remove it &bull; drag to move &bull; drag the corner handle to resize
       </p>
     </div>
   );
