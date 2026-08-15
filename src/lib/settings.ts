@@ -66,7 +66,6 @@ export interface Settings {
   clockTimeFontSizeRem: number | null
   clockDateFontSizeRem: number | null
   clockTimeStretchPercent: number | null
-  clockFontColor?: string
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
   globalCalendarFeeds: CalendarFeed[]
@@ -78,6 +77,10 @@ export interface Settings {
   weatherRefreshMinutes: number
   weatherUnitSystem: WeatherUnitSystem
   weatherShowExtraDetails: boolean
+  astronomyRefreshMinutes: number
+  astronomyUseDeviceLocation: boolean
+  astronomyManualLatitude: string
+  astronomyManualLongitude: string
   flightsRadiusKm: number
   flightsRadarRadiusKm: number
   flightsRefreshSeconds: number
@@ -202,7 +205,6 @@ export const DEFAULT_SETTINGS: Settings = {
   clockTimeFontSizeRem: null,
   clockDateFontSizeRem: null,
   clockTimeStretchPercent: null,
-  clockFontColor: '',
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
   globalCalendarFeeds: [],
@@ -214,6 +216,10 @@ export const DEFAULT_SETTINGS: Settings = {
   weatherRefreshMinutes: 10,
   weatherUnitSystem: 'metric',
   weatherShowExtraDetails: true,
+  astronomyRefreshMinutes: 30,
+  astronomyUseDeviceLocation: true,
+  astronomyManualLatitude: '',
+  astronomyManualLongitude: '',
   flightsRadiusKm: 50,
   flightsRadarRadiusKm: 25,
   flightsRefreshSeconds: 2,
@@ -373,6 +379,22 @@ function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
 
 function normalizeWeatherShowExtraDetails(value: unknown): boolean {
   return normalizeBoolean(value, DEFAULT_SETTINGS.weatherShowExtraDetails)
+}
+
+function normalizeAstronomyRefreshMinutes(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return DEFAULT_SETTINGS.astronomyRefreshMinutes
+  }
+
+  return Math.min(1_440, Math.max(1, Math.round(value)))
+}
+
+function normalizeAstronomyUseDeviceLocation(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.astronomyUseDeviceLocation)
+}
+
+function normalizeAstronomyCoordinate(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : ''
 }
 
 function normalizeFlightsRadiusKm(value: unknown): number {
@@ -694,15 +716,6 @@ function normalizeCustomColors(value: unknown): CustomColors {
   }
 }
 
-function normalizeClockFontColor(value: unknown): string {
-  if (typeof value !== 'string') {
-    return ''
-  }
-
-  const trimmed = value.trim()
-  return trimmed
-}
-
 function normalizeStoredSettings(value: unknown): Settings | null {
   if (!value || typeof value !== 'object') {
     return null
@@ -723,7 +736,6 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     clockTimeFontSizeRem: normalizeClockFontSizeRem((rest as { clockTimeFontSizeRem?: unknown }).clockTimeFontSizeRem),
     clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
     clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
-    clockFontColor: normalizeClockFontColor((rest as { clockFontColor?: unknown }).clockFontColor),
     showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
     calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
     globalCalendarFeeds: normalizeCalendarFeeds((rest as { globalCalendarFeeds?: unknown }).globalCalendarFeeds),
@@ -745,6 +757,10 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     weatherRefreshMinutes: normalizeWeatherRefreshMinutes(rest.weatherRefreshMinutes),
     weatherUnitSystem: normalizeWeatherUnitSystem(rest.weatherUnitSystem),
     weatherShowExtraDetails: normalizeWeatherShowExtraDetails(rest.weatherShowExtraDetails),
+    astronomyRefreshMinutes: normalizeAstronomyRefreshMinutes((rest as { astronomyRefreshMinutes?: unknown }).astronomyRefreshMinutes),
+    astronomyUseDeviceLocation: normalizeAstronomyUseDeviceLocation((rest as { astronomyUseDeviceLocation?: unknown }).astronomyUseDeviceLocation),
+    astronomyManualLatitude: normalizeAstronomyCoordinate((rest as { astronomyManualLatitude?: unknown }).astronomyManualLatitude),
+    astronomyManualLongitude: normalizeAstronomyCoordinate((rest as { astronomyManualLongitude?: unknown }).astronomyManualLongitude),
     flightsRadiusKm: normalizeFlightsRadiusKm((rest as { flightsRadiusKm?: unknown }).flightsRadiusKm),
     flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm((rest as { flightsRadarRadiusKm?: unknown }).flightsRadarRadiusKm),
     flightsRefreshSeconds: normalizeFlightsRefreshSeconds((rest as { flightsRefreshSeconds?: unknown }).flightsRefreshSeconds),
@@ -831,7 +847,6 @@ export function saveSettings(settings: Settings): void {
       clockTimeFontSizeRem: normalizeClockFontSizeRem(settings.clockTimeFontSizeRem),
       clockDateFontSizeRem: normalizeClockFontSizeRem(settings.clockDateFontSizeRem),
       clockTimeStretchPercent: normalizeClockTimeStretchPercent(settings.clockTimeStretchPercent),
-      clockFontColor: normalizeClockFontColor(settings.clockFontColor),
       showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
       calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
       globalCalendarFeeds: normalizeCalendarFeeds(settings.globalCalendarFeeds),
@@ -843,6 +858,10 @@ export function saveSettings(settings: Settings): void {
       weatherRefreshMinutes: normalizeWeatherRefreshMinutes(settings.weatherRefreshMinutes),
       weatherUnitSystem: normalizeWeatherUnitSystem(settings.weatherUnitSystem),
       weatherShowExtraDetails: normalizeWeatherShowExtraDetails(settings.weatherShowExtraDetails),
+      astronomyRefreshMinutes: normalizeAstronomyRefreshMinutes(settings.astronomyRefreshMinutes),
+      astronomyUseDeviceLocation: normalizeAstronomyUseDeviceLocation(settings.astronomyUseDeviceLocation),
+      astronomyManualLatitude: normalizeAstronomyCoordinate(settings.astronomyManualLatitude),
+      astronomyManualLongitude: normalizeAstronomyCoordinate(settings.astronomyManualLongitude),
       flightsRadiusKm: normalizeFlightsRadiusKm(settings.flightsRadiusKm),
       flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm(settings.flightsRadarRadiusKm),
       flightsRefreshSeconds: normalizeFlightsRefreshSeconds(settings.flightsRefreshSeconds),
@@ -958,10 +977,6 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
     errors.push('clockTimeStretchPercent must be between 50 and 200 when provided')
   }
 
-  if (settings.clockFontColor && !/^(#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})|rgba?\(|hsla?\(|(?:linear|radial|conic)-gradient\()/i.test(settings.clockFontColor.trim())) {
-    errors.push('clockFontColor must be a valid CSS color or gradient string')
-  }
-
   if (typeof settings.showBuyMeACoffeeWidget !== 'boolean') {
     errors.push('showBuyMeACoffeeWidget must be boolean')
   }
@@ -976,6 +991,22 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (!['metric', 'imperial'].includes(settings.weatherUnitSystem)) {
     errors.push('Invalid weatherUnitSystem')
+  }
+
+  if (settings.astronomyRefreshMinutes < 1 || settings.astronomyRefreshMinutes > 1440) {
+    errors.push('astronomyRefreshMinutes must be between 1 and 1440')
+  }
+
+  if (typeof settings.astronomyUseDeviceLocation !== 'boolean') {
+    errors.push('astronomyUseDeviceLocation must be boolean')
+  }
+
+  if (typeof settings.astronomyManualLatitude !== 'string') {
+    errors.push('astronomyManualLatitude must be a string')
+  }
+
+  if (typeof settings.astronomyManualLongitude !== 'string') {
+    errors.push('astronomyManualLongitude must be a string')
   }
 
   if (settings.flightsRadiusKm < 5 || settings.flightsRadiusKm > 250) {
@@ -1176,6 +1207,10 @@ export function isValidSettings(value: unknown): value is Settings {
     Array.isArray(s.calendarFeeds) &&
     typeof s.weatherRefreshMinutes === 'number' &&
     typeof s.weatherUnitSystem === 'string' &&
+    typeof s.astronomyRefreshMinutes === 'number' &&
+    typeof s.astronomyUseDeviceLocation === 'boolean' &&
+    typeof s.astronomyManualLatitude === 'string' &&
+    typeof s.astronomyManualLongitude === 'string' &&
     typeof s.pomodoroWorkMinutes === 'number' &&
     typeof s.pomodoroBreakMinutes === 'number' &&
     Array.isArray(s.stockSymbols) &&

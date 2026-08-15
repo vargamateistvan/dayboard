@@ -130,7 +130,7 @@ describe('useWidgetVisibility', () => {
 
     // Default: clock(1,1), weather(1,2), calendar(2,2 rowSpan 2), timer/tasks/notes/spotify/kanban on row 3
     expect(screen.getByTestId('order-grid').textContent).toBe(
-      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,kanban,flights,applePodcast,deviceInfo,stocks,timezoneClock,sports,currencies,quote',
+      'clock,weather,appleMusic,calendar,timer,tasks,notes,spotify,kanban,flights,applePodcast,deviceInfo,stocks,timezoneClock,sports,astronomy,currencies,quote',
     )
   })
 
