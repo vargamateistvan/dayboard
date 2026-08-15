@@ -1188,14 +1188,35 @@ export interface SettingsPresetSchedule {
   enabled: boolean
   startTime: string
   endTime: string
+  daysOfWeek: PresetScheduleDay[]
 }
 
 export type SettingsPreset = SettingsProfile
+
+export type PresetScheduleDay =
+  | 'sunday'
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+
+const PRESET_SCHEDULE_DAY_ORDER: ReadonlyArray<PresetScheduleDay> = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+]
 
 const DEFAULT_PRESET_SCHEDULE: SettingsPresetSchedule = {
   enabled: false,
   startTime: '09:00',
   endTime: '17:00',
+  daysOfWeek: [...PRESET_SCHEDULE_DAY_ORDER],
 }
 
 function isValidTimeValue(value: unknown): value is string {
@@ -1204,6 +1225,27 @@ function isValidTimeValue(value: unknown): value is string {
 
 function normalizePresetTime(value: unknown, fallback: string): string {
   return isValidTimeValue(value) ? value.trim() : fallback
+}
+
+function normalizePresetScheduleDays(
+  value: unknown,
+  fallback: PresetScheduleDay[],
+): PresetScheduleDay[] {
+  if (!Array.isArray(value)) {
+    return [...fallback]
+  }
+
+  const daySet = new Set(
+    value.filter((day): day is PresetScheduleDay =>
+      typeof day === 'string' && PRESET_SCHEDULE_DAY_ORDER.includes(day as PresetScheduleDay),
+    ),
+  )
+
+  if (daySet.size === 0) {
+    return [...fallback]
+  }
+
+  return PRESET_SCHEDULE_DAY_ORDER.filter((day) => daySet.has(day))
 }
 
 function normalizePresetSchedule(value: unknown): SettingsPresetSchedule | undefined {
@@ -1216,6 +1258,7 @@ function normalizePresetSchedule(value: unknown): SettingsPresetSchedule | undef
     enabled: normalizeBoolean(schedule.enabled, DEFAULT_PRESET_SCHEDULE.enabled),
     startTime: normalizePresetTime(schedule.startTime, DEFAULT_PRESET_SCHEDULE.startTime),
     endTime: normalizePresetTime(schedule.endTime, DEFAULT_PRESET_SCHEDULE.endTime),
+    daysOfWeek: normalizePresetScheduleDays(schedule.daysOfWeek, DEFAULT_PRESET_SCHEDULE.daysOfWeek),
   }
 }
 
@@ -1272,6 +1315,15 @@ function parseTimeMinutes(value: string): number {
   return (hours * 60) + minutes
 }
 
+function getScheduleDayFromDate(date: Date): PresetScheduleDay {
+  return PRESET_SCHEDULE_DAY_ORDER[date.getDay()]
+}
+
+function getPreviousScheduleDay(day: PresetScheduleDay): PresetScheduleDay {
+  const index = PRESET_SCHEDULE_DAY_ORDER.indexOf(day)
+  return PRESET_SCHEDULE_DAY_ORDER[(index + PRESET_SCHEDULE_DAY_ORDER.length - 1) % PRESET_SCHEDULE_DAY_ORDER.length]
+}
+
 export function isPresetScheduledNow(
   schedule: SettingsPresetSchedule | undefined,
   at: Date = new Date(),
@@ -1283,16 +1335,25 @@ export function isPresetScheduledNow(
   const start = parseTimeMinutes(schedule.startTime)
   const end = parseTimeMinutes(schedule.endTime)
   const current = at.getHours() * 60 + at.getMinutes()
+  const activeDays = normalizePresetScheduleDays(
+    schedule.daysOfWeek,
+    DEFAULT_PRESET_SCHEDULE.daysOfWeek,
+  )
+  const currentDay = getScheduleDayFromDate(at)
 
   if (start === end) {
-    return true
+    return activeDays.includes(currentDay)
   }
 
   if (start < end) {
-    return current >= start && current < end
+    return activeDays.includes(currentDay) && current >= start && current < end
   }
 
-  return current >= start || current < end
+  if (current >= start) {
+    return activeDays.includes(currentDay)
+  }
+
+  return activeDays.includes(getPreviousScheduleDay(currentDay)) && current < end
 }
 
 export function savePreset(

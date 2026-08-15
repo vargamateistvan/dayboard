@@ -50,6 +50,7 @@ import {
   type Settings,
   type SettingsPreset,
   type SettingsPresetSchedule,
+  type PresetScheduleDay,
   type SportsFavoriteTeam,
   type SportsLeagueId,
   updatePresetSchedule,
@@ -283,7 +284,18 @@ const DEFAULT_PRESET_SCHEDULE: SettingsPresetSchedule = {
   enabled: true,
   startTime: "09:00",
   endTime: "17:00",
+  daysOfWeek: ["monday", "tuesday", "wednesday", "thursday", "friday"],
 };
+
+const PRESET_SCHEDULE_DAY_OPTIONS: ReadonlyArray<{ id: PresetScheduleDay; label: string; shortLabel: string }> = [
+  { id: "monday", label: "Monday", shortLabel: "Mon" },
+  { id: "tuesday", label: "Tuesday", shortLabel: "Tue" },
+  { id: "wednesday", label: "Wednesday", shortLabel: "Wed" },
+  { id: "thursday", label: "Thursday", shortLabel: "Thu" },
+  { id: "friday", label: "Friday", shortLabel: "Fri" },
+  { id: "saturday", label: "Saturday", shortLabel: "Sat" },
+  { id: "sunday", label: "Sunday", shortLabel: "Sun" },
+];
 
 function formatPresetTimestamp(timestamp: number): string {
   return new Date(timestamp).toLocaleString("en-US", {
@@ -299,7 +311,15 @@ function formatPresetSchedule(schedule?: SettingsPresetSchedule): string {
     return "Manual only";
   }
 
-  return `Daily ${schedule.startTime}–${schedule.endTime}`;
+  const selectedDays = PRESET_SCHEDULE_DAY_OPTIONS.filter((day) =>
+    schedule.daysOfWeek.includes(day.id),
+  );
+  const daySummary =
+    selectedDays.length === PRESET_SCHEDULE_DAY_OPTIONS.length
+      ? "Daily"
+      : selectedDays.map((day) => day.shortLabel).join(", ");
+
+  return `${daySummary} ${schedule.startTime}–${schedule.endTime}`;
 }
 
 interface WidgetLayoutEditorProps {
@@ -792,13 +812,33 @@ function PresetCard({
   const [endTime, setEndTime] = useState(
     preset.schedule?.endTime ?? DEFAULT_PRESET_SCHEDULE.endTime,
   );
+  const [daysOfWeek, setDaysOfWeek] = useState<PresetScheduleDay[]>(
+    preset.schedule?.daysOfWeek ?? DEFAULT_PRESET_SCHEDULE.daysOfWeek,
+  );
   const [renameError, setRenameError] = useState<string | null>(null);
 
   useEffect(() => {
     setScheduleEnabled(preset.schedule?.enabled ?? false);
     setStartTime(preset.schedule?.startTime ?? DEFAULT_PRESET_SCHEDULE.startTime);
     setEndTime(preset.schedule?.endTime ?? DEFAULT_PRESET_SCHEDULE.endTime);
+    setDaysOfWeek(preset.schedule?.daysOfWeek ?? DEFAULT_PRESET_SCHEDULE.daysOfWeek);
   }, [preset]);
+
+  const toggleScheduleDay = (day: PresetScheduleDay) => {
+    setDaysOfWeek((currentDays) => {
+      if (currentDays.includes(day)) {
+        if (currentDays.length === 1) {
+          return currentDays;
+        }
+
+        return currentDays.filter((candidate) => candidate !== day);
+      }
+
+      return PRESET_SCHEDULE_DAY_OPTIONS
+        .map((option) => option.id)
+        .filter((candidate) => currentDays.includes(candidate) || candidate === day);
+    });
+  };
 
   const handleSaveCurrent = () => {
     savePreset(
@@ -809,6 +849,7 @@ function PresetCard({
             enabled: true,
             startTime,
             endTime,
+            daysOfWeek,
           }
         : undefined,
       draftLayout,
@@ -824,6 +865,7 @@ function PresetCard({
             enabled: true,
             startTime,
             endTime,
+            daysOfWeek,
           }
         : undefined,
     );
@@ -923,6 +965,7 @@ function PresetCard({
                       enabled: true,
                       startTime,
                       endTime,
+                      daysOfWeek,
                     }
                   : undefined,
               )}
@@ -943,25 +986,44 @@ function PresetCard({
         </div>
 
         {scheduleEnabled && (
-          <div className={styles.presetScheduleInputs}>
-            <label className={styles.intervalLabel}>
-              <span>Start</span>
-              <input
-                className={styles.input}
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-              />
-            </label>
-            <label className={styles.intervalLabel}>
-              <span>End</span>
-              <input
-                className={styles.input}
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-              />
-            </label>
+          <div className={styles.presetScheduleEditor}>
+            <div className={styles.presetScheduleInputs}>
+              <label className={styles.intervalLabel}>
+                <span>Start</span>
+                <input
+                  className={styles.input}
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+              </label>
+              <label className={styles.intervalLabel}>
+                <span>End</span>
+                <input
+                  className={styles.input}
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className={styles.presetScheduleDays}>
+              {PRESET_SCHEDULE_DAY_OPTIONS.map((day) => (
+                <button
+                  key={`${preset.name}-${day.id}`}
+                  className={[
+                    styles.presetScheduleDayButton,
+                    daysOfWeek.includes(day.id) ? styles.presetScheduleDayButtonActive : "",
+                  ].join(" ")}
+                  type="button"
+                  onClick={() => toggleScheduleDay(day.id)}
+                  aria-pressed={daysOfWeek.includes(day.id)}
+                  aria-label={`Apply on ${day.label}`}
+                >
+                  {day.shortLabel}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -1187,6 +1249,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   );
   const [newPresetEndTime, setNewPresetEndTime] = useState(
     DEFAULT_PRESET_SCHEDULE.endTime,
+  );
+  const [newPresetDaysOfWeek, setNewPresetDaysOfWeek] = useState<PresetScheduleDay[]>(
+    DEFAULT_PRESET_SCHEDULE.daysOfWeek,
   );
   const [editingPresetName, setEditingPresetName] = useState<string>(selectedPresetName ?? "");
   const background = parseBackground(customColors.background);
@@ -1620,6 +1685,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
             enabled: true,
             startTime: newPresetStartTime,
             endTime: newPresetEndTime,
+            daysOfWeek: newPresetDaysOfWeek,
           }
         : undefined,
       presetLayout,
@@ -1627,6 +1693,22 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setEditingPresetName(trimmedName);
     refreshPresets();
     setPresetName("");
+  };
+
+  const toggleNewPresetScheduleDay = (day: PresetScheduleDay) => {
+    setNewPresetDaysOfWeek((currentDays) => {
+      if (currentDays.includes(day)) {
+        if (currentDays.length === 1) {
+          return currentDays;
+        }
+
+        return currentDays.filter((candidate) => candidate !== day);
+      }
+
+      return PRESET_SCHEDULE_DAY_OPTIONS
+        .map((option) => option.id)
+        .filter((candidate) => currentDays.includes(candidate) || candidate === day);
+    });
   };
 
   const handleApplyPreset = (preset: SettingsPreset) => {
@@ -3244,25 +3326,44 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                         <span>{newPresetAutoApply ? "Auto-apply on" : "Auto-apply off"}</span>
                       </button>
                       {newPresetAutoApply && (
-                        <div className={styles.presetScheduleInputs}>
-                          <label className={styles.intervalLabel}>
-                            <span>Start</span>
-                            <input
-                              className={styles.input}
-                              type="time"
-                              value={newPresetStartTime}
-                              onChange={(e) => setNewPresetStartTime(e.target.value)}
-                            />
-                          </label>
-                          <label className={styles.intervalLabel}>
-                            <span>End</span>
-                            <input
-                              className={styles.input}
-                              type="time"
-                              value={newPresetEndTime}
-                              onChange={(e) => setNewPresetEndTime(e.target.value)}
-                            />
-                          </label>
+                        <div className={styles.presetScheduleEditor}>
+                          <div className={styles.presetScheduleInputs}>
+                            <label className={styles.intervalLabel}>
+                              <span>Start</span>
+                              <input
+                                className={styles.input}
+                                type="time"
+                                value={newPresetStartTime}
+                                onChange={(e) => setNewPresetStartTime(e.target.value)}
+                              />
+                            </label>
+                            <label className={styles.intervalLabel}>
+                              <span>End</span>
+                              <input
+                                className={styles.input}
+                                type="time"
+                                value={newPresetEndTime}
+                                onChange={(e) => setNewPresetEndTime(e.target.value)}
+                              />
+                            </label>
+                          </div>
+                          <div className={styles.presetScheduleDays}>
+                            {PRESET_SCHEDULE_DAY_OPTIONS.map((day) => (
+                              <button
+                                key={`new-${day.id}`}
+                                className={[
+                                  styles.presetScheduleDayButton,
+                                  newPresetDaysOfWeek.includes(day.id) ? styles.presetScheduleDayButtonActive : "",
+                                ].join(" ")}
+                                type="button"
+                                onClick={() => toggleNewPresetScheduleDay(day.id)}
+                                aria-pressed={newPresetDaysOfWeek.includes(day.id)}
+                                aria-label={`Apply on ${day.label}`}
+                              >
+                                {day.shortLabel}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

@@ -505,7 +505,12 @@ describe('settings profiles', () => {
     savePreset(
       'work',
       { ...DEFAULT_SETTINGS, theme: 'nature' as const },
-      { enabled: true, startTime: '09:00', endTime: '17:00' },
+      {
+        enabled: true,
+        startTime: '09:00',
+        endTime: '17:00',
+        daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      },
     )
 
     const activePreset = getActiveScheduledPreset(new Date('2026-08-10T10:30:00'))
@@ -516,25 +521,102 @@ describe('settings profiles', () => {
   it('supports overnight preset schedules', () => {
     expect(
       isPresetScheduledNow(
-        { enabled: true, startTime: '22:00', endTime: '06:00' },
+        {
+          enabled: true,
+          startTime: '22:00',
+          endTime: '06:00',
+          daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        },
         new Date('2026-08-10T23:30:00'),
       ),
     ).toBe(true)
 
     expect(
       isPresetScheduledNow(
-        { enabled: true, startTime: '22:00', endTime: '06:00' },
+        {
+          enabled: true,
+          startTime: '22:00',
+          endTime: '06:00',
+          daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+        },
         new Date('2026-08-10T12:00:00'),
+      ),
+    ).toBe(false)
+  })
+
+  it('applies schedules only on selected days', () => {
+    expect(
+      isPresetScheduledNow(
+        {
+          enabled: true,
+          startTime: '09:00',
+          endTime: '17:00',
+          daysOfWeek: ['monday', 'wednesday'],
+        },
+        new Date('2026-08-10T10:00:00'),
+      ),
+    ).toBe(true)
+
+    expect(
+      isPresetScheduledNow(
+        {
+          enabled: true,
+          startTime: '09:00',
+          endTime: '17:00',
+          daysOfWeek: ['monday', 'wednesday'],
+        },
+        new Date('2026-08-11T10:00:00'),
+      ),
+    ).toBe(false)
+  })
+
+  it('treats overnight schedules as belonging to the previous day after midnight', () => {
+    expect(
+      isPresetScheduledNow(
+        {
+          enabled: true,
+          startTime: '22:00',
+          endTime: '06:00',
+          daysOfWeek: ['monday'],
+        },
+        new Date('2026-08-11T01:00:00'),
+      ),
+    ).toBe(true)
+
+    expect(
+      isPresetScheduledNow(
+        {
+          enabled: true,
+          startTime: '22:00',
+          endTime: '06:00',
+          daysOfWeek: ['monday'],
+        },
+        new Date('2026-08-12T01:00:00'),
       ),
     ).toBe(false)
   })
 
   it('auto-applies the active scheduled preset in the settings provider', async () => {
     saveSettings(DEFAULT_SETTINGS)
+    const scheduledLayout = {
+      ...loadWidgetLayoutState(),
+      rowCount: 4,
+      visibility: {
+        ...loadWidgetLayoutState().visibility,
+        tasks: true,
+        kanban: true,
+      },
+    }
     savePreset(
       'focus-hours',
       { ...DEFAULT_SETTINGS, theme: 'ocean' as const },
-      { enabled: true, startTime: '00:00', endTime: '23:59' },
+      {
+        enabled: true,
+        startTime: '00:00',
+        endTime: '23:59',
+        daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      },
+      scheduledLayout,
     )
 
     render(
@@ -548,6 +630,14 @@ describe('settings profiles', () => {
     await waitFor(() => {
       expect(screen.getByTestId('theme-value')).toHaveTextContent('ocean')
     })
+
+    expect(loadWidgetLayoutState()).toMatchObject({
+      rowCount: 4,
+      visibility: {
+        tasks: true,
+        kanban: true,
+      },
+    })
   })
 
   it('does not re-apply an active scheduled preset after a manual theme change', async () => {
@@ -555,7 +645,12 @@ describe('settings profiles', () => {
     savePreset(
       'focus-hours',
       { ...DEFAULT_SETTINGS, theme: 'ocean' as const },
-      { enabled: true, startTime: '00:00', endTime: '23:59' },
+      {
+        enabled: true,
+        startTime: '00:00',
+        endTime: '23:59',
+        daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      },
     )
 
     render(

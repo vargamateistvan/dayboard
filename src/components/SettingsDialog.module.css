@@ -681,6 +681,40 @@
   gap: var(--space-3);
 }
 
+.presetScheduleEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.presetScheduleDays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.presetScheduleDayButton {
+  min-height: 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.presetScheduleDayButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.presetScheduleDayButtonActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-accent);
+}
+
 .listHeading {
   margin: 0.75rem 0 0.25rem;
   font-size: var(--font-size-sm);
@@ -1306,7 +1340,8 @@
 
   .fontGrid,
   .colorPickerGrid,
-  .presetScheduleInputs {
+  .presetScheduleInputs,
+  .presetScheduleDays {
     grid-template-columns: 1fr;
   }
 

@@ -37,6 +37,8 @@ import './themes/sunset.css'
 import './themes/custom.css'
 import styles from './App.module.css'
 
+const ACTIVE_PRESET_STORAGE_KEY = 'dayboard:active-preset'
+
 function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
   if (a == null || b == null) return false
@@ -470,7 +472,9 @@ function usePresetSelection(
   placements: ReturnType<typeof useWidgetVisibility>['placements'],
   updateSettings: ReturnType<typeof useSettings>['updateSettings'],
 ) {
-  const [selectedPresetName, setSelectedPresetName] = useState('')
+  const [selectedPresetName, setSelectedPresetName] = useState(() =>
+    localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) ?? '',
+  )
 
   const currentPresetName = useMemo(
     () => presets.find((preset) => presetMatchesSettings(preset, settings, rowCount, visibility, placements))?.name ?? '',
@@ -481,6 +485,15 @@ function usePresetSelection(
     selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
   )
   const visiblePresetName = currentPresetName || (selectedPresetExists ? selectedPresetName : '')
+
+  useEffect(() => {
+    if (visiblePresetName) {
+      localStorage.setItem(ACTIVE_PRESET_STORAGE_KEY, visiblePresetName)
+      return
+    }
+
+    localStorage.removeItem(ACTIVE_PRESET_STORAGE_KEY)
+  }, [visiblePresetName])
 
   useEffect(() => {
     // Sync selected preset with current preset when current changes

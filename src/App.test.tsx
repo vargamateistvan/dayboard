@@ -6,6 +6,7 @@ import type { Widget } from './lib/useWidgetVisibility'
 
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
 const SETTINGS_STORAGE_KEY = 'dayboard:settings'
+const ACTIVE_PRESET_STORAGE_KEY = 'dayboard:active-preset'
 
 const widgetVisibility: Record<Widget, boolean> = {
   clock: true,
@@ -342,5 +343,16 @@ describe('App fullscreen widgets', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Mock diverge settings' }))
 
     expect(screen.getByRole('button', { name: 'Select preset' })).toHaveTextContent('Work')
+  })
+
+  it('persists the active preset name in localStorage', () => {
+    seedPresets(createPreset('Work', 'light', 1), createPreset('Focus', 'dark', 2))
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Focus' }))
+
+    expect(localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY)).toBe('Focus')
   })
 })

@@ -7,6 +7,7 @@ import {
   saveSettings,
   type Settings,
 } from './settings'
+import { saveWidgetLayoutState } from './useWidgetVisibility'
 
 interface SettingsContextValue {
   settings: Settings
@@ -90,6 +91,9 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
 
       lastScheduledPresetRef.current = activePreset.name
       saveSettings(activePreset.settings)
+      if (activePreset.layout) {
+        saveWidgetLayoutState(activePreset.layout)
+      }
       return activePreset.settings
     })
   }, [])

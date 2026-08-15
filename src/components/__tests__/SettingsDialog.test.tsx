@@ -439,6 +439,7 @@ describe('SettingsDialog', () => {
 
     fireEvent.change(screen.getByLabelText('Start'), { target: { value: '09:00' } })
     fireEvent.change(screen.getByLabelText('End'), { target: { value: '17:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply on Friday' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save preset' }))
 
     expect(screen.getByText('Work Focus')).toBeInTheDocument()
@@ -467,6 +468,7 @@ describe('SettingsDialog', () => {
           enabled: true,
           startTime: '09:00',
           endTime: '17:00',
+          daysOfWeek: ['monday', 'tuesday', 'wednesday', 'thursday'],
         },
       },
     })
