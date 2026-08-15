@@ -89,7 +89,7 @@ describe('FlightWidget', () => {
 
     await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
 
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('api.airplanes.live/v2/point/')
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain('/api/flights')
     expect(screen.getByText(/2 aircraft/)).toBeInTheDocument()
     expect(screen.getAllByText(/WZZ123/).length).toBeGreaterThan(0)
     expect(screen.getByText(/Device location/)).toBeInTheDocument()
