@@ -153,4 +153,28 @@ describe('fetchNearbyFlights', () => {
       }),
     )
   })
+
+  it('surfaces proxy rate-limit responses as a friendly flight-data error', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: { get: () => 'text/plain' },
+        clone: () => ({ text: async () => 'Too many requests' }),
+        json: async () => {
+          throw new Error('should not parse JSON')
+        },
+      }),
+    )
+
+    await expect(
+      fetchNearbyFlights({
+        latitude: 47.4979,
+        longitude: 19.0402,
+        radiusKm: 50,
+        onlyAirborne: true,
+      }),
+    ).rejects.toThrow(/temporarily unavailable/i)
+  })
 })

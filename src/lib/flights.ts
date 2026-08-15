@@ -6,6 +6,14 @@ const MIN_FETCH_INTERVAL_MS = 10_000
 const DEFAULT_RATE_LIMIT_BACKOFF_MS = 30_000
 const MAX_RATE_LIMIT_BACKOFF_MS = 300_000
 const FLIGHTS_API_BASE = import.meta.env.VITE_FLIGHTS_API_BASE?.trim() || DEFAULT_FLIGHTS_API_BASE
+const PROXY_ERROR_PATTERNS = [
+  'too many requests',
+  'error code: 520',
+  'error code: 522',
+  'temporarily unavailable',
+  'gateway timeout',
+  'forbidden',
+]
 
 interface CachedFlightPayload {
   readonly flights: NearbyFlight[]
@@ -307,6 +315,45 @@ function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: nu
   return relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
 }
 
+function isProxyRateLimitError(rawText: string): boolean {
+  const normalized = rawText.trim().toLowerCase()
+  return normalized.length > 0 && PROXY_ERROR_PATTERNS.some((pattern) => normalized.includes(pattern))
+}
+
+async function readFlightPayload(response: Response): Promise<{ time?: unknown; states?: unknown; ac?: unknown }> {
+  const contentType = response.headers?.get?.('content-type') ?? ''
+
+  if (typeof response.clone === 'function') {
+    const clonedResponse = response.clone()
+    if (clonedResponse && typeof clonedResponse.text === 'function') {
+      const rawText = await clonedResponse.text()
+
+      if (rawText.trim().length > 0) {
+        const normalized = rawText.trim().toLowerCase()
+        if (isProxyRateLimitError(normalized)) {
+          throw new Error('Flight data is temporarily unavailable because the proxy is rate-limited.')
+        }
+
+        try {
+          return JSON.parse(rawText) as { time?: unknown; states?: unknown; ac?: unknown }
+        } catch {
+          if (contentType.includes('application/json') || contentType.includes('+json')) {
+            throw new Error('Flight data payload was malformed.')
+          }
+
+          return { states: [] }
+        }
+      }
+    }
+  }
+
+  if (typeof response.json === 'function') {
+    return (await response.json()) as { time?: unknown; states?: unknown; ac?: unknown }
+  }
+
+  return { states: [] }
+}
+
 function buildRequestKey({
   latitude,
   longitude,
@@ -401,7 +448,7 @@ export async function fetchNearbyFlights({
         throw new Error('Could not load nearby flights.')
       }
 
-      const payload = (await response.json()) as { time?: unknown; states?: unknown; ac?: unknown }
+      const payload = await readFlightPayload(response)
       const snapshotTime =
         typeof payload.time === 'number' && Number.isFinite(payload.time)
           ? payload.time
