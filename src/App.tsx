@@ -9,6 +9,7 @@ import { getWidgetLabel } from './lib/widgetMetadata'
 import { ClockWidget } from './components/ClockWidget'
 import { TimezoneClockWidget } from './components/TimezoneClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
+import { AstronomyWidget } from './components/AstronomyWidget'
 import { FlightWidget } from './components/FlightWidget'
 import { CalendarWidget } from './components/CalendarWidget'
 import { TimerPanel } from './components/TimerPanel'
@@ -118,6 +119,7 @@ const WIDGET_RENDERERS = {
   clock: (isFullscreen: boolean, rowCount: number) => <ClockWidget isFullscreen={isFullscreen} rowCount={rowCount} />,
   timezoneClock: (isFullscreen: boolean) => <TimezoneClockWidget isFullscreen={isFullscreen} />,
   weather: (isFullscreen: boolean) => <WeatherWidget isFullscreen={isFullscreen} />,
+  astronomy: (isFullscreen: boolean) => <AstronomyWidget isFullscreen={isFullscreen} />,
   flights: (isFullscreen: boolean) => <FlightWidget isFullscreen={isFullscreen} />,
   calendar: (isFullscreen: boolean) => <CalendarWidget isFullscreen={isFullscreen} />,
   timer: (isFullscreen: boolean) => <TimerPanel isFullscreen={isFullscreen} />,

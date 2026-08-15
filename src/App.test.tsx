@@ -12,6 +12,7 @@ const widgetVisibility: Record<Widget, boolean> = {
   clock: true,
   timezoneClock: false,
   weather: true,
+  astronomy: false,
   flights: false,
   calendar: false,
   timer: false,
@@ -32,6 +33,7 @@ const DEFAULT_WIDGET_VISIBILITY: Record<Widget, boolean> = {
   clock: true,
   timezoneClock: false,
   weather: true,
+  astronomy: false,
   flights: false,
   calendar: false,
   timer: false,
@@ -65,6 +67,7 @@ const widgetPlacements = {
   clock: { column: 1, row: 1, columnSpan: 1, rowSpan: 1 },
   timezoneClock: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
   weather: { column: 2, row: 1, columnSpan: 1, rowSpan: 1 },
+  astronomy: { column: 1, row: 6, columnSpan: 1, rowSpan: 1 },
   flights: { column: 1, row: 5, columnSpan: 1, rowSpan: 1 },
   calendar: { column: 1, row: 2, columnSpan: 1, rowSpan: 1 },
   timer: { column: 2, row: 2, columnSpan: 1, rowSpan: 1 },
@@ -110,6 +113,10 @@ vi.mock('./components/ClockWidget', () => ({
 
 vi.mock('./components/WeatherWidget', () => ({
   WeatherWidget: () => <div>Weather widget</div>,
+}))
+
+vi.mock('./components/AstronomyWidget', () => ({
+  AstronomyWidget: () => <div>Astronomy widget</div>,
 }))
 
 vi.mock('./components/FlightWidget', () => ({

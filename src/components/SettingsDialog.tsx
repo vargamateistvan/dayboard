@@ -376,7 +376,7 @@ const WIDGET_CHIP_GROUPS: ReadonlyArray<{
   {
     id: "core",
     label: "Core",
-    widgets: ["clock", "timezoneClock", "weather", "flights", "calendar", "deviceInfo"],
+    widgets: ["clock", "timezoneClock", "weather", "astronomy", "flights", "calendar", "deviceInfo"],
   },
   {
     id: "productivity",
@@ -1267,6 +1267,18 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
   );
+  const [astronomyRefreshMin, setAstronomyRefreshMin] = useState(
+    settings.astronomyRefreshMinutes,
+  );
+  const [astronomyUseDeviceLocation, setAstronomyUseDeviceLocation] = useState(
+    settings.astronomyUseDeviceLocation,
+  );
+  const [astronomyManualLatitude, setAstronomyManualLatitude] = useState(
+    settings.astronomyManualLatitude,
+  );
+  const [astronomyManualLongitude, setAstronomyManualLongitude] = useState(
+    settings.astronomyManualLongitude,
+  );
   const [flightsRadiusKm, setFlightsRadiusKm] = useState(settings.flightsRadiusKm);
   const [flightsRadarRadiusKm, setFlightsRadarRadiusKm] = useState(
     settings.flightsRadarRadiusKm,
@@ -1302,7 +1314,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [clockTimeStretch, setClockTimeStretch] = useState(
     formatOptionalStretchPercent(settings.clockTimeStretchPercent),
   );
-  const [clockFontColor, setClockFontColor] = useState(settings.clockFontColor ?? "");
   const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
     string | null
   >(null);
@@ -1379,6 +1390,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const background = parseBackground(customColors.background);
   const isCalendarOnLayout = visibility.calendar;
   const isWeatherOnLayout = visibility.weather;
+  const isAstronomyOnLayout = visibility.astronomy;
   const isFlightsOnLayout = visibility.flights;
   const isClockOnLayout = visibility.clock;
   const isTimezoneClockOnLayout = visibility.timezoneClock;
@@ -1433,6 +1445,10 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setWeatherRefreshMin(nextSettings.weatherRefreshMinutes);
     setWeatherUnitSystem(nextSettings.weatherUnitSystem);
     setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
+    setAstronomyRefreshMin(nextSettings.astronomyRefreshMinutes);
+    setAstronomyUseDeviceLocation(nextSettings.astronomyUseDeviceLocation);
+    setAstronomyManualLatitude(nextSettings.astronomyManualLatitude);
+    setAstronomyManualLongitude(nextSettings.astronomyManualLongitude);
     setFlightsRadiusKm(nextSettings.flightsRadiusKm);
     setFlightsRadarRadiusKm(nextSettings.flightsRadarRadiusKm);
     setFlightsRefreshSeconds(nextSettings.flightsRefreshSeconds);
@@ -1444,7 +1460,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setClockTimeFontSize(formatOptionalFontSizeRem(nextSettings.clockTimeFontSizeRem));
     setClockDateFontSize(formatOptionalFontSizeRem(nextSettings.clockDateFontSizeRem));
     setClockTimeStretch(formatOptionalStretchPercent(nextSettings.clockTimeStretchPercent));
-    setClockFontColor(nextSettings.clockFontColor ?? "");
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
@@ -1494,6 +1509,10 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     weatherRefreshMinutes: weatherRefreshMin,
     weatherUnitSystem,
     weatherShowExtraDetails,
+    astronomyRefreshMinutes: astronomyRefreshMin,
+    astronomyUseDeviceLocation,
+    astronomyManualLatitude: astronomyManualLatitude.trim(),
+    astronomyManualLongitude: astronomyManualLongitude.trim(),
     flightsRadiusKm,
     flightsRadarRadiusKm,
     flightsRefreshSeconds,
@@ -1505,7 +1524,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     clockTimeFontSizeRem: parseOptionalFontSizeRem(clockTimeFontSize),
     clockDateFontSizeRem: parseOptionalFontSizeRem(clockDateFontSize),
     clockTimeStretchPercent: parseOptionalStretchPercent(clockTimeStretch),
-    clockFontColor: clockFontColor.trim(),
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl: settings.spotifyEmbedUrl,
@@ -1548,13 +1566,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     const nextClockTimeFontSizeRem = parseOptionalFontSizeRem(clockTimeFontSize);
     const nextClockDateFontSizeRem = parseOptionalFontSizeRem(clockDateFontSize);
     const nextClockTimeStretchPercent = parseOptionalStretchPercent(clockTimeStretch);
-    const nextClockFontColor = clockFontColor.trim();
 
     if (
       settings.clockTimeFontSizeRem === nextClockTimeFontSizeRem
       && settings.clockDateFontSizeRem === nextClockDateFontSizeRem
       && settings.clockTimeStretchPercent === nextClockTimeStretchPercent
-      && settings.clockFontColor === nextClockFontColor
     ) {
       return;
     }
@@ -1563,15 +1579,12 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       clockTimeFontSizeRem: nextClockTimeFontSizeRem,
       clockDateFontSizeRem: nextClockDateFontSizeRem,
       clockTimeStretchPercent: nextClockTimeStretchPercent,
-      clockFontColor: nextClockFontColor,
     });
   }, [
     clockDateFontSize,
-    clockFontColor,
     clockTimeFontSize,
     clockTimeStretch,
     settings.clockDateFontSizeRem,
-    settings.clockFontColor,
     settings.clockTimeFontSizeRem,
     settings.clockTimeStretchPercent,
     updateSettings,
@@ -2331,6 +2344,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
               <>
                 {!isCalendarOnLayout &&
                   !isWeatherOnLayout &&
+                  !isAstronomyOnLayout &&
                   !isFlightsOnLayout &&
                   !isTimezoneClockOnLayout &&
                   !isFinanceOnLayout &&
@@ -2863,6 +2877,81 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </>
                 )}
 
+                {isAstronomyOnLayout && (
+                  <>
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Astronomy Location</h3>
+                      <div className={styles.widgetGrid}>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            astronomyUseDeviceLocation ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setAstronomyUseDeviceLocation((value) => !value)}
+                          type="button"
+                        >
+                          {astronomyUseDeviceLocation ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Use device location</span>
+                        </button>
+                      </div>
+                      {!astronomyUseDeviceLocation && (
+                        <div className={styles.intervalRow}>
+                          <label className={styles.intervalLabel}>
+                            <span>Manual latitude</span>
+                            <input
+                              className={styles.input}
+                              type="text"
+                              inputMode="decimal"
+                              value={astronomyManualLatitude}
+                              placeholder="47.4979"
+                              onChange={(e) => setAstronomyManualLatitude(e.target.value)}
+                            />
+                          </label>
+                          <label className={styles.intervalLabel}>
+                            <span>Manual longitude</span>
+                            <input
+                              className={styles.input}
+                              type="text"
+                              inputMode="decimal"
+                              value={astronomyManualLongitude}
+                              placeholder="19.0402"
+                              onChange={(e) => setAstronomyManualLongitude(e.target.value)}
+                            />
+                          </label>
+                        </div>
+                      )}
+                    </section>
+
+                    <section className={styles.section}>
+                      <h3 className={styles.sectionTitle}>Astronomy Refresh</h3>
+                      <div className={styles.intervalRow}>
+                        <label className={styles.intervalLabel}>
+                          <span>Astronomy refresh every (min)</span>
+                          <input
+                            className={styles.numberInput}
+                            type="number"
+                            min={1}
+                            max={180}
+                            value={astronomyRefreshMin}
+                            onChange={(e) =>
+                              setAstronomyRefreshMin(
+                                Math.max(1, Number.parseInt(e.target.value, 10) || 1),
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                      <p className={styles.hint}>
+                        Astronomy data updates automatically using this interval.
+                      </p>
+                    </section>
+                  </>
+                )}
+
                 {isClockOnLayout && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Clock</h3>
@@ -2921,24 +3010,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           onChange={(e) => setClockTimeStretch(e.target.value)}
                         />
                       </label>
-                      <label className={styles.intervalLabel}>
-                        <span>Clock font color</span>
-                        <input
-                          className={styles.input}
-                          type="text"
-                          value={clockFontColor}
-                          placeholder="#f5f5f5 or linear-gradient(90deg, #fff, #7dd3fc)"
-                          onFocus={() => {
-                            if (!clockFontColor) {
-                              setClockFontColor(customColors.fontColor);
-                            }
-                          }}
-                          onChange={(e) => setClockFontColor(e.target.value)}
-                        />
-                      </label>
                     </div>
                     <p className={styles.hint}>
-                      Leave size fields empty to keep automatic sizing based on the clock row height. Stretch starts at 100% when blank. Use a solid color or a CSS gradient for the clock text.
+                      Leave size fields empty to keep automatic sizing based on the clock row height. Stretch starts at 100% when blank.
                     </p>
                   </section>
                 )}
