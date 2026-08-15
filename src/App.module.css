@@ -388,6 +388,22 @@
   min-height: 18rem;
 }
 
+.singleColumnLayout {
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto !important;
+  padding: clamp(0.5rem, 1.5vh, 1rem) clamp(1rem, 3vw, 2rem);
+}
+
+.singleColumnLayout .widgetCell {
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  min-height: 15rem;
+}
+
+.singleColumnLayout .widgetClock {
+  min-height: 12rem;
+}
+
 @media (max-width: 1200px) {
   .main {
     grid-template-columns: 1fr;

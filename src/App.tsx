@@ -382,6 +382,35 @@ function DashboardLayout({
   onSelectPreset,
   onDismissNotification,
 }: DashboardLayoutProps) {
+  const mainRef = useRef<HTMLElement | null>(null)
+  const [singleColumnLayout, setSingleColumnLayout] = useState(false)
+
+  useEffect(() => {
+    const node = mainRef.current
+    if (!node) {
+      return undefined
+    }
+
+    const updateSingleColumnLayout = () => {
+      const width = node.getBoundingClientRect().width
+      setSingleColumnLayout(width <= 1200 || window.innerWidth <= 1200)
+    }
+
+    updateSingleColumnLayout()
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSingleColumnLayout()
+    })
+
+    resizeObserver.observe(node)
+    window.addEventListener('resize', updateSingleColumnLayout)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', updateSingleColumnLayout)
+    }
+  }, [])
+
   return (
     <div
       className={[
@@ -404,7 +433,11 @@ function DashboardLayout({
         onToggleAppFullscreen={onToggleAppFullscreen}
       />
 
-      <main className={styles.main} style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}>
+      <main
+        ref={mainRef}
+        className={[styles.main, singleColumnLayout ? styles.singleColumnLayout : ''].join(' ')}
+        style={{ gridTemplateRows: `repeat(${rowCount}, minmax(0, 1fr))` }}
+      >
         {orderedVisibleWidgets.map((widget) => (
           <WidgetCell
             key={widget}
