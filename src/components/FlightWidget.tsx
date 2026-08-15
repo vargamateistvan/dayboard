@@ -311,15 +311,20 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
           'Device location',
         )
       },
-      () => {
+      (positionError) => {
         if (manualCoordinates) {
           void requestFlights(manualCoordinates, 'Manual coordinates')
           return
         }
 
+        const fallbackMessage =
+          positionError.code === positionError.PERMISSION_DENIED
+            ? 'Location access was denied. Add manual coordinates or allow location access to see nearby flights.'
+            : 'Location is temporarily unavailable. Add manual coordinates to see nearby flights.'
+
         setFlights([])
         setLoading(false)
-        setError('Location access denied. Add manual coordinates or allow location access to see nearby flights.')
+        setError(fallbackMessage)
         setHasInitialized(true)
       },
       {
