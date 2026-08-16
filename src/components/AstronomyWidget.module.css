@@ -298,7 +298,7 @@
   box-shadow: inset -6px -6px 12px rgba(94, 109, 158, 0.2), 0 0 18px rgba(142, 180, 255, 0.25);
   overflow: hidden;
   flex-shrink: 0;
-  transform: rotate(var(--moon-rotation));
+  transform: rotate(calc(var(--moon-rotation) + 180deg));
   transition: transform 160ms ease-out;
 }
 
