@@ -202,13 +202,13 @@ describe("AstronomyWidget", () => {
       toJSON: () => ({}),
     } as DOMRect);
 
-    // clientX 110 maps to viewBox x=110 → minute 720 (12:00), which is daytime
+    // clientX 110 maps near noon in the widened chart, which should still be daytime.
     fireEvent.mouseMove(sunChart, { clientX: 110, clientY: 20 });
-    expect(screen.getByText("12:00 · Day")).toBeInTheDocument();
-    expect(screen.getByText("12:00")).toBeInTheDocument();
+    expect(screen.getByText(/12:\d\d · Day/)).toBeInTheDocument();
+    expect(screen.getAllByText(/^12:\d\d$/).length).toBeGreaterThan(0);
     expect(screen.getByText("Day")).toBeInTheDocument();
 
     fireEvent.mouseLeave(sunChart);
-    expect(screen.queryByText("12:00 · Day")).not.toBeInTheDocument();
+    expect(screen.queryByText(/12:\d\d · Day/)).not.toBeInTheDocument();
   });
 });

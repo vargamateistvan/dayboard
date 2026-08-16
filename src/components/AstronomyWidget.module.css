@@ -102,13 +102,14 @@
 
 .chartContent {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 66.6667%) minmax(0, 33.3333%);
   gap: 0.45rem;
   align-items: start;
 }
 
 .chartMain {
   min-width: 0;
+  width: 100%;
 }
 
 .dataBox {

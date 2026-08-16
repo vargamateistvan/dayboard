@@ -116,10 +116,10 @@ function getMoonIlluminationPercent(moonPhase: number | null): number | null {
   return Math.round(((1 - Math.cos(2 * Math.PI * moonPhase)) / 2) * 100);
 }
 
-const CHART_W = 220;
+const CHART_W = 780;
 const CHART_H = 74;
-const CHART_LEFT = 8;
-const CHART_RIGHT = 212;
+const CHART_LEFT = 28;
+const CHART_RIGHT = 740;
 const HORIZON_Y = 44;
 const UP_AMPLITUDE = 30;
 const DOWN_AMPLITUDE = 22;
