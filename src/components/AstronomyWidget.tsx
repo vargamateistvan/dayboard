@@ -12,6 +12,12 @@ interface AstronomyData {
   moonrise: string | null;
   moonset: string | null;
   moonPhase: number | null;
+  primaryMoonPhaseDates: {
+    newMoon: string | null;
+    firstQuarter: string | null;
+    fullMoon: string | null;
+    thirdQuarter: string | null;
+  };
 }
 
 function parseOpenMeteoTime(value: string, utcOffsetSeconds: number | null) {
@@ -114,6 +120,60 @@ function getMoonIlluminationPercent(moonPhase: number | null): number | null {
   }
 
   return Math.round(((1 - Math.cos(2 * Math.PI * moonPhase)) / 2) * 100);
+}
+
+function formatPhaseDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return value;
+  }
+  const [, year, month, day] = match;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short" }).format(date);
+}
+
+function computePrimaryMoonPhaseDates(
+  currentDate: unknown,
+  currentPhase: unknown,
+): AstronomyData["primaryMoonPhaseDates"] {
+  if (typeof currentDate !== "string" || typeof currentPhase !== "number" || !Number.isFinite(currentPhase)) {
+    return {
+      newMoon: null,
+      firstQuarter: null,
+      fullMoon: null,
+      thirdQuarter: null,
+    };
+  }
+
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(currentDate);
+  if (!dateMatch) {
+    return {
+      newMoon: null,
+      firstQuarter: null,
+      fullMoon: null,
+      thirdQuarter: null,
+    };
+  }
+
+  const [, year, month, day] = dateMatch;
+  const base = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+  const synodicDays = 29.530588;
+  const toDate = (targetPhase: number): string => {
+    const deltaPhase = (targetPhase - currentPhase + 1) % 1;
+    const dayOffset = deltaPhase * synodicDays;
+    const next = new Date(base.getTime() + dayOffset * 24 * 60 * 60 * 1000);
+    const iso = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, "0")}-${String(
+      next.getUTCDate(),
+    ).padStart(2, "0")}`;
+    return formatPhaseDate(iso);
+  };
+
+  return {
+    newMoon: toDate(0),
+    firstQuarter: toDate(0.25),
+    fullMoon: toDate(0.5),
+    thirdQuarter: toDate(0.75),
+  };
 }
 
 const CHART_W = 780;
@@ -533,6 +593,10 @@ async function fetchAstronomy(lat: number, lon: number): Promise<AstronomyData> 
       typeof astronomy.daily?.moon_phase?.[0] === "number"
         ? astronomy.daily.moon_phase[0]
         : null,
+    primaryMoonPhaseDates: computePrimaryMoonPhaseDates(
+      astronomy.daily?.time?.[0],
+      astronomy.daily?.moon_phase?.[0],
+    ),
   };
 }
 
@@ -795,6 +859,32 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                   {moonPhase.label}
                   {moonIllumination !== null ? ` · ${moonIllumination}% illuminated` : ""}
                 </span>
+              </div>
+              <div className={styles.phaseDates}>
+                <div className={styles.phaseDateRow}>
+                  <span className={styles.phaseDateLabel}>New Moon</span>
+                  <span className={styles.phaseDateValue}>
+                    {data.primaryMoonPhaseDates.newMoon ?? "—"}
+                  </span>
+                </div>
+                <div className={styles.phaseDateRow}>
+                  <span className={styles.phaseDateLabel}>First Quarter</span>
+                  <span className={styles.phaseDateValue}>
+                    {data.primaryMoonPhaseDates.firstQuarter ?? "—"}
+                  </span>
+                </div>
+                <div className={styles.phaseDateRow}>
+                  <span className={styles.phaseDateLabel}>Full Moon</span>
+                  <span className={styles.phaseDateValue}>
+                    {data.primaryMoonPhaseDates.fullMoon ?? "—"}
+                  </span>
+                </div>
+                <div className={styles.phaseDateRow}>
+                  <span className={styles.phaseDateLabel}>Third Quarter</span>
+                  <span className={styles.phaseDateValue}>
+                    {data.primaryMoonPhaseDates.thirdQuarter ?? "—"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
