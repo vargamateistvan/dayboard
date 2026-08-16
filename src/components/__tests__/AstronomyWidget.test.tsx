@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { AstronomyWidget } from "../AstronomyWidget";
 import { SettingsProvider } from "../../lib/useSettings";
 import { DEFAULT_SETTINGS, saveSettings } from "../../lib/settings";
@@ -82,6 +82,8 @@ describe("AstronomyWidget", () => {
     expect(screen.getByText(/Moonset/)).toBeInTheDocument();
     expect(screen.getByText(/11:28/)).toBeInTheDocument();
     expect(screen.getByText(/Full Moon · 100% illuminated/)).toBeInTheDocument();
+    expect(screen.getAllByText("Time:").length).toBeGreaterThan(0);
+    expect(screen.getByText("Percent Illuminated:")).toBeInTheDocument();
     expect(screen.getByText(/Updated just now/)).toBeInTheDocument();
   });
 
@@ -150,5 +152,63 @@ describe("AstronomyWidget", () => {
     renderWithSettings({ astronomyRefreshMinutes: 12 });
 
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 12 * 60 * 1000);
+  });
+
+  it("scrubs the chart to the hovered time and resets on mouse leave", async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.5, longitude: 19.0 } } as GeolocationPosition);
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            timezone: "Europe/Budapest",
+            utc_offset_seconds: 7200,
+            daily: {
+              sunrise: ["2026-08-15T05:52"],
+              sunset: ["2026-08-15T19:49"],
+              moonrise: ["2026-08-15T21:03"],
+              moonset: ["2026-08-15T11:28"],
+              moon_phase: [0.5],
+            },
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            address: { city: "Budapest" },
+          }),
+        }),
+    );
+
+    renderWithSettings();
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Loading astronomy")).not.toBeInTheDocument(),
+    );
+
+    const sunChart = screen.getByRole("img", { name: /Sun altitude chart/ });
+    vi.spyOn(sunChart, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 220,
+      bottom: 50,
+      width: 220,
+      height: 50,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    // clientX 110 maps to viewBox x=110 → minute 720 (12:00), which is daytime
+    fireEvent.mouseMove(sunChart, { clientX: 110, clientY: 20 });
+    expect(screen.getByText("12:00 · Day")).toBeInTheDocument();
+    expect(screen.getByText("12:00")).toBeInTheDocument();
+    expect(screen.getByText("Day")).toBeInTheDocument();
+
+    fireEvent.mouseLeave(sunChart);
+    expect(screen.queryByText("12:00 · Day")).not.toBeInTheDocument();
   });
 });
