@@ -331,6 +331,8 @@ function AltitudeChart({
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverMinutes, setHoverMinutes] = useState<number | null>(null);
   const axisLevels = [90, 60, 30, 0, -30, -60, -90] as const;
+  const riseMinutes = markerMinutes[0] ?? null;
+  const setMinutes = markerMinutes[markerMinutes.length - 1] ?? null;
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -406,6 +408,9 @@ function AltitudeChart({
         );
       })}
       <line x1={0} y1={HORIZON_Y} x2={CHART_W} y2={HORIZON_Y} className={styles.horizonLine} />
+      <text x={CHART_RIGHT - 4} y={HORIZON_Y - 3} textAnchor="end" className={styles.horizonLabel}>
+        Horizon
+      </text>
       {curve &&
         markerMinutes.map((t) => (
           <line
@@ -417,6 +422,32 @@ function AltitudeChart({
             className={styles.tickLine}
           />
         ))}
+      {curve && riseMinutes !== null && (
+        <>
+          <circle cx={chartX(riseMinutes)} cy={HORIZON_Y} r={2.8} className={styles.riseSetMarker} />
+          <text
+            x={chartX(riseMinutes)}
+            y={Math.min(CHART_H - 2, HORIZON_Y + 11)}
+            textAnchor="middle"
+            className={styles.riseSetLabel}
+          >
+            Rise
+          </text>
+        </>
+      )}
+      {curve && setMinutes !== null && (
+        <>
+          <circle cx={chartX(setMinutes)} cy={HORIZON_Y} r={2.8} className={styles.riseSetMarker} />
+          <text
+            x={chartX(setMinutes)}
+            y={Math.min(CHART_H - 2, HORIZON_Y + 11)}
+            textAnchor="middle"
+            className={styles.riseSetLabel}
+          >
+            Set
+          </text>
+        </>
+      )}
       {curve && hoverMinutes !== null && (
         <line
           x1={chartX(activeMinutes)}
