@@ -20,50 +20,6 @@ interface AstronomyData {
   };
 }
 
-function parseOpenMeteoTime(value: string, utcOffsetSeconds: number | null) {
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/,
-  );
-  if (!match) {
-    return null;
-  }
-
-  const [, year, month, day, hour, minute, second = "0"] = match;
-  const offsetMs = (utcOffsetSeconds ?? 0) * 1000;
-  return new Date(
-    Date.UTC(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hour),
-      Number(minute),
-      Number(second),
-    ) - offsetMs,
-  );
-}
-
-function formatTime(
-  value: string | null,
-  timeZone: string | null,
-  utcOffsetSeconds: number | null,
-) {
-  if (!value || !timeZone || utcOffsetSeconds === null) {
-    return null;
-  }
-
-  const instant = parseOpenMeteoTime(value, utcOffsetSeconds);
-  if (!instant) {
-    return null;
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-    timeZone,
-  }).format(instant);
-}
-
 function formatLastRefresh(lastRefreshedAt: number, now: number): string {
   const diffMs = Math.max(0, now - lastRefreshedAt);
   const diffMinutes = Math.floor(diffMs / 60_000);
@@ -700,15 +656,16 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     () => buildAltitudeCurve(moonriseMinutes, moonsetMinutes),
     [moonriseMinutes, moonsetMinutes],
   );
+  const utcOffsetSeconds = data?.utcOffsetSeconds ?? null;
 
   const nowMinutes = useMemo(() => {
-    if (data?.utcOffsetSeconds === null || data?.utcOffsetSeconds === undefined) {
+    if (utcOffsetSeconds === null) {
       const local = new Date(now);
       return local.getHours() * 60 + local.getMinutes();
     }
-    const shifted = new Date(now + data.utcOffsetSeconds * 1000);
+    const shifted = new Date(now + utcOffsetSeconds * 1000);
     return shifted.getUTCHours() * 60 + shifted.getUTCMinutes();
-  }, [now, data?.utcOffsetSeconds]);
+  }, [now, utcOffsetSeconds]);
 
   const activeSunMinutes = sunHoverMinutes ?? nowMinutes;
   const activeMoonMinutes = moonHoverMinutes ?? nowMinutes;
