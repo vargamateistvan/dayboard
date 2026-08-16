@@ -160,7 +160,7 @@
 }
 
 .hoverReadout {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
   fill: var(--color-text);
   font-variant-numeric: tabular-nums;
@@ -186,7 +186,7 @@
 }
 
 .axisLabel {
-  font-size: 7px;
+  font-size: 10px;
   fill: var(--color-text);
   opacity: 0.72;
   pointer-events: none;
@@ -198,7 +198,7 @@
 }
 
 .horizonLabel {
-  font-size: 7px;
+  font-size: 11px;
   fill: var(--color-text);
   opacity: 0.8;
   pointer-events: none;
@@ -211,7 +211,7 @@
 }
 
 .eventLabel {
-  font-size: 7px;
+  font-size: 11px;
   fill: var(--color-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -219,7 +219,7 @@
 }
 
 .eventTime {
-  font-size: 8px;
+  font-size: 12px;
   font-weight: 600;
   fill: var(--color-text);
   pointer-events: none;
