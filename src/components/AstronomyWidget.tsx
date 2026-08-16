@@ -254,6 +254,7 @@ interface ChartDataSnapshot {
   time: string;
   altitude: string;
   direction: string;
+  directionDegrees: number | null;
   phaseOrPosition: string;
 }
 
@@ -270,6 +271,7 @@ function getChartSnapshot(
       time,
       altitude: "—",
       direction: "—",
+      directionDegrees: null,
       phaseOrPosition: variant === "sun" ? "Unknown" : "Unknown position",
     };
   }
@@ -307,6 +309,7 @@ function getChartSnapshot(
     time,
     altitude: `${altitudeDegrees}°`,
     direction,
+    directionDegrees: normalizedAzimuth,
     phaseOrPosition,
   };
 }
@@ -736,7 +739,10 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 <div className={styles.chartTitle}>Today's Moon</div>
                 <div
                   className={styles.moonDisc}
-                  style={{ ["--phase-shift" as string]: `${phaseShift}px` }}
+                  style={{
+                    ["--phase-shift" as string]: `${phaseShift}px`,
+                    ["--moon-rotation" as string]: `${moonSnapshot.directionDegrees ?? 0}deg`,
+                  }}
                   aria-label={`Moon phase ${moonPhase.label}`}
                 >
                   <span className={styles.moonGlow} aria-hidden="true" />

@@ -289,6 +289,7 @@
 
 .moonDisc {
   --phase-shift: 0px;
+  --moon-rotation: 0deg;
   position: relative;
   width: 1.6rem;
   height: 1.6rem;
@@ -297,6 +298,8 @@
   box-shadow: inset -6px -6px 12px rgba(94, 109, 158, 0.2), 0 0 18px rgba(142, 180, 255, 0.25);
   overflow: hidden;
   flex-shrink: 0;
+  transform: rotate(var(--moon-rotation));
+  transition: transform 160ms ease-out;
 }
 
 .moonDisc::after {
