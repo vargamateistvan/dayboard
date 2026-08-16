@@ -322,43 +322,6 @@
   white-space: nowrap;
 }
 
-.phaseGlyph {
-  --phase-shift-mini: 0%;
-  position: relative;
-  width: 0.72rem;
-  height: 0.72rem;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #f4f7ff 0%, #dfe9ff 100%);
-  box-shadow: inset -1px -1px 3px rgba(94, 109, 158, 0.2);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.phaseGlyph::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(9, 13, 22, 0.88);
-  transform: translateX(var(--phase-shift-mini));
-}
-
-.phaseNewMoon {
-  --phase-shift-mini: 0%;
-}
-
-.phaseFirstQuarter {
-  --phase-shift-mini: -50%;
-}
-
-.phaseFullMoon {
-  --phase-shift-mini: 100%;
-}
-
-.phaseThirdQuarter {
-  --phase-shift-mini: 50%;
-}
-
 .moonDisc {
   --phase-shift: 0px;
   --moon-rotation: 0deg;
@@ -372,6 +335,14 @@
   flex-shrink: 0;
   transform: rotate(calc(var(--moon-rotation) + 180deg));
   transition: transform 160ms ease-out;
+}
+
+.moonDiscMini {
+  width: 0.78rem;
+  height: 0.78rem;
+  box-shadow: inset -2px -2px 4px rgba(94, 109, 158, 0.2), 0 0 6px rgba(142, 180, 255, 0.2);
+  transform: none;
+  transition: none;
 }
 
 .moonDisc::after {

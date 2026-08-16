@@ -122,6 +122,10 @@ function getMoonIlluminationPercent(moonPhase: number | null): number | null {
   return Math.round(((1 - Math.cos(2 * Math.PI * moonPhase)) / 2) * 100);
 }
 
+function moonPhaseShiftPx(phase: number): string {
+  return `${((phase - 0.5) * 20).toFixed(2)}px`;
+}
+
 function formatPhaseDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) {
@@ -681,7 +685,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
   const moonPhase = getMoonPhaseInfo(data?.moonPhase ?? null);
   const moonIllumination = getMoonIlluminationPercent(data?.moonPhase ?? null);
   const phaseValue = data?.moonPhase ?? 0.5;
-  const phaseShift = ((phaseValue - 0.5) * 20).toFixed(2);
+  const phaseShift = moonPhaseShiftPx(phaseValue);
 
   const sunriseMinutes = minutesFromLocalIso(data?.sunrise ?? null);
   const sunsetMinutes = minutesFromLocalIso(data?.sunset ?? null);
@@ -804,7 +808,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 <div
                   className={styles.moonDisc}
                   style={{
-                    ["--phase-shift" as string]: `${phaseShift}px`,
+                    ["--phase-shift" as string]: phaseShift,
                     ["--moon-rotation" as string]: `${moonSnapshot.directionDegrees ?? 0}deg`,
                   }}
                   aria-label={`Moon phase ${moonPhase.label}`}
@@ -863,7 +867,13 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
               <div className={styles.phaseDates}>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span className={[styles.phaseGlyph, styles.phaseNewMoon].join(" ")} aria-hidden="true" />
+                    <span
+                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
+                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0) }}
+                      aria-hidden="true"
+                    >
+                      <span className={styles.moonGlow} aria-hidden="true" />
+                    </span>
                     <span className={styles.phaseDateLabel}>New Moon</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -873,9 +883,12 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
                     <span
-                      className={[styles.phaseGlyph, styles.phaseFirstQuarter].join(" ")}
+                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
+                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.25) }}
                       aria-hidden="true"
-                    />
+                    >
+                      <span className={styles.moonGlow} aria-hidden="true" />
+                    </span>
                     <span className={styles.phaseDateLabel}>First Quarter</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -884,7 +897,13 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 </div>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span className={[styles.phaseGlyph, styles.phaseFullMoon].join(" ")} aria-hidden="true" />
+                    <span
+                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
+                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.5) }}
+                      aria-hidden="true"
+                    >
+                      <span className={styles.moonGlow} aria-hidden="true" />
+                    </span>
                     <span className={styles.phaseDateLabel}>Full Moon</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -894,9 +913,12 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
                     <span
-                      className={[styles.phaseGlyph, styles.phaseThirdQuarter].join(" ")}
+                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
+                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.75) }}
                       aria-hidden="true"
-                    />
+                    >
+                      <span className={styles.moonGlow} aria-hidden="true" />
+                    </span>
                     <span className={styles.phaseDateLabel}>Third Quarter</span>
                   </span>
                   <span className={styles.phaseDateValue}>
