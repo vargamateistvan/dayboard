@@ -330,6 +330,7 @@ function AltitudeChart({
   const isSun = variant === "sun";
   const svgRef = useRef<SVGSVGElement>(null);
   const [hoverMinutes, setHoverMinutes] = useState<number | null>(null);
+  const axisLevels = [90, 60, 30, 0, -30, -60, -90] as const;
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
     const rect = svgRef.current?.getBoundingClientRect();
@@ -382,6 +383,28 @@ function AltitudeChart({
           <path d={curve.linePath} className={isSun ? styles.sunLine : styles.moonLine} />
         </>
       )}
+      {axisLevels.map((deg) => {
+        const y = chartY(deg / 90);
+        return (
+          <line
+            key={`grid-${deg}`}
+            x1={CHART_LEFT}
+            y1={y}
+            x2={CHART_RIGHT}
+            y2={y}
+            className={deg === 0 ? styles.axisGridMajor : styles.axisGrid}
+          />
+        );
+      })}
+      <line x1={CHART_RIGHT} y1={2} x2={CHART_RIGHT} y2={CHART_H - 2} className={styles.axisLine} />
+      {axisLevels.map((deg) => {
+        const y = chartY(deg / 90);
+        return (
+          <text key={`axis-${deg}`} x={CHART_W - 2} y={y + 2.5} textAnchor="end" className={styles.axisLabel}>
+            {deg}°
+          </text>
+        );
+      })}
       <line x1={0} y1={HORIZON_Y} x2={CHART_W} y2={HORIZON_Y} className={styles.horizonLine} />
       {curve &&
         markerMinutes.map((t) => (

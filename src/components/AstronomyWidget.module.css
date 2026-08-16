@@ -102,7 +102,7 @@
 
 .chartContent {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(9rem, 0.8fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 0.45rem;
   align-items: start;
 }
@@ -167,6 +167,27 @@
   paint-order: stroke;
   stroke: rgba(var(--color-surface-rgb), 0.85);
   stroke-width: 3;
+}
+
+.axisLine {
+  stroke: rgba(var(--color-text-rgb), 0.25);
+  stroke-width: 1;
+}
+
+.axisGrid {
+  stroke: rgba(var(--color-text-rgb), 0.08);
+  stroke-width: 1;
+}
+
+.axisGridMajor {
+  stroke: rgba(var(--color-text-rgb), 0.14);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  font-size: 7px;
+  fill: rgba(var(--color-text-rgb), 0.62);
+  pointer-events: none;
 }
 
 .horizonLine {
@@ -336,14 +357,4 @@
 
 .fullscreen .moonPhaseSummary {
   font-size: clamp(0.75rem, min(1.2vw, 1.8dvh), 1rem);
-}
-
-@media (max-width: 900px) {
-  .chartContent {
-    grid-template-columns: 1fr;
-  }
-
-  .dataBox {
-    padding: 0.3rem 0.4rem;
-  }
 }
