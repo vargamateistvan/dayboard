@@ -73,13 +73,13 @@ describe("AstronomyWidget", () => {
     );
 
     expect(screen.getByText(/Budapest/)).toBeInTheDocument();
-    expect(screen.getByText(/Sunrise/)).toBeInTheDocument();
+    expect(screen.queryByText(/^Sunrise$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Sunset$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Moonrise$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Moonset$/)).not.toBeInTheDocument();
     expect(screen.getByText(/05:52/)).toBeInTheDocument();
-    expect(screen.getByText(/Sunset/)).toBeInTheDocument();
     expect(screen.getByText(/19:49/)).toBeInTheDocument();
-    expect(screen.getByText(/Moonrise/)).toBeInTheDocument();
     expect(screen.getByText(/21:03/)).toBeInTheDocument();
-    expect(screen.getByText(/Moonset/)).toBeInTheDocument();
     expect(screen.getByText(/11:28/)).toBeInTheDocument();
     expect(screen.getByText(/Full Moon · 100% illuminated/)).toBeInTheDocument();
     expect(screen.getAllByText("Time:").length).toBeGreaterThan(0);

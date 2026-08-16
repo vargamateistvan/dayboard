@@ -117,7 +117,7 @@ function getMoonIlluminationPercent(moonPhase: number | null): number | null {
 }
 
 const CHART_W = 780;
-const CHART_H = 74;
+const CHART_H = 96;
 const CHART_LEFT = 28;
 const CHART_RIGHT = 740;
 const HORIZON_Y = 44;
@@ -332,6 +332,7 @@ function AltitudeChart({
   const [hoverMinutes, setHoverMinutes] = useState<number | null>(null);
   const axisLevels = [90, 60, 30, 0, -30, -60, -90] as const;
   const riseMinutes = markerMinutes[0] ?? null;
+  const meridianMinutes = markerMinutes.length >= 3 ? markerMinutes[1] : null;
   const setMinutes = markerMinutes[markerMinutes.length - 1] ?? null;
 
   const handleMouseMove = (event: React.MouseEvent<SVGSVGElement>) => {
@@ -425,26 +426,40 @@ function AltitudeChart({
       {curve && riseMinutes !== null && (
         <>
           <circle cx={chartX(riseMinutes)} cy={HORIZON_Y} r={2.8} className={styles.riseSetMarker} />
-          <text
-            x={chartX(riseMinutes)}
-            y={Math.min(CHART_H - 2, HORIZON_Y + 11)}
-            textAnchor="middle"
-            className={styles.riseSetLabel}
-          >
-            Rise
-          </text>
         </>
       )}
       {curve && setMinutes !== null && (
         <>
           <circle cx={chartX(setMinutes)} cy={HORIZON_Y} r={2.8} className={styles.riseSetMarker} />
-          <text
-            x={chartX(setMinutes)}
-            y={Math.min(CHART_H - 2, HORIZON_Y + 11)}
-            textAnchor="middle"
-            className={styles.riseSetLabel}
-          >
+        </>
+      )}
+      {curve && riseMinutes !== null && (
+        <>
+          <text x={chartX(riseMinutes)} y={CHART_H - 16} textAnchor="middle" className={styles.eventLabel}>
+            Rise
+          </text>
+          <text x={chartX(riseMinutes)} y={CHART_H - 4} textAnchor="middle" className={styles.eventTime}>
+            {formatMinutes(riseMinutes)}
+          </text>
+        </>
+      )}
+      {curve && meridianMinutes !== null && (
+        <>
+          <text x={chartX(meridianMinutes)} y={CHART_H - 16} textAnchor="middle" className={styles.eventLabel}>
+            Meridian
+          </text>
+          <text x={chartX(meridianMinutes)} y={CHART_H - 4} textAnchor="middle" className={styles.eventTime}>
+            {formatMinutes(meridianMinutes)}
+          </text>
+        </>
+      )}
+      {curve && setMinutes !== null && (
+        <>
+          <text x={chartX(setMinutes)} y={CHART_H - 16} textAnchor="middle" className={styles.eventLabel}>
             Set
+          </text>
+          <text x={chartX(setMinutes)} y={CHART_H - 4} textAnchor="middle" className={styles.eventTime}>
+            {formatMinutes(setMinutes)}
           </text>
         </>
       )}
@@ -596,10 +611,6 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     return () => clearInterval(id);
   }, []);
 
-  const sunrise = data ? formatTime(data.sunrise, data.timezone, data.utcOffsetSeconds) : null;
-  const sunset = data ? formatTime(data.sunset, data.timezone, data.utcOffsetSeconds) : null;
-  const moonrise = data ? formatTime(data.moonrise, data.timezone, data.utcOffsetSeconds) : null;
-  const moonset = data ? formatTime(data.moonset, data.timezone, data.utcOffsetSeconds) : null;
   const moonPhase = getMoonPhaseInfo(data?.moonPhase ?? null);
   const moonIllumination = getMoonIlluminationPercent(data?.moonPhase ?? null);
   const phaseValue = data?.moonPhase ?? 0.5;
@@ -628,8 +639,6 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     return shifted.getUTCHours() * 60 + shifted.getUTCMinutes();
   }, [now, data?.utcOffsetSeconds]);
 
-  const sunMeridian = formatMinutes(sunCurve?.meridian ?? null);
-  const moonMeridian = formatMinutes(moonCurve?.meridian ?? null);
   const activeSunMinutes = sunHoverMinutes ?? nowMinutes;
   const activeMoonMinutes = moonHoverMinutes ?? nowMinutes;
   const sunSnapshot = getChartSnapshot(
@@ -700,20 +709,6 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                     variant="sun"
                     onHoverMinutesChange={setSunHoverMinutes}
                   />
-                  <div className={styles.chartFooter}>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Sunrise</span>
-                      <span className={styles.footerValue}>{sunrise ?? "—"}</span>
-                    </div>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Meridian</span>
-                      <span className={styles.footerValue}>{sunMeridian ?? "—"}</span>
-                    </div>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Sunset</span>
-                      <span className={styles.footerValue}>{sunset ?? "—"}</span>
-                    </div>
-                  </div>
                 </div>
                 <div className={styles.dataBox} aria-live="polite">
                   <div className={styles.dataRow}>
@@ -760,20 +755,6 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                     variant="moon"
                     onHoverMinutesChange={setMoonHoverMinutes}
                   />
-                  <div className={styles.chartFooter}>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Moonrise</span>
-                      <span className={styles.footerValue}>{moonrise ?? "—"}</span>
-                    </div>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Meridian</span>
-                      <span className={styles.footerValue}>{moonMeridian ?? "—"}</span>
-                    </div>
-                    <div className={styles.footerItem}>
-                      <span className={styles.footerLabel}>Moonset</span>
-                      <span className={styles.footerValue}>{moonset ?? "—"}</span>
-                    </div>
-                  </div>
                 </div>
                 <div className={styles.dataBox} aria-live="polite">
                   <div className={styles.dataRow}>

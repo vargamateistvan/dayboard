@@ -146,7 +146,7 @@
 .altSvg {
   display: block;
   width: 100%;
-  height: 50px;
+  height: 72px;
   overflow: visible;
   cursor: crosshair;
   touch-action: none;
@@ -187,7 +187,8 @@
 
 .axisLabel {
   font-size: 7px;
-  fill: rgba(var(--color-text-rgb), 0.62);
+  fill: var(--color-text);
+  opacity: 0.72;
   pointer-events: none;
 }
 
@@ -198,7 +199,8 @@
 
 .horizonLabel {
   font-size: 7px;
-  fill: rgba(var(--color-text-rgb), 0.75);
+  fill: var(--color-text);
+  opacity: 0.8;
   pointer-events: none;
 }
 
@@ -208,9 +210,18 @@
   stroke-width: 1;
 }
 
-.riseSetLabel {
+.eventLabel {
   font-size: 7px;
-  fill: rgba(var(--color-text-rgb), 0.8);
+  fill: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+
+.eventTime {
+  font-size: 8px;
+  font-weight: 600;
+  fill: var(--color-text);
   pointer-events: none;
 }
 
@@ -251,34 +262,6 @@
   stroke: rgba(167, 185, 255, 0.85);
   stroke-width: 1;
   filter: drop-shadow(0 0 7px rgba(142, 180, 255, 0.7));
-}
-
-.chartFooter {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.3rem;
-  margin-top: 0.2rem;
-}
-
-.footerItem {
-  display: flex;
-  flex-direction: column;
-  gap: 0.08rem;
-  text-align: center;
-}
-
-.footerLabel {
-  font-size: 0.58rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.footerValue {
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
 }
 
 .moonCardHeader {
@@ -351,7 +334,7 @@
 }
 
 .fullscreen .altSvg {
-  height: clamp(80px, 18dvh, 160px);
+  height: clamp(90px, 20dvh, 190px);
 }
 
 .fullscreen .chartTitle {
@@ -364,14 +347,6 @@
 
 .fullscreen .dataValue {
   font-size: clamp(0.7rem, min(1.1vw, 1.7dvh), 0.95rem);
-}
-
-.fullscreen .footerLabel {
-  font-size: clamp(0.65rem, min(1vw, 1.6dvh), 0.85rem);
-}
-
-.fullscreen .footerValue {
-  font-size: clamp(0.85rem, min(1.4vw, 2.1dvh), 1.15rem);
 }
 
 .fullscreen .moonPhaseSummary {
