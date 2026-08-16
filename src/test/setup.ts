@@ -38,6 +38,18 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock,
 })
 
+// jsdom does not implement ResizeObserver — provide a minimal stub
+class ResizeObserverMock {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  writable: true,
+  value: ResizeObserverMock,
+})
+
 // Clear localStorage after each test
 afterEach(() => {
   localStorage.clear()

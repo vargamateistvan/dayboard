@@ -239,6 +239,9 @@ describe('CalendarWidget', () => {
     await waitFor(() => expect(screen.queryByLabelText('Loading events')).not.toBeInTheDocument())
 
     expect(screen.getByLabelText('Current week calendar')).toBeInTheDocument()
+    if (new Date().getDay() === 0) {
+      fireEvent.click(screen.getByRole('button', { name: 'Next week' }))
+    }
     expect(screen.getByText('Tomorrow Planning')).toBeInTheDocument()
 
     vi.unstubAllGlobals()
