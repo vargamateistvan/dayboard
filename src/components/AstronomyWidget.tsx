@@ -862,25 +862,43 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
               </div>
               <div className={styles.phaseDates}>
                 <div className={styles.phaseDateRow}>
-                  <span className={styles.phaseDateLabel}>New Moon</span>
+                  <span className={styles.phaseDateLabelWrap}>
+                    <span className={[styles.phaseGlyph, styles.phaseNewMoon].join(" ")} aria-hidden="true" />
+                    <span className={styles.phaseDateLabel}>New Moon</span>
+                  </span>
                   <span className={styles.phaseDateValue}>
                     {data.primaryMoonPhaseDates.newMoon ?? "—"}
                   </span>
                 </div>
                 <div className={styles.phaseDateRow}>
-                  <span className={styles.phaseDateLabel}>First Quarter</span>
+                  <span className={styles.phaseDateLabelWrap}>
+                    <span
+                      className={[styles.phaseGlyph, styles.phaseFirstQuarter].join(" ")}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.phaseDateLabel}>First Quarter</span>
+                  </span>
                   <span className={styles.phaseDateValue}>
                     {data.primaryMoonPhaseDates.firstQuarter ?? "—"}
                   </span>
                 </div>
                 <div className={styles.phaseDateRow}>
-                  <span className={styles.phaseDateLabel}>Full Moon</span>
+                  <span className={styles.phaseDateLabelWrap}>
+                    <span className={[styles.phaseGlyph, styles.phaseFullMoon].join(" ")} aria-hidden="true" />
+                    <span className={styles.phaseDateLabel}>Full Moon</span>
+                  </span>
                   <span className={styles.phaseDateValue}>
                     {data.primaryMoonPhaseDates.fullMoon ?? "—"}
                   </span>
                 </div>
                 <div className={styles.phaseDateRow}>
-                  <span className={styles.phaseDateLabel}>Third Quarter</span>
+                  <span className={styles.phaseDateLabelWrap}>
+                    <span
+                      className={[styles.phaseGlyph, styles.phaseThirdQuarter].join(" ")}
+                      aria-hidden="true"
+                    />
+                    <span className={styles.phaseDateLabel}>Third Quarter</span>
+                  </span>
                   <span className={styles.phaseDateValue}>
                     {data.primaryMoonPhaseDates.thirdQuarter ?? "—"}
                   </span>
