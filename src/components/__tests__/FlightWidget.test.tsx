@@ -97,6 +97,51 @@ describe('FlightWidget', () => {
     expect(screen.getByRole('list', { name: 'Nearby flights' })).toBeInTheDocument()
   })
 
+  it('renders Google Maps below radar when enabled in settings', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
+      success({ coords: { latitude: 47.4979, longitude: 19.0402 } } as GeolocationPosition)
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          time: 1_786_362_327,
+          states: [
+            [
+              '49d099',
+              'WZZ123',
+              'Hungary',
+              1_786_362_326,
+              1_786_362_320,
+              19.0623,
+              47.5375,
+              5_478.78,
+              false,
+              106.19,
+              49.52,
+              -0.65,
+              null,
+              5_844.54,
+              '1000',
+              false,
+              0,
+            ],
+          ],
+        }),
+      }),
+    )
+
+    renderWithSettings({ flightsShowGoogleMap: true })
+
+    await waitFor(() => expect(screen.queryByLabelText('Loading flights')).not.toBeInTheDocument())
+
+    const mapFrame = screen.getByTitle('Google Maps centered on flight radar location')
+    expect(mapFrame).toBeInTheDocument()
+    expect(mapFrame).toHaveAttribute('src', expect.stringContaining('https://www.google.com/maps?q=47.497900,19.040200&z=10&output=embed'))
+  })
+
   it('falls back to manual coordinates when geolocation is denied', async () => {
     mockGeolocation.getCurrentPosition.mockImplementation(
       (_success: unknown, error: PositionErrorCallback) => {

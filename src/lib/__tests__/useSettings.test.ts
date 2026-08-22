@@ -153,6 +153,7 @@ describe('settings persistence', () => {
       flightsRadarRadiusKm: 25,
       flightsRefreshSeconds: 90,
       flightsShowLabels: false,
+      flightsShowGoogleMap: true,
       flightsShowOnlyAirborne: false,
       flightsUseDeviceLocation: false,
       flightsManualLatitude: '47.4979',
@@ -230,6 +231,7 @@ describe('settings persistence', () => {
         flightsRadarRadiusKm: 999,
         flightsRefreshSeconds: 1,
         flightsShowLabels: 'yes',
+        flightsShowGoogleMap: 'sometimes',
         flightsShowOnlyAirborne: 'sometimes',
         flightsUseDeviceLocation: 'no',
         flightsManualLatitude: 47.5,
@@ -250,6 +252,7 @@ describe('settings persistence', () => {
     expect(loaded.flightsRadarRadiusKm).toBe(250)
     expect(loaded.flightsRefreshSeconds).toBe(2)
     expect(loaded.flightsShowLabels).toBe(DEFAULT_SETTINGS.flightsShowLabels)
+    expect(loaded.flightsShowGoogleMap).toBe(DEFAULT_SETTINGS.flightsShowGoogleMap)
     expect(loaded.flightsShowOnlyAirborne).toBe(DEFAULT_SETTINGS.flightsShowOnlyAirborne)
     expect(loaded.flightsUseDeviceLocation).toBe(DEFAULT_SETTINGS.flightsUseDeviceLocation)
     expect(loaded.flightsManualLatitude).toBe(DEFAULT_SETTINGS.flightsManualLatitude)

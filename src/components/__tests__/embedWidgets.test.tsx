@@ -459,6 +459,22 @@ describe("AppleMusicWidget", () => {
       );
     });
   });
+
+  it("explains the Apple Music preview limitation and links out to full playback", () => {
+    renderWithSettings(<AppleMusicWidget />, {
+      appleMusicEmbedUrl:
+        "https://music.apple.com/us/album/dreams/202271826?i=202272624",
+    });
+
+    expect(screen.getByText("Preview embed")).toBeInTheDocument();
+    expect(
+      screen.getByText(/embeddable player only exposes previews inside third-party dashboards/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open in Apple Music/i })).toHaveAttribute(
+      "href",
+      "https://music.apple.com/us/album/dreams/202271826?i=202272624",
+    );
+  });
 });
 
 describe("ApplePodcastWidget", () => {

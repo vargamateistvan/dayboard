@@ -246,6 +246,8 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
 
   const groups = searchGroups ?? []
   const hasSearchResults = groups.some((group) => group.items.length > 0)
+  const showAppleMusicEmbedNotice = config.brand === 'apple-music'
+  const openAppleMusicUrl = activeUrl.trim() || 'https://music.apple.com/'
 
   const tabs: Array<{ id: AppleBrowseTab; label: string; Icon: typeof Search }> = [
     { id: 'search', label: 'Search', Icon: Search },
@@ -266,7 +268,9 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
             </div>
           </div>
           <div className={styles.spotifyPills}>
-            <span className={styles.spotifyPill}>Embedded player</span>
+            <span className={styles.spotifyPill}>
+              {showAppleMusicEmbedNotice ? 'Preview embed' : 'Embedded player'}
+            </span>
           </div>
         </header>
 
@@ -283,6 +287,22 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
                 colorScheme: resolvedColorScheme,
               })}
             </div>
+            {showAppleMusicEmbedNotice ? (
+              <div className={appleStyles.embedNotice}>
+                <div className={styles.connectHint}>
+                  Apple&apos;s embeddable player only exposes previews inside third-party
+                  dashboards. Open the selection in Apple Music for full subscriber playback.
+                </div>
+                <a
+                  className={[styles.connectButton, appleStyles.embedNoticeLink].join(' ')}
+                  href={openAppleMusicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in Apple Music
+                </a>
+              </div>
+            ) : null}
           </div>
 
           <aside className={styles.spotifySidebar}>

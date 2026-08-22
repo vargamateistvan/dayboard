@@ -85,6 +85,7 @@ export interface Settings {
   flightsRadarRadiusKm: number
   flightsRefreshSeconds: number
   flightsShowLabels: boolean
+  flightsShowGoogleMap: boolean
   flightsShowOnlyAirborne: boolean
   flightsUseDeviceLocation: boolean
   flightsManualLatitude: string
@@ -224,6 +225,7 @@ export const DEFAULT_SETTINGS: Settings = {
   flightsRadarRadiusKm: 25,
   flightsRefreshSeconds: 2,
   flightsShowLabels: true,
+  flightsShowGoogleMap: false,
   flightsShowOnlyAirborne: true,
   flightsUseDeviceLocation: true,
   flightsManualLatitude: '',
@@ -428,6 +430,10 @@ function normalizeFlightsRefreshSeconds(value: unknown): number {
 
 function normalizeFlightsShowLabels(value: unknown): boolean {
   return normalizeBoolean(value, DEFAULT_SETTINGS.flightsShowLabels)
+}
+
+function normalizeFlightsShowGoogleMap(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.flightsShowGoogleMap)
 }
 
 function normalizeFlightsShowOnlyAirborne(value: unknown): boolean {
@@ -765,6 +771,7 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm((rest as { flightsRadarRadiusKm?: unknown }).flightsRadarRadiusKm),
     flightsRefreshSeconds: normalizeFlightsRefreshSeconds((rest as { flightsRefreshSeconds?: unknown }).flightsRefreshSeconds),
     flightsShowLabels: normalizeFlightsShowLabels((rest as { flightsShowLabels?: unknown }).flightsShowLabels),
+    flightsShowGoogleMap: normalizeFlightsShowGoogleMap((rest as { flightsShowGoogleMap?: unknown }).flightsShowGoogleMap),
     flightsShowOnlyAirborne: normalizeFlightsShowOnlyAirborne((rest as { flightsShowOnlyAirborne?: unknown }).flightsShowOnlyAirborne),
     flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation((rest as { flightsUseDeviceLocation?: unknown }).flightsUseDeviceLocation),
     flightsManualLatitude: normalizeFlightsCoordinate((rest as { flightsManualLatitude?: unknown }).flightsManualLatitude),
@@ -866,6 +873,7 @@ export function saveSettings(settings: Settings): void {
       flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm(settings.flightsRadarRadiusKm),
       flightsRefreshSeconds: normalizeFlightsRefreshSeconds(settings.flightsRefreshSeconds),
       flightsShowLabels: normalizeFlightsShowLabels(settings.flightsShowLabels),
+      flightsShowGoogleMap: normalizeFlightsShowGoogleMap(settings.flightsShowGoogleMap),
       flightsShowOnlyAirborne: normalizeFlightsShowOnlyAirborne(settings.flightsShowOnlyAirborne),
       flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation(settings.flightsUseDeviceLocation),
       flightsManualLatitude: normalizeFlightsCoordinate(settings.flightsManualLatitude),
@@ -1023,6 +1031,10 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (typeof settings.flightsShowLabels !== 'boolean') {
     errors.push('flightsShowLabels must be boolean')
+  }
+
+  if (typeof settings.flightsShowGoogleMap !== 'boolean') {
+    errors.push('flightsShowGoogleMap must be boolean')
   }
 
   if (typeof settings.flightsShowOnlyAirborne !== 'boolean') {

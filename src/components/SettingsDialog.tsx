@@ -1289,6 +1289,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [flightsShowLabels, setFlightsShowLabels] = useState(
     settings.flightsShowLabels,
   );
+  const [flightsShowGoogleMap, setFlightsShowGoogleMap] = useState(
+    settings.flightsShowGoogleMap,
+  );
   const [flightsShowOnlyAirborne, setFlightsShowOnlyAirborne] = useState(
     settings.flightsShowOnlyAirborne,
   );
@@ -1453,6 +1456,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setFlightsRadarRadiusKm(nextSettings.flightsRadarRadiusKm);
     setFlightsRefreshSeconds(nextSettings.flightsRefreshSeconds);
     setFlightsShowLabels(nextSettings.flightsShowLabels);
+    setFlightsShowGoogleMap(nextSettings.flightsShowGoogleMap);
     setFlightsShowOnlyAirborne(nextSettings.flightsShowOnlyAirborne);
     setFlightsUseDeviceLocation(nextSettings.flightsUseDeviceLocation);
     setFlightsManualLatitude(nextSettings.flightsManualLatitude);
@@ -1517,6 +1521,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     flightsRadarRadiusKm,
     flightsRefreshSeconds,
     flightsShowLabels,
+    flightsShowGoogleMap,
     flightsShowOnlyAirborne,
     flightsUseDeviceLocation,
     flightsManualLatitude: flightsManualLatitude.trim(),
@@ -2797,6 +2802,21 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             <EyeOff size={14} />
                           )}
                           <span>Show labels on radar</span>
+                        </button>
+                        <button
+                          className={[
+                            styles.widgetToggle,
+                            flightsShowGoogleMap ? styles.widgetVisible : "",
+                          ].join(" ")}
+                          onClick={() => setFlightsShowGoogleMap((value) => !value)}
+                          type="button"
+                        >
+                          {flightsShowGoogleMap ? (
+                            <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
+                          )}
+                          <span>Show Google Maps under radar</span>
                         </button>
                       </div>
                       <p className={styles.hint}>

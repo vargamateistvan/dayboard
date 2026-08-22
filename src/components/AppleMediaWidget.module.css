@@ -42,6 +42,22 @@
   flex: 0 0 auto;
 }
 
+.embedNotice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.embedNoticeLink {
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
 .savedRowButton {
   flex: 1 1 auto;
 }
@@ -72,4 +88,11 @@
   display: flex;
   gap: 0.45rem;
   align-items: center;
+}
+
+@media (max-width: 700px) {
+  .embedNotice {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

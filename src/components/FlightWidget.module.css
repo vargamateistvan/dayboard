@@ -129,9 +129,42 @@
     inset 0 14px 30px color-mix(in srgb, var(--color-accent-hover) 18%, transparent);
 }
 
+.radarScopeWithMap {
+  border-color: color-mix(in srgb, var(--color-accent) 62%, var(--color-border));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 36%, transparent),
+    inset 0 14px 30px color-mix(in srgb, var(--color-accent-hover) 12%, transparent);
+}
+
+.radarMapLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+  z-index: 0;
+  filter: saturate(0.65) brightness(0.86) contrast(1.05);
+}
+
+.radarMapTint {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 8%, transparent) 0%, transparent 62%),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent-hover) 24%, transparent),
+      color-mix(in srgb, var(--color-accent) 22%, transparent)
+    );
+}
+
 .radar {
   position: relative;
-  z-index: 2;
+  z-index: 4;
   display: block;
   width: 100%;
   height: 100%;
@@ -149,14 +182,14 @@
 }
 
 .radarSweep {
-  z-index: 0;
+  z-index: 2;
   background:
     radial-gradient(circle at center, color-mix(in srgb, var(--color-accent) 16%, transparent) 0%, transparent 62%),
     repeating-radial-gradient(circle at center, color-mix(in srgb, var(--color-accent-hover) 36%, transparent) 0 1px, transparent 1px 26px);
 }
 
 .radarSweepBeam {
-  z-index: 1;
+  z-index: 3;
   background:
     conic-gradient(
       from 0deg,
@@ -173,7 +206,7 @@
 }
 
 .radarGlass {
-  z-index: 3;
+  z-index: 5;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 26%, transparent 78%, color-mix(in srgb, var(--color-accent-hover) 10%, transparent)),
     radial-gradient(circle at 30% 24%, color-mix(in srgb, var(--color-accent) 12%, transparent), transparent 30%);
@@ -181,6 +214,10 @@
 
 .radarBackground {
   fill: color-mix(in srgb, var(--color-accent) 20%, transparent);
+}
+
+.radarBackgroundOnMap {
+  fill: color-mix(in srgb, var(--color-accent) 12%, transparent);
 }
 
 .radarOuterGlow {
@@ -253,6 +290,14 @@
   letter-spacing: 0.04em;
 }
 
+.planeLabelOnMap {
+  fill: color-mix(in srgb, var(--color-text) 92%, white);
+  stroke: color-mix(in srgb, var(--color-surface) 86%, black);
+  stroke-width: 0.58;
+  paint-order: stroke;
+  letter-spacing: 0.05em;
+}
+
 .planeMarker {
   cursor: pointer;
   outline: none;
@@ -269,6 +314,18 @@
 .planeMarkerSelected .planeMarkerOutline {
   stroke: color-mix(in srgb, var(--color-accent-hover) 72%, var(--color-text));
   stroke-width: 0.48;
+}
+
+.planeMarkerSelected {
+  filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--color-accent-hover) 55%, transparent));
+}
+
+.planeMarkerDimmed {
+  opacity: 0.28;
+}
+
+.planeMarkerDimmed .planeHitArea {
+  fill: transparent;
 }
 
 .planeMarker:focus-visible .planeMarkerFill {
@@ -296,9 +353,39 @@
   letter-spacing: 0.08em;
 }
 
+.radarLabelOnMap,
+.radarRangeLabelOnMap {
+  fill: color-mix(in srgb, var(--color-text) 95%, white);
+  stroke: color-mix(in srgb, var(--color-surface) 88%, black);
+  stroke-width: 0.42;
+  paint-order: stroke;
+}
+
 .radarCaption {
   font-size: 0.72rem;
   color: var(--color-text-muted);
+  text-align: center;
+  line-height: 1.35;
+}
+
+.mapEmbed {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mapLink {
+  font-size: 0.72rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  justify-self: center;
+  padding: 0.24rem 0.56rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+.mapLink:hover {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
 }
 
 .flightList {
@@ -439,6 +526,7 @@
 .fullscreen .refreshHint,
 .fullscreen .summaryMetric,
 .fullscreen .radarCaption,
+.fullscreen .mapLink,
 .fullscreen .highlightValue,
 .fullscreen .flightName {
   font-size: clamp(0.9rem, 1.2vw, 1.05rem);
@@ -514,6 +602,15 @@
 
   .selectedFlightGrid {
     grid-template-columns: 1fr;
+  }
+
+  .radarScopeWithMap .radarRangeLabelOuter {
+    display: none;
+  }
+
+  .radarScopeWithMap .radarLabelOnMap,
+  .radarScopeWithMap .radarRangeLabelOnMap {
+    stroke-width: 0.54;
   }
 
   .rowHeader,

@@ -42,6 +42,12 @@ function getManualCoordinates(latitude: string, longitude: string): Coordinates 
   return { latitude: parsedLatitude, longitude: parsedLongitude }
 }
 
+function buildGoogleMapsEmbedUrl(coordinates: Coordinates): string {
+  const latitude = coordinates.latitude.toFixed(6)
+  const longitude = coordinates.longitude.toFixed(6)
+  return `https://www.google.com/maps?q=${latitude},${longitude}&z=10&output=embed`
+}
+
 function formatLastRefresh(lastRefreshedAt: number, now: number): string {
   const diffMs = Math.max(0, now - lastRefreshedAt)
   const diffMinutes = Math.floor(diffMs / 60_000)
@@ -127,6 +133,8 @@ function RadarPlot({
   flights,
   maxRadiusKm,
   showLabels,
+  showGoogleMap,
+  googleMapsEmbedUrl,
   isFullscreen,
   selectedFlightIcao,
   onSelectFlight,
@@ -134,11 +142,18 @@ function RadarPlot({
   flights: NearbyFlight[]
   maxRadiusKm: number
   showLabels: boolean
+  showGoogleMap: boolean
+  googleMapsEmbedUrl: string | null
   isFullscreen: boolean
   selectedFlightIcao: string | null
   onSelectFlight: (flight: NearbyFlight) => void
 }) {
   const labelLimit = isFullscreen ? 8 : 3
+  const effectiveLabelLimit = showGoogleMap
+    ? isFullscreen
+      ? 5
+      : 2
+    : labelLimit
   const rangeStepKm = Math.max(1, Math.round(maxRadiusKm / 3))
   const radarLabels = [
     { x: 50, y: 9, label: 'N' },
@@ -146,14 +161,40 @@ function RadarPlot({
     { x: 50, y: 94, label: 'S' },
     { x: 9, y: 51.5, label: 'W' },
   ]
+  const hasSelectedFlight = selectedFlightIcao !== null
 
   return (
-    <div className={styles.radarScope}>
+    <div
+      className={[
+        styles.radarScope,
+        showGoogleMap && googleMapsEmbedUrl ? styles.radarScopeWithMap : '',
+      ].join(' ')}
+    >
+      {showGoogleMap && googleMapsEmbedUrl ? (
+        <iframe
+          className={styles.radarMapLayer}
+          src={googleMapsEmbedUrl}
+          loading="lazy"
+          title="Google Maps centered on flight radar location"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      ) : null}
+      {showGoogleMap && googleMapsEmbedUrl ? (
+        <div className={styles.radarMapTint} aria-hidden="true" />
+      ) : null}
       <div className={styles.radarSweep} aria-hidden="true" />
       <div className={styles.radarSweepBeam} aria-hidden="true" />
       <div className={styles.radarGlass} aria-hidden="true" />
       <svg className={styles.radar} viewBox="0 0 100 100" role="img" aria-label="Nearby flights radar">
-        <circle className={styles.radarBackground} cx="50" cy="50" r="46" />
+        <circle
+          className={[
+            styles.radarBackground,
+            showGoogleMap && googleMapsEmbedUrl ? styles.radarBackgroundOnMap : '',
+          ].join(' ')}
+          cx="50"
+          cy="50"
+          r="46"
+        />
         <circle className={styles.radarOuterGlow} cx="50" cy="50" r="44.5" />
         <circle className={styles.radarOuter} cx="50" cy="50" r="44" />
         <circle className={styles.radarRing} cx="50" cy="50" r="29.5" />
@@ -164,18 +205,48 @@ function RadarPlot({
         <circle className={styles.radarCenter} cx="50" cy="50" r="2.5" />
 
         {radarLabels.map((entry) => (
-          <text key={entry.label} className={styles.radarLabel} x={entry.x} y={entry.y}>
+          <text
+            key={entry.label}
+            className={[
+              styles.radarLabel,
+              showGoogleMap && googleMapsEmbedUrl ? styles.radarLabelOnMap : '',
+            ].join(' ')}
+            x={entry.x}
+            y={entry.y}
+          >
             {entry.label}
           </text>
         ))}
 
-        <text className={styles.radarRangeLabel} x="52" y="35.5">
+        <text
+          className={[
+            styles.radarRangeLabel,
+            showGoogleMap && googleMapsEmbedUrl ? styles.radarRangeLabelOnMap : '',
+          ].join(' ')}
+          x="52"
+          y="35.5"
+        >
           {rangeStepKm} km
         </text>
-        <text className={styles.radarRangeLabel} x="52" y="20.5">
+        <text
+          className={[
+            styles.radarRangeLabel,
+            showGoogleMap && googleMapsEmbedUrl ? styles.radarRangeLabelOnMap : '',
+          ].join(' ')}
+          x="52"
+          y="20.5"
+        >
           {rangeStepKm * 2} km
         </text>
-        <text className={styles.radarRangeLabel} x="52" y="6.5">
+        <text
+          className={[
+            styles.radarRangeLabel,
+            styles.radarRangeLabelOuter,
+            showGoogleMap && googleMapsEmbedUrl ? styles.radarRangeLabelOnMap : '',
+          ].join(' ')}
+          x="52"
+          y="6.5"
+        >
           {maxRadiusKm} km
         </text>
 
@@ -194,6 +265,7 @@ function RadarPlot({
               className={[
                 styles.planeMarker,
                 isSelected ? styles.planeMarkerSelected : '',
+                hasSelectedFlight && !isSelected ? styles.planeMarkerDimmed : '',
               ].join(' ')}
               role="button"
               tabIndex={0}
@@ -209,8 +281,15 @@ function RadarPlot({
             >
               <circle className={styles.planeHitArea} cx="0" cy="0" r="3.8" />
               <RadarPlaneIcon rotationDegrees={planeRotation} />
-              {showLabels && index < labelLimit ? (
-                <text className={styles.planeLabel} x="3.8" y="-3.1">
+              {showLabels && index < effectiveLabelLimit && (!hasSelectedFlight || isSelected) ? (
+                <text
+                  className={[
+                    styles.planeLabel,
+                    showGoogleMap && googleMapsEmbedUrl ? styles.planeLabelOnMap : '',
+                  ].join(' ')}
+                  x="3.8"
+                  y="-3.1"
+                >
                   {getFlightName(flight)}
                 </text>
               ) : null}
@@ -230,6 +309,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [locationSource, setLocationSource] = useState('Device location')
+  const [activeCoordinates, setActiveCoordinates] = useState<Coordinates | null>(null)
   const [hasInitialized, setHasInitialized] = useState(false)
   const [selectedFlightIcao, setSelectedFlightIcao] = useState<string | null>(null)
 
@@ -253,6 +333,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
 
         setFlights(nearbyFlights)
         setLocationSource(sourceLabel)
+        setActiveCoordinates(coordinates)
         setLastRefreshedAt(Date.now())
         setNow(Date.now())
         setError(null)
@@ -278,6 +359,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
     if (!settings.flightsUseDeviceLocation) {
       if (!manualCoordinates) {
         setFlights([])
+        setActiveCoordinates(null)
         setLoading(false)
         setError('Add valid manual coordinates in settings to load nearby flights.')
         setHasInitialized(true)
@@ -295,6 +377,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
       }
 
       setFlights([])
+      setActiveCoordinates(null)
       setLoading(false)
       setError('Geolocation is unavailable. Add manual coordinates in settings to use the flights widget.')
       setHasInitialized(true)
@@ -323,6 +406,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
             : 'Location is temporarily unavailable. Add manual coordinates to see nearby flights.'
 
         setFlights([])
+        setActiveCoordinates(null)
         setLoading(false)
         setError(fallbackMessage)
         setHasInitialized(true)
@@ -378,6 +462,17 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
       lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now),
     [lastRefreshedAt, now],
   )
+  const googleMapsEmbedUrl = useMemo(
+    () => (activeCoordinates === null ? null : buildGoogleMapsEmbedUrl(activeCoordinates)),
+    [activeCoordinates],
+  )
+  const googleMapsOpenUrl = useMemo(() => {
+    if (activeCoordinates === null) {
+      return null
+    }
+
+    return `https://www.google.com/maps?q=${activeCoordinates.latitude.toFixed(6)},${activeCoordinates.longitude.toFixed(6)}`
+  }, [activeCoordinates])
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
@@ -440,16 +535,32 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
           ) : (
             <div className={styles.content}>
               <div className={styles.radarPanel}>
-                <RadarPlot
-                  flights={flights}
-                  maxRadiusKm={settings.flightsRadarRadiusKm}
-                  showLabels={settings.flightsShowLabels}
-                  isFullscreen={isFullscreen}
-                  selectedFlightIcao={selectedFlightIcao}
-                  onSelectFlight={(flight) => setSelectedFlightIcao(flight.icao24)}
-                />
-                <div className={styles.radarCaption}>
-                Centered on {locationSource.toLowerCase()} · outer ring {settings.flightsRadarRadiusKm} km
+                <div className={styles.radarComposite}>
+                  <RadarPlot
+                    flights={flights}
+                    maxRadiusKm={settings.flightsRadarRadiusKm}
+                    showLabels={settings.flightsShowLabels}
+                    showGoogleMap={settings.flightsShowGoogleMap}
+                    googleMapsEmbedUrl={googleMapsEmbedUrl}
+                    isFullscreen={isFullscreen}
+                    selectedFlightIcao={selectedFlightIcao}
+                    onSelectFlight={(flight) => setSelectedFlightIcao(flight.icao24)}
+                  />
+                  <div className={styles.radarCaption}>
+                  Centered on {locationSource.toLowerCase()} · outer ring {settings.flightsRadarRadiusKm} km
+                  </div>
+                  {settings.flightsShowGoogleMap && googleMapsOpenUrl ? (
+                    <div className={styles.mapEmbed}>
+                      <a
+                        className={styles.mapLink}
+                        href={googleMapsOpenUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open in Google Maps
+                      </a>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

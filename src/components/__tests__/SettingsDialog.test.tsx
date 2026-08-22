@@ -166,6 +166,27 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('persists the Google Maps option for the flights radar', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        rowCount: 3,
+        visibility: { flights: true },
+        placements: {},
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show Google Maps under radar' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
+      flightsShowGoogleMap: true,
+    })
+  })
+
   it('prefills the current auto clock size when the field is focused', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
