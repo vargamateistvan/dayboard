@@ -368,26 +368,6 @@
   line-height: 1.35;
 }
 
-.mapEmbed {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.mapLink {
-  font-size: 0.72rem;
-  color: var(--color-accent);
-  text-decoration: none;
-  justify-self: center;
-  padding: 0.24rem 0.56rem;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
-  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
-}
-
-.mapLink:hover {
-  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
-}
-
 .flightList {
   display: flex;
   flex-direction: column;
@@ -526,7 +506,6 @@
 .fullscreen .refreshHint,
 .fullscreen .summaryMetric,
 .fullscreen .radarCaption,
-.fullscreen .mapLink,
 .fullscreen .highlightValue,
 .fullscreen .flightName {
   font-size: clamp(0.9rem, 1.2vw, 1.05rem);

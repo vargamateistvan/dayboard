@@ -466,13 +466,6 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
     () => (activeCoordinates === null ? null : buildGoogleMapsEmbedUrl(activeCoordinates)),
     [activeCoordinates],
   )
-  const googleMapsOpenUrl = useMemo(() => {
-    if (activeCoordinates === null) {
-      return null
-    }
-
-    return `https://www.google.com/maps?q=${activeCoordinates.latitude.toFixed(6)},${activeCoordinates.longitude.toFixed(6)}`
-  }, [activeCoordinates])
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
@@ -549,18 +542,6 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                   <div className={styles.radarCaption}>
                   Centered on {locationSource.toLowerCase()} · outer ring {settings.flightsRadarRadiusKm} km
                   </div>
-                  {settings.flightsShowGoogleMap && googleMapsOpenUrl ? (
-                    <div className={styles.mapEmbed}>
-                      <a
-                        className={styles.mapLink}
-                        href={googleMapsOpenUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open in Google Maps
-                      </a>
-                    </div>
-                  ) : null}
                 </div>
               </div>
 
