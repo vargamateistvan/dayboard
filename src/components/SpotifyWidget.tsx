@@ -2,14 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { History, Library, LogOut, Search } from "lucide-react";
 import { MediaBrandIcon } from "./MediaBrandIcon";
 import { SpotifyEmbedPlayer } from "./SpotifyEmbedPlayer";
-import { SpotifyWebPlayer } from "./SpotifyWebPlayer";
 import { useSettings } from "../lib/useSettings";
 import { useWidgetVisibility } from "../lib/useWidgetVisibility";
 import { resolveColorScheme } from "../lib/settings";
 import {
   fetchSpotifyAccountSnapshot,
   searchSpotifyCatalog,
-  spotifyUrlToPlayRequest,
   type SpotifyAccountSnapshot,
   type SpotifyRecentPlayedItem,
   type SpotifySavedAlbumItem,
@@ -29,7 +27,6 @@ import {
   onSpotifyAuthChanged,
   startSpotifyLogin,
 } from "../lib/spotifyAuth";
-import { useSpotifyWebPlayback } from "../lib/spotifyWebPlayback";
 import styles from "./SpotifyWidget.module.css";
 
 interface SpotifyWidgetProps {
@@ -297,18 +294,6 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const isLargeEmbed = placements.spotify.rowSpan >= 2;
 
   const accountProduct = snapshot?.profile.product ?? null;
-  const isNonPremiumAccount =
-    accountProduct !== null && accountProduct !== "premium";
-
-  // Premium accounts stream through the Web Playback SDK; free accounts fall
-  // back to Spotify's embedded iframe player (the SDK stays disabled). The SDK
-  // reporting 'unsupported' covers accounts whose plan we could not read.
-  const [playback, playbackControls] = useSpotifyWebPlayback(
-    authSession,
-    Boolean(authSession) && !isNonPremiumAccount,
-  );
-  const useEmbedPlayer =
-    isNonPremiumAccount || playback.status === "unsupported";
 
   useEffect(() => {
     const updateAuthSession = () => {
@@ -523,24 +508,8 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   };
 
   const handlePlay = (selection: SpotifySelection) => {
-    if (useEmbedPlayer) {
-      setPlayError(null);
-      setEmbedSelection(selection);
-      return;
-    }
-
-    const request = spotifyUrlToPlayRequest(selection.url);
-    if (!request) {
-      setPlayError(`“${selection.title}” cannot be played here.`);
-      return;
-    }
-
     setPlayError(null);
-    void playbackControls.activate(request).catch((error: unknown) => {
-      setPlayError(
-        error instanceof Error ? error.message : "Failed to start playback.",
-      );
-    });
+    setEmbedSelection(selection);
   };
 
   if (!authSession) {
@@ -633,13 +602,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
                   : `${accountProduct} plan`}
               </span>
             ) : null}
-            <span className={styles.spotifyPill}>
-              {useEmbedPlayer
-                ? "Embedded player"
-                : playback.isActive
-                  ? "Playing in browser"
-                  : "Browser player"}
-            </span>
+            <span className={styles.spotifyPill}>Embedded player</span>
             <button
               type="button"
               className={styles.disconnectButton}
@@ -654,36 +617,19 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
         <div className={styles.spotifyLayout}>
           <div className={styles.playerPane}>
-            {useEmbedPlayer ? (
-              <>
-                <SpotifyEmbedPlayer
-                  selection={
-                    embedSelection ?? recentSelections[0]?.selection ?? null
-                  }
-                  colorScheme={resolveColorScheme(settings.colorScheme)}
-                  embedSize={
-                    isFullscreen
-                      ? "fullscreen"
-                      : isLargeEmbed
-                        ? "large"
-                        : "normal"
-                  }
-                />
-              </>
-            ) : (
-              <SpotifyWebPlayer
-                state={playback}
-                controls={playbackControls}
-                colorScheme={resolveColorScheme(settings.colorScheme)}
-                embedSize={
-                  isFullscreen
-                    ? "fullscreen"
-                    : isLargeEmbed
-                      ? "large"
-                      : "normal"
-                }
-              />
-            )}
+            <SpotifyEmbedPlayer
+              selection={
+                embedSelection ?? recentSelections[0]?.selection ?? null
+              }
+              colorScheme={resolveColorScheme(settings.colorScheme)}
+              embedSize={
+                isFullscreen
+                  ? "fullscreen"
+                  : isLargeEmbed
+                    ? "large"
+                    : "normal"
+              }
+            />
             {playError ? <div className={styles.error}>{playError}</div> : null}
             {snapshotError ? (
               <div className={styles.error}>{snapshotError}</div>

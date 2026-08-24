@@ -201,7 +201,7 @@ describe("SpotifyWidget", () => {
     ).toBeTruthy();
   });
 
-  it("shows the browser player and library when an account is linked", async () => {
+  it("shows the embedded player and library when an account is linked", async () => {
     vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession);
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
       ...baseSnapshot,
@@ -257,9 +257,7 @@ describe("SpotifyWidget", () => {
     renderWithSettings(<SpotifyWidget />);
 
     expect(await screen.findByText("Dayboard")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Ready to stream in this browser/i),
-    ).toBeInTheDocument();
+    expect(await screen.findByTitle("Spotify player: Dreams")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: /^Connect Spotify$/i }),
     ).not.toBeInTheDocument();
@@ -270,7 +268,7 @@ describe("SpotifyWidget", () => {
     expect(screen.getByText("Dreams Podcast")).toBeInTheDocument();
   });
 
-  it("plays a search result through the browser player", async () => {
+  it("plays a search result through the embedded player", async () => {
     vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession);
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue(
       baseSnapshot,
@@ -305,20 +303,20 @@ describe("SpotifyWidget", () => {
 
     fireEvent.click(await screen.findByText("Dreams"));
 
-    await waitFor(() => {
-      expect(playbackControls.activate).toHaveBeenCalledWith({
-        uris: ["spotify:track:example"],
-      });
-    });
+    expect(await screen.findByTitle("Spotify player: Dreams")).toHaveAttribute(
+      "src",
+      expect.stringContaining("https://open.spotify.com/embed/track/example"),
+    );
+    expect(playbackControls.activate).not.toHaveBeenCalled();
   });
 
-  it("falls back to the embedded player for free accounts", async () => {
+  it("uses the embedded player for premium accounts too", async () => {
     vi.mocked(spotifyAuth.getStoredSpotifyAuth).mockReturnValue(authSession);
     vi.mocked(spotifyApi.fetchSpotifyAccountSnapshot).mockResolvedValue({
       ...baseSnapshot,
       profile: {
         ...baseSnapshot.profile,
-        product: "free",
+        product: "premium",
       },
     });
     vi.mocked(spotifyApi.searchSpotifyCatalog).mockResolvedValue({
