@@ -174,8 +174,8 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
       .map((team) => {
         const key = favoriteKey(team)
         const row = rows.get(key)
-        const gameId = row?.game?.id ?? 'none'
-        return `${key}:${row?.loading ? '1' : '0'}:${row?.error ? 'e' : 'ok'}:${gameId}`
+        const gameSignature = row?.game ? `${row.game.playedAt}:${row.game.teamScore}-${row.game.opponentScore}` : 'none'
+        return `${key}:${row?.loading ? '1' : '0'}:${row?.error ? 'e' : 'ok'}:${gameSignature}`
       })
       .join('|')
     const leaguePart = leagueScores.map((score) => score.id).join('|')

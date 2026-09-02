@@ -265,7 +265,7 @@ describe("SpotifyWidget", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Library/i }));
     const libraryTitle = await screen.findByText("Your Spotify library");
     const libraryPanel = libraryTitle.closest('[data-spotify-tab-panel="library"]');
-    if (!libraryPanel) {
+    if (!(libraryPanel instanceof HTMLElement)) {
       throw new Error("Spotify library panel not found");
     }
     expect(within(libraryPanel).getByText("Dreams")).toBeInTheDocument();
