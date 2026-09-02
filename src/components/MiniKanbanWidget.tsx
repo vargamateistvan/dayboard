@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import styles from './MiniKanbanWidget.module.css'
 
 type KanbanColumn = 'todo' | 'doing' | 'done'
@@ -76,6 +77,8 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
   const [editingTitle, setEditingTitle] = useState('')
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null)
   const [columnMenuOpen, setColumnMenuOpen] = useState(false)
+  const widgetRootRef = useRef<HTMLDivElement | null>(null)
+  const boardRef = useRef<HTMLDivElement | null>(null)
   const columnMenuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -252,8 +255,163 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
     setDraggedCardId(null)
   }
 
+  const cardAnimationSignature = useMemo(
+    () => cards.map((card) => `${card.id}:${card.column}:${card.updatedAt}`).join('|'),
+    [cards],
+  )
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const boardNode = boardRef.current
+    if (!boardNode) {
+      return
+    }
+
+    const cardNodes = Array.from(boardNode.querySelectorAll<HTMLElement>(`.${styles.card}`))
+    if (!cardNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(cardNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = cardNodes.map((cardNode, index) =>
+        anime.animate(cardNode, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [cardAnimationSignature])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRootRef.current
+    if (!rootNode) {
+      return
+    }
+
+    let cancelled = false
+
+    const isInteractiveButton = (button: HTMLButtonElement) =>
+      button.classList.contains(styles.addBtn)
+      || button.classList.contains(styles.actionBtn)
+      || button.classList.contains(styles.deleteBtn)
+      || button.classList.contains(styles.cardTitle)
+      || button.classList.contains(styles.columnSelectorTrigger)
+      || button.classList.contains(styles.columnSelectorItem)
+      || button.classList.contains(styles.cardDragHandle)
+
+    const resolveInteractiveButton = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null
+      }
+      const button = target.closest('button')
+      if (!(button instanceof HTMLButtonElement) || !isInteractiveButton(button)) {
+        return null
+      }
+      return button
+    }
+
+    const animateButton = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(button, options)
+      })
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const button = resolveInteractiveButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateButton(button, { scale: 1.015, translateY: -1, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = resolveInteractiveButton(event.target)
+      if (!button) {
+        return
+      }
+      animateButton(button, { scale: 1, translateY: 0, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = resolveInteractiveButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateButton(button, { scale: 0.98, translateY: 0, duration: Math.max(80, MOTION_DURATIONS.quick - 50) })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = resolveInteractiveButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: button.matches(':hover') ? 1.015 : 1,
+        translateY: button.matches(':hover') ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    rootNode.addEventListener('pointerenter', handlePointerEnter, true)
+    rootNode.addEventListener('pointerleave', handlePointerLeave, true)
+    rootNode.addEventListener('pointerdown', handlePointerDown, true)
+    rootNode.addEventListener('pointerup', handlePointerUp, true)
+    rootNode.addEventListener('pointercancel', handlePointerUp, true)
+
+    return () => {
+      cancelled = true
+      rootNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      rootNode.removeEventListener('pointerleave', handlePointerLeave, true)
+      rootNode.removeEventListener('pointerdown', handlePointerDown, true)
+      rootNode.removeEventListener('pointerup', handlePointerUp, true)
+      rootNode.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+  }, [])
+
   return (
-    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <h2>Mini Kanban</h2>
         <span className={styles.counter}>{cards.length} cards</span>
@@ -317,7 +475,7 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
         </button>
       </form>
 
-      <div className={styles.board}>
+      <div ref={boardRef} className={styles.board}>
         {cardsByColumn.map((columnEntry) => (
           <section
             key={columnEntry.id}

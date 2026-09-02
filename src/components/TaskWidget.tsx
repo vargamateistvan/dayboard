@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Plus, Trash2, Check } from 'lucide-react'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import styles from './TaskWidget.module.css'
 
 interface Task {
@@ -78,6 +79,8 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
   const [mounted, setMounted] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
+  const widgetRootRef = useRef<HTMLDivElement | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
 
   // Mark component as mounted to avoid hydration issues
   useEffect(() => {
@@ -146,9 +149,172 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
     }
     return b.createdAt - a.createdAt
   })
+  const taskAnimationSignature = useMemo(
+    () =>
+      sortedTasks
+        .map((task) => `${task.id}:${task.completed ? '1' : '0'}:${task.text.length}`)
+        .join('|'),
+    [sortedTasks],
+  )
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const listNode = listRef.current
+    if (!listNode) {
+      return
+    }
+
+    const taskNodes = Array.from(listNode.querySelectorAll<HTMLElement>(`.${styles.taskItem}`))
+    if (!taskNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(taskNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = taskNodes.map((taskNode, index) =>
+        anime.animate(taskNode, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [taskAnimationSignature])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRootRef.current
+    if (!rootNode) {
+      return
+    }
+
+    const isInteractiveButton = (button: HTMLButtonElement) =>
+      button.classList.contains(styles.addBtn) ||
+      button.classList.contains(styles.checkBtn) ||
+      button.classList.contains(styles.taskTextButton) ||
+      button.classList.contains(styles.deleteBtn)
+
+    const resolveButton = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null
+      }
+      const button = target.closest('button')
+      return button instanceof HTMLButtonElement ? button : null
+    }
+
+    let cancelled = false
+
+    const animateButton = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(button, options)
+      })
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const button = resolveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: 1.015,
+        translateY: -1,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = resolveButton(event.target)
+      if (!button || !isInteractiveButton(button)) {
+        return
+      }
+      animateButton(button, {
+        scale: 1,
+        translateY: 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = resolveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: 0.98,
+        translateY: 0,
+        duration: Math.max(80, MOTION_DURATIONS.quick - 50),
+      })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = resolveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: button.matches(':hover') ? 1.015 : 1,
+        translateY: button.matches(':hover') ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    rootNode.addEventListener('pointerenter', handlePointerEnter, true)
+    rootNode.addEventListener('pointerleave', handlePointerLeave, true)
+    rootNode.addEventListener('pointerdown', handlePointerDown, true)
+    rootNode.addEventListener('pointerup', handlePointerUp, true)
+    rootNode.addEventListener('pointercancel', handlePointerUp, true)
+
+    return () => {
+      cancelled = true
+      rootNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      rootNode.removeEventListener('pointerleave', handlePointerLeave, true)
+      rootNode.removeEventListener('pointerdown', handlePointerDown, true)
+      rootNode.removeEventListener('pointerup', handlePointerUp, true)
+      rootNode.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+  }, [])
 
   return (
-    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <h2>Tasks</h2>
         {totalCount > 0 && (
@@ -179,7 +345,7 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
         </button>
       </form>
 
-      <div className={styles.list}>
+      <div ref={listRef} className={styles.list}>
         {tasks.length === 0 ? (
           <p className={styles.empty}>No tasks yet</p>
         ) : (

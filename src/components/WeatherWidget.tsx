@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Sun,
   Cloud,
@@ -16,6 +16,7 @@ import {
   Sunset,
 } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from "../lib/anime";
 import styles from "./WeatherWidget.module.css";
 import type { WeatherUnitSystem } from "../lib/settings";
 
@@ -303,6 +304,8 @@ interface WeatherWidgetProps {
 
 export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
   const { settings } = useSettings();
+  const widgetRootRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<WeatherData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -358,9 +361,172 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
   const sunset = data
     ? formatTime(data.sunset, data.timezone, data.utcOffsetSeconds)
     : null;
+  const weatherAnimationSignature = useMemo(
+    () =>
+      data
+        ? [
+            data.location,
+            data.temperature,
+            data.weatherCode,
+            data.forecast.map((day) => `${day.date}-${day.high}-${day.low}-${day.weatherCode}`).join("|"),
+            settings.weatherShowExtraDetails ? "details-on" : "details-off",
+            isFullscreen ? "fullscreen" : "normal",
+          ].join(":")
+        : "empty",
+    [data, isFullscreen, settings.weatherShowExtraDetails],
+  );
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return;
+    }
+
+    const rootNode = widgetRootRef.current;
+    if (!rootNode) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const animateRefresh = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return;
+        }
+        anime.animate(button, options);
+      });
+    };
+
+    const resolveRefreshButton = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null;
+      }
+      const button = target.closest("button");
+      if (!(button instanceof HTMLButtonElement) || !button.classList.contains(styles.refresh)) {
+        return null;
+      }
+      return button;
+    };
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") {
+        return;
+      }
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, { scale: 1.06, translateY: -1, duration: MOTION_DURATIONS.quick });
+    };
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button) {
+        return;
+      }
+      animateRefresh(button, { scale: 1, translateY: 0, duration: MOTION_DURATIONS.quick });
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, { scale: 0.95, translateY: 0, duration: Math.max(80, MOTION_DURATIONS.quick - 50) });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, {
+        scale: button.matches(":hover") ? 1.06 : 1,
+        translateY: button.matches(":hover") ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      });
+    };
+
+    rootNode.addEventListener("pointerenter", handlePointerEnter, true);
+    rootNode.addEventListener("pointerleave", handlePointerLeave, true);
+    rootNode.addEventListener("pointerdown", handlePointerDown, true);
+    rootNode.addEventListener("pointerup", handlePointerUp, true);
+    rootNode.addEventListener("pointercancel", handlePointerUp, true);
+
+    return () => {
+      cancelled = true;
+      rootNode.removeEventListener("pointerenter", handlePointerEnter, true);
+      rootNode.removeEventListener("pointerleave", handlePointerLeave, true);
+      rootNode.removeEventListener("pointerdown", handlePointerDown, true);
+      rootNode.removeEventListener("pointerup", handlePointerUp, true);
+      rootNode.removeEventListener("pointercancel", handlePointerUp, true);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isMotionEnabled() || loading || error || !data) {
+      return;
+    }
+
+    const contentNode = contentRef.current;
+    if (!contentNode) {
+      return;
+    }
+
+    const summaryNode = contentNode.querySelector(`.${styles.summary}`);
+    const detailNodes = Array.from(contentNode.querySelectorAll<HTMLElement>(`.${styles.detail}`));
+    const forecastNodes = Array.from(contentNode.querySelectorAll<HTMLElement>(`.${styles.forecastDay}`));
+    const targets = [
+      ...(summaryNode instanceof HTMLElement ? [summaryNode] : []),
+      ...detailNodes,
+      ...forecastNodes,
+    ];
+
+    if (!targets.length) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeAnimations: Array<{ cancel?: () => void }> = [];
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(targets, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ];
+        return;
+      }
+
+      activeAnimations = targets.map((target, index) =>
+        anime.animate(target, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      activeAnimations.forEach((animation) => animation.cancel?.());
+    };
+  }, [weatherAnimationSignature, loading, error, data]);
 
   return (
-    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <span className={styles.title}>Weather</span>
         {!loading && (
@@ -387,6 +553,7 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
       {!loading && error && <div className={styles.error}>{error}</div>}
       {!loading && !error && data && info && (
         <div
+          ref={contentRef}
           className={`${styles.content} ${
             settings.weatherShowExtraDetails ? "" : styles.contentFull
           }`}

@@ -6,6 +6,7 @@ import { useEventNotifications } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
 import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
 import { getWidgetLabel } from './lib/widgetMetadata'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS, startAnimeAnimation } from './lib/anime'
 import { ClockWidget } from './components/ClockWidget'
 import { TimezoneClockWidget } from './components/TimezoneClockWidget'
 import { WeatherWidget } from './components/WeatherWidget'
@@ -386,6 +387,7 @@ function DashboardLayout({
 }: DashboardLayoutProps) {
   const mainRef = useRef<HTMLElement | null>(null)
   const [singleColumnLayout, setSingleColumnLayout] = useState(false)
+  const animationSignature = orderedVisibleWidgets.join('|')
 
   useEffect(() => {
     const node = mainRef.current
@@ -412,6 +414,141 @@ function DashboardLayout({
       window.removeEventListener('resize', updateSingleColumnLayout)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isMotionEnabled()) {
+      return undefined
+    }
+
+    const hostNode = mainRef.current
+    if (!hostNode) {
+      return undefined
+    }
+
+    const widgetNodes = Array.from(hostNode.querySelectorAll<HTMLElement>('[data-widget-id]')).filter(
+      (widgetNode) => !widgetNode.classList.contains(styles.widgetCellHidden),
+    )
+
+    if (!widgetNodes.length) {
+      return undefined
+    }
+
+    const animationController = startAnimeAnimation((anime) => {
+      if (!anime.animate) {
+        return null
+      }
+      widgetNodes.forEach((widgetNode) => {
+        widgetNode.style.willChange = 'transform, opacity'
+      })
+
+      if (anime.stagger) {
+        return anime.animate(widgetNodes, {
+          opacity: [0, 1],
+          translateY: [18, 0],
+          scale: [0.975, 1],
+          duration: MOTION_DURATIONS.long,
+          delay: anime.stagger(MOTION_STAGGERS.normal),
+        })
+      }
+
+      return widgetNodes.map((widgetNode, index) =>
+        anime.animate(widgetNode, {
+          opacity: [0, 1],
+          translateY: [18, 0],
+          scale: [0.975, 1],
+          duration: MOTION_DURATIONS.long,
+          delay: index * MOTION_STAGGERS.normal,
+        }),
+      )
+    })
+
+    return () => {
+      animationController.cancel()
+      widgetNodes.forEach((widgetNode) => {
+        widgetNode.style.willChange = ''
+      })
+    }
+  }, [animationSignature, focusMode, fullscreenWidget, singleColumnLayout])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !isMotionEnabled()) {
+      return undefined
+    }
+
+    const hostNode = mainRef.current
+    if (!hostNode) {
+      return undefined
+    }
+
+    let cancelled = false
+
+    const animateCell = (
+      cellNode: HTMLElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(cellNode, options)
+      })
+    }
+
+    const resolveWidgetCell = (eventTarget: EventTarget | null) => {
+      if (!(eventTarget instanceof Element)) {
+        return null
+      }
+      const cellNode = eventTarget.closest<HTMLElement>('[data-widget-id]')
+      if (!cellNode || cellNode.classList.contains(styles.widgetCellHidden) || cellNode.classList.contains(styles.widgetCellFullscreen)) {
+        return null
+      }
+      return cellNode
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const cellNode = resolveWidgetCell(event.target)
+      if (!cellNode) {
+        return
+      }
+      const previousCell = resolveWidgetCell(event.relatedTarget)
+      if (previousCell === cellNode) {
+        return
+      }
+      animateCell(cellNode, {
+        scale: 1.01,
+        translateY: -2,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const cellNode = resolveWidgetCell(event.target)
+      if (!cellNode) {
+        return
+      }
+      const nextCell = resolveWidgetCell(event.relatedTarget)
+      if (nextCell === cellNode) {
+        return
+      }
+      animateCell(cellNode, {
+        scale: 1,
+        translateY: 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    hostNode.addEventListener('pointerenter', handlePointerEnter, true)
+    hostNode.addEventListener('pointerleave', handlePointerLeave, true)
+
+    return () => {
+      cancelled = true
+      hostNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      hostNode.removeEventListener('pointerleave', handlePointerLeave, true)
+    }
+  }, [animationSignature, fullscreenWidget])
 
   return (
     <div

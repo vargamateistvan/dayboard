@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchCalendarFeeds, type FetchedCalendarFeed } from '../lib/fetchCalendarFeed'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import {
   parseCalendarFeed,
   type CalendarEvent,
@@ -496,6 +497,8 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const tooltipRef = useRef<HTMLDivElement | null>(null)
   const monthTooltipRef = useRef<HTMLDivElement | null>(null)
   const listRef = useRef<HTMLUListElement | null>(null)
+  const monthGridRef = useRef<HTMLDivElement | null>(null)
+  const weekScheduleGridRef = useRef<HTMLDivElement | null>(null)
   const mergedCalendarFeeds = useMemo(
     () => mergeCalendarFeeds(settings.globalCalendarFeeds, settings.calendarFeeds),
     [settings.globalCalendarFeeds, settings.calendarFeeds],
@@ -686,6 +689,220 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
   const isMissingCalendarLinkError = error?.toLowerCase().includes('calendar link is missing') ?? false
   const previousPeriodLabel = isWeeklyPreview ? 'Previous week' : 'Previous month'
   const nextPeriodLabel = isWeeklyPreview ? 'Next week' : 'Next month'
+  const visibleEventAnimationSignature = useMemo(
+    () => visibleEvents.map((event) => `${getEventKey(event)}:${event.calendarColor ?? ''}`).join('|'),
+    [visibleEvents],
+  )
+  const periodAnimationSignature = useMemo(
+    () =>
+      `${settings.calendarExtraInfoPreview}:${selectedDate.getFullYear()}-${selectedDate.getMonth()}-${selectedDate.getDate()}`,
+    [settings.calendarExtraInfoPreview, selectedDate],
+  )
+
+  useEffect(() => {
+    if (!isMotionEnabled() || loading || error || visibleEvents.length === 0) {
+      return
+    }
+
+    const listNode = listRef.current
+    if (!listNode) {
+      return
+    }
+
+    const eventNodes = Array.from(listNode.querySelectorAll<HTMLElement>(`.${styles.event}`))
+    if (!eventNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(eventNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = eventNodes.map((eventNode, index) =>
+        anime.animate(eventNode, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [visibleEventAnimationSignature, visibleEvents.length, loading, error])
+
+  useEffect(() => {
+    if (!isMotionEnabled() || !showCalendarExtraInfo) {
+      return
+    }
+
+    const overviewNode = isWeeklyPreview ? weekScheduleGridRef.current : monthGridRef.current
+    if (!overviewNode) {
+      return
+    }
+
+    const animatedSelector = isWeeklyPreview ? `.${styles.weekDayColumn}` : `.${styles.monthCell}`
+    const targetNodes = Array.from(overviewNode.querySelectorAll<HTMLElement>(animatedSelector))
+    if (!targetNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(targetNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = targetNodes.map((targetNode, index) =>
+        anime.animate(targetNode, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [periodAnimationSignature, isWeeklyPreview, showCalendarExtraInfo])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRef.current
+    if (!rootNode) {
+      return
+    }
+
+    let cancelled = false
+
+    const resolveInteractiveTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null
+      }
+
+      const candidate = target.closest(
+        `.${styles.navButton}, .${styles.todayButton}, .${styles.weekDayHeader}, .${styles.monthCell}, .${styles.weekTimedEvent}, .${styles.eventLink}`,
+      )
+      if (!(candidate instanceof HTMLElement)) {
+        return null
+      }
+      return candidate
+    }
+
+    const animateInteractive = (
+      target: HTMLElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(target, options)
+      })
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const target = resolveInteractiveTarget(event.target)
+      if (!target) {
+        return
+      }
+      if (target instanceof HTMLButtonElement && target.disabled) {
+        return
+      }
+      animateInteractive(target, { scale: 1.015, translateY: -1, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const target = resolveInteractiveTarget(event.target)
+      if (!target) {
+        return
+      }
+      animateInteractive(target, { scale: 1, translateY: 0, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = resolveInteractiveTarget(event.target)
+      if (!target) {
+        return
+      }
+      if (target instanceof HTMLButtonElement && target.disabled) {
+        return
+      }
+      animateInteractive(target, { scale: 0.98, translateY: 0, duration: Math.max(80, MOTION_DURATIONS.quick - 50) })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const target = resolveInteractiveTarget(event.target)
+      if (!target) {
+        return
+      }
+      if (target instanceof HTMLButtonElement && target.disabled) {
+        return
+      }
+      animateInteractive(target, {
+        scale: target.matches(':hover') ? 1.015 : 1,
+        translateY: target.matches(':hover') ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    rootNode.addEventListener('pointerenter', handlePointerEnter, true)
+    rootNode.addEventListener('pointerleave', handlePointerLeave, true)
+    rootNode.addEventListener('pointerdown', handlePointerDown, true)
+    rootNode.addEventListener('pointerup', handlePointerUp, true)
+    rootNode.addEventListener('pointercancel', handlePointerUp, true)
+
+    return () => {
+      cancelled = true
+      rootNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      rootNode.removeEventListener('pointerleave', handlePointerLeave, true)
+      rootNode.removeEventListener('pointerdown', handlePointerDown, true)
+      rootNode.removeEventListener('pointerup', handlePointerUp, true)
+      rootNode.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+  }, [])
 
   const goToPreviousPeriod = () => {
     setSelectedDate((currentDate) => {
@@ -914,7 +1131,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                           ))}
                         </div>
                       </div>
-                      <div className={styles.weekScheduleGrid}>
+                      <div ref={weekScheduleGridRef} className={styles.weekScheduleGrid}>
                         {weekSchedule.map((day) => {
                           const isSelected = getDayKey(day.date) === getDayKey(selectedDate)
                           const dayLabel = day.date.toLocaleDateString(undefined, {
@@ -1084,7 +1301,7 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
                   ))}
                 </div>
 
-                <div className={styles.monthGrid}>
+                <div ref={monthGridRef} className={styles.monthGrid}>
                   {monthCells.map((cell) => {
                     const isSelected = getDayKey(cell.date) === getDayKey(selectedDate)
 

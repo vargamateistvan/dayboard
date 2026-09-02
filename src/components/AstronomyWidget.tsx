@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from "../lib/anime";
 import { useSettings } from "../lib/useSettings";
 import styles from "./AstronomyWidget.module.css";
 
@@ -566,6 +567,8 @@ interface AstronomyWidgetProps {
 
 export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) {
   const { settings } = useSettings();
+  const widgetRootRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const [data, setData] = useState<AstronomyData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -687,9 +690,172 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     () => (lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now)),
     [lastRefreshedAt, now],
   );
+  const contentAnimationSignature = useMemo(() => {
+    if (!data) {
+      return "empty";
+    }
+
+    return [
+      data.location,
+      data.sunrise ?? "",
+      data.sunset ?? "",
+      data.moonrise ?? "",
+      data.moonset ?? "",
+      data.moonPhase?.toFixed(4) ?? "",
+    ].join(":");
+  }, [data]);
+
+  useEffect(() => {
+    if (!isMotionEnabled() || loading || error || !data) {
+      return;
+    }
+
+    const contentNode = contentRef.current;
+    if (!contentNode) {
+      return;
+    }
+
+    const animatedNodes = Array.from(
+      contentNode.querySelectorAll<HTMLElement>(
+        `.${styles.location}, .${styles.chartCard}, .${styles.phaseDateRow}`,
+      ),
+    );
+    if (!animatedNodes.length) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeAnimations: Array<{ cancel?: () => void }> = [];
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(animatedNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ];
+        return;
+      }
+
+      activeAnimations = animatedNodes.map((node, index) =>
+        anime.animate(node, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      activeAnimations.forEach((animation) => animation.cancel?.());
+    };
+  }, [contentAnimationSignature, loading, error, data]);
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return;
+    }
+
+    const rootNode = widgetRootRef.current;
+    if (!rootNode) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const animateRefresh = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return;
+        }
+        anime.animate(button, options);
+      });
+    };
+
+    const resolveRefreshButton = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null;
+      }
+      const button = target.closest("button");
+      if (!(button instanceof HTMLButtonElement) || !button.classList.contains(styles.refresh)) {
+        return null;
+      }
+      return button;
+    };
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") {
+        return;
+      }
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, { scale: 1.06, translateY: -1, duration: MOTION_DURATIONS.quick });
+    };
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button) {
+        return;
+      }
+      animateRefresh(button, { scale: 1, translateY: 0, duration: MOTION_DURATIONS.quick });
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, {
+        scale: 0.95,
+        translateY: 0,
+        duration: Math.max(80, MOTION_DURATIONS.quick - 50),
+      });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target);
+      if (!button || button.disabled) {
+        return;
+      }
+      animateRefresh(button, {
+        scale: button.matches(":hover") ? 1.06 : 1,
+        translateY: button.matches(":hover") ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      });
+    };
+
+    rootNode.addEventListener("pointerenter", handlePointerEnter, true);
+    rootNode.addEventListener("pointerleave", handlePointerLeave, true);
+    rootNode.addEventListener("pointerdown", handlePointerDown, true);
+    rootNode.addEventListener("pointerup", handlePointerUp, true);
+    rootNode.addEventListener("pointercancel", handlePointerUp, true);
+
+    return () => {
+      cancelled = true;
+      rootNode.removeEventListener("pointerenter", handlePointerEnter, true);
+      rootNode.removeEventListener("pointerleave", handlePointerLeave, true);
+      rootNode.removeEventListener("pointerdown", handlePointerDown, true);
+      rootNode.removeEventListener("pointerup", handlePointerUp, true);
+      rootNode.removeEventListener("pointercancel", handlePointerUp, true);
+    };
+  }, []);
 
   return (
-    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ""].join(" ")}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.fullscreen : ""].join(" ")}>
       <div className={styles.header}>
         <span className={styles.title}>Astronomy</span>
         {!loading && (
@@ -715,7 +881,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
       {!loading && error && <div className={styles.error}>{error}</div>}
 
       {!loading && !error && data && (
-        <div className={styles.content}>
+        <div ref={contentRef} className={styles.content}>
           <div className={styles.location}>
             <MapPin size={isFullscreen ? 18 : 12} />
             <span>{data.location}</span>

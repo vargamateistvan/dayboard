@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { useSettings } from '../lib/useSettings'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import { fetchLastGameForTeam, fetchRecentLeagueScores, type SportsLastGame, type SportsLeagueScore } from '../lib/sports'
 import type { SportsFavoriteTeam } from '../lib/settings'
 import styles from './SportsScoresWidget.module.css'
@@ -60,6 +61,8 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
   const [leagueScores, setLeagueScores] = useState<SportsLeagueScore[]>([])
   const [leagueScoresLoading, setLeagueScoresLoading] = useState(false)
   const [leagueScoresError, setLeagueScoresError] = useState<string | null>(null)
+  const widgetRootRef = useRef<HTMLDivElement | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
   const [rows, setRows] = useState<Map<string, TeamRowState>>(() => {
     return new Map(
       favorites.map((team) => [favoriteKey(team), { game: null, loading: true, error: null }]),
@@ -166,9 +169,162 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
     () => (lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now)),
     [lastRefreshedAt, now],
   )
+  const rowAnimationSignature = useMemo(() => {
+    const favoritePart = favorites
+      .map((team) => {
+        const key = favoriteKey(team)
+        const row = rows.get(key)
+        const gameId = row?.game?.id ?? 'none'
+        return `${key}:${row?.loading ? '1' : '0'}:${row?.error ? 'e' : 'ok'}:${gameId}`
+      })
+      .join('|')
+    const leaguePart = leagueScores.map((score) => score.id).join('|')
+    return `${favoritePart}::${leaguePart}::${leagueScoresLoading ? 'loading' : 'idle'}`
+  }, [favorites, rows, leagueScores, leagueScoresLoading])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const listNode = listRef.current
+    if (!listNode) {
+      return
+    }
+
+    const rowNodes = Array.from(listNode.querySelectorAll<HTMLElement>(`.${styles.row}`))
+    if (!rowNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(rowNodes, {
+            opacity: [0, 1],
+            translateY: [8, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = rowNodes.map((rowNode, index) =>
+        anime.animate(rowNode, {
+          opacity: [0, 1],
+          translateY: [8, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [rowAnimationSignature])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRootRef.current
+    if (!rootNode) {
+      return
+    }
+
+    let cancelled = false
+
+    const animateRefresh = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(button, options)
+      })
+    }
+
+    const resolveRefreshButton = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) {
+        return null
+      }
+      const button = target.closest('button')
+      if (!(button instanceof HTMLButtonElement) || !button.classList.contains(styles.refresh)) {
+        return null
+      }
+      return button
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const button = resolveRefreshButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateRefresh(button, { scale: 1.06, translateY: -1, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target)
+      if (!button) {
+        return
+      }
+      animateRefresh(button, { scale: 1, translateY: 0, duration: MOTION_DURATIONS.quick })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateRefresh(button, { scale: 0.95, translateY: 0, duration: Math.max(80, MOTION_DURATIONS.quick - 50) })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = resolveRefreshButton(event.target)
+      if (!button || button.disabled) {
+        return
+      }
+      animateRefresh(button, {
+        scale: button.matches(':hover') ? 1.06 : 1,
+        translateY: button.matches(':hover') ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    rootNode.addEventListener('pointerenter', handlePointerEnter, true)
+    rootNode.addEventListener('pointerleave', handlePointerLeave, true)
+    rootNode.addEventListener('pointerdown', handlePointerDown, true)
+    rootNode.addEventListener('pointerup', handlePointerUp, true)
+    rootNode.addEventListener('pointercancel', handlePointerUp, true)
+
+    return () => {
+      cancelled = true
+      rootNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      rootNode.removeEventListener('pointerleave', handlePointerLeave, true)
+      rootNode.removeEventListener('pointerdown', handlePointerDown, true)
+      rootNode.removeEventListener('pointerup', handlePointerUp, true)
+      rootNode.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+  }, [])
 
   return (
-    <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.header}>
         <span className={styles.title}>Sports Scores</span>
         {!anyLoading && (favorites.length > 0 || followedLeagues.length > 0) ? (
@@ -192,7 +348,7 @@ export function SportsScoresWidget({ isFullscreen = false }: SportsScoresWidgetP
           Pick favorite teams or followed leagues in Settings to see live score feeds.
         </p>
       ) : (
-        <div className={styles.list}>
+        <div ref={listRef} className={styles.list}>
           {favorites.length > 0 ? <p className={styles.sectionHeading}>Favorite teams</p> : null}
           {favorites.map((team) => {
             const key = favoriteKey(team)

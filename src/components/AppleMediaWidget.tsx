@@ -4,6 +4,7 @@ import { MediaBrandIcon } from './MediaBrandIcon'
 import { useSettings } from '../lib/useSettings'
 import { useWidgetVisibility } from '../lib/useWidgetVisibility'
 import { resolveColorScheme, type Settings } from '../lib/settings'
+import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import {
   createSavedMediaLink,
   formatSavedLinkLabel,
@@ -19,6 +20,15 @@ import appleStyles from './AppleMediaWidget.module.css'
 const SEARCH_DEBOUNCE_MS = 450
 const SEARCH_MIN_QUERY_LENGTH = 2
 const SEARCH_CACHE_TTL_MS = 45_000
+const PRESS_ANIMATION_DURATION_MS = Math.max(80, MOTION_DURATIONS.quick - 50)
+
+function getInteractiveButton(target: EventTarget | null): HTMLButtonElement | null {
+  if (!(target instanceof Element)) {
+    return null
+  }
+  const button = target.closest('button')
+  return button instanceof HTMLButtonElement ? button : null
+}
 
 export interface AppleCatalogGroup {
   readonly title: string
@@ -121,6 +131,12 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   const [addUrl, setAddUrl] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const [isAdding, setIsAdding] = useState(false)
+  const widgetRootRef = useRef<HTMLDivElement | null>(null)
+  const playerPaneRef = useRef<HTMLDivElement | null>(null)
+  const sidebarRef = useRef<HTMLElement | null>(null)
+  const tabRowRef = useRef<HTMLDivElement | null>(null)
+  const tabIndicatorRef = useRef<HTMLSpanElement | null>(null)
+  const lastActiveUrlRef = useRef<string | null>(null)
   const searchCacheRef = useRef<Map<string, { expiresAt: number; groups: AppleCatalogGroup[] }>>(
     new Map(),
   )
@@ -239,15 +255,353 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
     }
   }, [searchQuery, runSearch])
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    runSearch(searchQuery)
-  }
-
   const groups = searchGroups ?? []
   const hasSearchResults = groups.some((group) => group.items.length > 0)
   const showAppleMusicEmbedNotice = config.brand === 'apple-music'
   const openAppleMusicUrl = activeUrl.trim() || 'https://music.apple.com/'
+  const searchResultTotal = groups.reduce((sum, group) => sum + group.items.length, 0)
+  const listAnimationSignature = `${activeTab}:${searchResultTotal}:${savedLinks.length}:${activeUrl}`
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRootRef.current
+    if (!rootNode) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      const targets = [
+        rootNode.querySelector(`.${styles.spotifyHeader}`),
+        rootNode.querySelector(`.${styles.playerPane}`),
+        rootNode.querySelector(`.${styles.spotifySidebar}`),
+      ]
+
+      activeAnimations = targets
+        .filter((target): target is Element => target instanceof Element)
+        .map((target, index) =>
+          anime.animate(target, {
+            opacity: [0, 1],
+            translateY: [12, 0],
+            duration: MOTION_DURATIONS.short + 50,
+            delay: index * MOTION_STAGGERS.normal,
+          }),
+        )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [config.brand])
+
+  useEffect(() => {
+    const tabRowNode = tabRowRef.current
+    const tabIndicatorNode = tabIndicatorRef.current
+    if (!tabRowNode || !tabIndicatorNode) {
+      return
+    }
+
+    const placeIndicator = () => {
+      const activeTabButton = tabRowNode.querySelector<HTMLButtonElement>(
+        'button[role="tab"][aria-selected="true"]',
+      )
+      if (!activeTabButton) {
+        return
+      }
+      tabIndicatorNode.style.width = `${activeTabButton.offsetWidth}px`
+      tabIndicatorNode.style.transform = `translateX(${activeTabButton.offsetLeft}px)`
+      tabIndicatorNode.style.opacity = '1'
+    }
+
+    placeIndicator()
+
+    const resizeObserver = new ResizeObserver(() => {
+      placeIndicator()
+    })
+    resizeObserver.observe(tabRowNode)
+    window.addEventListener('resize', placeIndicator)
+
+    return () => {
+      resizeObserver.disconnect()
+      window.removeEventListener('resize', placeIndicator)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const tabRowNode = tabRowRef.current
+    const tabIndicatorNode = tabIndicatorRef.current
+    if (!tabRowNode || !tabIndicatorNode) {
+      return
+    }
+
+    const activeTabButton = tabRowNode.querySelector<HTMLButtonElement>(
+      'button[role="tab"][aria-selected="true"]',
+    )
+    if (!activeTabButton) {
+      return
+    }
+
+    let cancelled = false
+    let animation: { cancel?: () => void } | null = null
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+      animation = anime.animate(tabIndicatorNode, {
+        width: activeTabButton.offsetWidth,
+        translateX: activeTabButton.offsetLeft,
+        duration: MOTION_DURATIONS.short,
+      })
+    })
+
+    return () => {
+      cancelled = true
+      animation?.cancel?.()
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const sidebarNode = sidebarRef.current
+    if (!sidebarNode) {
+      return
+    }
+
+    const panelNode = sidebarNode.querySelector(`[data-apple-tab-panel="${activeTab}"]`)
+    if (!(panelNode instanceof Element)) {
+      return
+    }
+
+    let cancelled = false
+    let animation: { cancel?: () => void } | null = null
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+      animation = anime.animate(panelNode, {
+        opacity: [0, 1],
+        translateY: [8, 0],
+        duration: MOTION_DURATIONS.short,
+      })
+    })
+
+    return () => {
+      cancelled = true
+      animation?.cancel?.()
+    }
+  }, [activeTab])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const sidebarNode = sidebarRef.current
+    if (!sidebarNode) {
+      return
+    }
+
+    const panelNode = sidebarNode.querySelector(`[data-apple-tab-panel="${activeTab}"]`)
+    if (!(panelNode instanceof Element)) {
+      return
+    }
+
+    const rowNodes = Array.from(panelNode.querySelectorAll(`.${styles.resultButton}`))
+    if (!rowNodes.length) {
+      return
+    }
+
+    let cancelled = false
+    let activeAnimations: Array<{ cancel?: () => void }> = []
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+
+      if (anime.stagger) {
+        activeAnimations = [
+          anime.animate(rowNodes, {
+            opacity: [0, 1],
+            translateX: [10, 0],
+            duration: MOTION_DURATIONS.medium,
+            delay: anime.stagger(MOTION_STAGGERS.tight),
+          }),
+        ]
+        return
+      }
+
+      activeAnimations = rowNodes.map((rowNode, index) =>
+        anime.animate(rowNode, {
+          opacity: [0, 1],
+          translateX: [10, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      )
+    })
+
+    return () => {
+      cancelled = true
+      activeAnimations.forEach((animation) => animation.cancel?.())
+    }
+  }, [activeTab, listAnimationSignature])
+
+  useEffect(() => {
+    if (!isMotionEnabled() || !activeUrl) {
+      return
+    }
+
+    if (lastActiveUrlRef.current === activeUrl) {
+      return
+    }
+    lastActiveUrlRef.current = activeUrl
+
+    const paneNode = playerPaneRef.current
+    if (!paneNode) {
+      return
+    }
+
+    let cancelled = false
+    let animation: { cancel?: () => void } | null = null
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return
+      }
+      animation = anime.animate(paneNode, {
+        scale: [0.99, 1],
+        opacity: [0.94, 1],
+        duration: MOTION_DURATIONS.short + 30,
+      })
+    })
+
+    return () => {
+      cancelled = true
+      animation?.cancel?.()
+    }
+  }, [activeUrl])
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return
+    }
+
+    const rootNode = widgetRootRef.current
+    if (!rootNode) {
+      return
+    }
+
+    const isInteractiveButton = (button: HTMLButtonElement) =>
+      button.classList.contains(styles.tabButton) ||
+      button.classList.contains(styles.resultButton) ||
+      button.classList.contains(styles.button) ||
+      button.classList.contains(appleStyles.removeButton)
+
+    let cancelled = false
+
+    const animateButton = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return
+        }
+        anime.animate(button, options)
+      })
+    }
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return
+      }
+      const button = getInteractiveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: 1.015,
+        translateY: -1,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target)
+      if (!button || !isInteractiveButton(button)) {
+        return
+      }
+      animateButton(button, {
+        scale: 1,
+        translateY: 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: 0.98,
+        translateY: 0,
+        duration: PRESS_ANIMATION_DURATION_MS,
+      })
+    }
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target)
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return
+      }
+      animateButton(button, {
+        scale: button.matches(':hover') ? 1.015 : 1,
+        translateY: button.matches(':hover') ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      })
+    }
+
+    rootNode.addEventListener('pointerenter', handlePointerEnter, true)
+    rootNode.addEventListener('pointerleave', handlePointerLeave, true)
+    rootNode.addEventListener('pointerdown', handlePointerDown, true)
+    rootNode.addEventListener('pointerup', handlePointerUp, true)
+    rootNode.addEventListener('pointercancel', handlePointerUp, true)
+
+    return () => {
+      cancelled = true
+      rootNode.removeEventListener('pointerenter', handlePointerEnter, true)
+      rootNode.removeEventListener('pointerleave', handlePointerLeave, true)
+      rootNode.removeEventListener('pointerdown', handlePointerDown, true)
+      rootNode.removeEventListener('pointerup', handlePointerUp, true)
+      rootNode.removeEventListener('pointercancel', handlePointerUp, true)
+    }
+  }, [])
+
+  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    runSearch(searchQuery)
+  }
 
   const tabs: Array<{ id: AppleBrowseTab; label: string; Icon: typeof Search }> = [
     { id: 'search', label: 'Search', Icon: Search },
@@ -255,7 +609,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   ]
 
   return (
-    <div className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
+    <div ref={widgetRootRef} className={[styles.widget, isFullscreen ? styles.widgetFullscreen : ''].join(' ')}>
       <section className={styles.spotifyShell}>
         <header className={styles.spotifyHeader}>
           <div className={styles.spotifyIdentity}>
@@ -275,7 +629,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
         </header>
 
         <div className={styles.spotifyLayout}>
-          <div className={styles.playerPane}>
+          <div ref={playerPaneRef} className={styles.playerPane}>
             <div
               className={[styles.embedArea, appleStyles.embedHost, embedSizeClass].join(' ')}
             >
@@ -305,8 +659,9 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
             ) : null}
           </div>
 
-          <aside className={styles.spotifySidebar}>
-            <div className={styles.tabRow} role="tablist" aria-label={`Browse ${config.title}`}>
+          <aside ref={sidebarRef} className={styles.spotifySidebar}>
+            <div ref={tabRowRef} className={styles.tabRow} role="tablist" aria-label={`Browse ${config.title}`}>
+              <span ref={tabIndicatorRef} aria-hidden="true" className={styles.tabIndicator} />
               {tabs.map(({ id, label, Icon }) => (
                 <button
                   key={id}
@@ -326,7 +681,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
             </div>
 
             {activeTab === 'search' ? (
-              <form className={styles.searchPanel} onSubmit={handleSearchSubmit}>
+              <form className={styles.searchPanel} data-apple-tab-panel="search" onSubmit={handleSearchSubmit}>
                 <div className={styles.searchRow}>
                   <input
                     className={styles.input}
@@ -364,7 +719,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
             ) : null}
 
             {activeTab === 'saved' ? (
-              <div className={styles.librarySection}>
+              <div className={styles.librarySection} data-apple-tab-panel="saved">
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>Saved links</span>
                   {savedLinks.length ? (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { History, Library, LogOut, Search } from "lucide-react";
 import { MediaBrandIcon } from "./MediaBrandIcon";
 import { SpotifyEmbedPlayer } from "./SpotifyEmbedPlayer";
@@ -27,6 +27,12 @@ import {
   onSpotifyAuthChanged,
   startSpotifyLogin,
 } from "../lib/spotifyAuth";
+import {
+  isMotionEnabled,
+  loadAnimeJs,
+  MOTION_DURATIONS,
+  MOTION_STAGGERS,
+} from "../lib/anime";
 import styles from "./SpotifyWidget.module.css";
 
 interface SpotifyWidgetProps {
@@ -171,6 +177,17 @@ const SEARCH_DEBOUNCE_MS = 450;
 const SEARCH_MIN_QUERY_LENGTH = 2;
 const SEARCH_CACHE_TTL_MS = 45_000;
 const RATE_LIMIT_STORAGE_KEY = "dayboard_spotify_rate_limit_until";
+const NOW_PLAYING_ANIMATION_DURATION_MS = MOTION_DURATIONS.short + 20;
+
+function getInteractiveButton(
+  target: EventTarget | null,
+): HTMLButtonElement | null {
+  if (!(target instanceof Element)) {
+    return null;
+  }
+  const button = target.closest("button");
+  return button instanceof HTMLButtonElement ? button : null;
+}
 
 function parseSpotifyRateLimitSeconds(message: string): number | null {
   const retryMatch = message.match(/Retry after (\d+) seconds/i);
@@ -291,7 +308,44 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const searchCacheRef = useRef<
     Map<string, { expiresAt: number; results: SpotifySearchResults }>
   >(new Map());
+  const widgetRootRef = useRef<HTMLDivElement | null>(null);
+  const playerPaneRef = useRef<HTMLDivElement | null>(null);
+  const nowPlayingCardRef = useRef<HTMLDivElement | null>(null);
+  const nowPlayingArtworkRef = useRef<HTMLDivElement | null>(null);
+  const nowPlayingCopyRef = useRef<HTMLDivElement | null>(null);
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  const tabRowRef = useRef<HTMLDivElement | null>(null);
+  const tabIndicatorRef = useRef<HTMLSpanElement | null>(null);
+  const lastPlayerSelectionUrlRef = useRef<string | null>(null);
   const isLargeEmbed = placements.spotify.rowSpan >= 2;
+  const primarySelectionUrl =
+    embedSelection?.url ??
+    snapshot?.recentlyPlayed?.[0]?.track?.external_urls.spotify ??
+    null;
+  const searchResultTotal =
+    (searchResults?.tracks.length ?? 0) +
+    (searchResults?.albums.length ?? 0) +
+    (searchResults?.playlists.length ?? 0) +
+    (searchResults?.shows.length ?? 0) +
+    (searchResults?.episodes.length ?? 0);
+  const libraryResultTotal =
+    (snapshot?.library?.playlists.length ?? 0) +
+    (snapshot?.library?.savedAlbums.length ?? 0) +
+    (snapshot?.library?.savedShows.length ?? 0) +
+    (snapshot?.library?.topTracks.length ?? 0) +
+    (snapshot?.library?.topArtists.length ?? 0);
+  const listAnimationSignature = [
+    activeTab,
+    searchResultTotal,
+    snapshot?.recentlyPlayed?.length ?? 0,
+    libraryResultTotal,
+  ].join(":");
+  const firstRecentPlayedItem = snapshot?.recentlyPlayed?.[0] ?? null;
+  const fallbackRecentSelection = useMemo(
+    () => (firstRecentPlayedItem ? formatRecent(firstRecentPlayedItem) : null),
+    [firstRecentPlayedItem],
+  );
+  const activeSelection = embedSelection ?? fallbackRecentSelection;
 
   const accountProduct = snapshot?.profile.product ?? null;
 
@@ -484,6 +538,398 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
     };
   }, [searchQuery]);
 
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return;
+    }
+
+    const rootNode = widgetRootRef.current;
+    if (!rootNode) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeAnimations: Array<{ cancel?: () => void }> = [];
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+
+      const targets = authSession
+        ? [
+            rootNode.querySelector(`.${styles.spotifyHeader}`),
+            rootNode.querySelector(`.${styles.playerPane}`),
+            rootNode.querySelector(`.${styles.spotifySidebar}`),
+          ]
+        : [rootNode.querySelector(`.${styles.connectCard}`)];
+
+      activeAnimations = targets
+        .filter((target): target is Element => target instanceof Element)
+        .map((target, index) =>
+          anime.animate(target, {
+            opacity: [0, 1],
+            translateY: [12, 0],
+            duration: MOTION_DURATIONS.short + 50,
+            delay: index * MOTION_STAGGERS.normal,
+          }),
+        );
+    });
+
+    return () => {
+      cancelled = true;
+      activeAnimations.forEach((animation) => animation.cancel?.());
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession || !isMotionEnabled()) {
+      return;
+    }
+
+    const sidebarNode = sidebarRef.current;
+    if (!sidebarNode) {
+      return;
+    }
+
+    const panelNode = sidebarNode.querySelector(
+      `[data-spotify-tab-panel="${activeTab}"]`,
+    );
+    if (!(panelNode instanceof Element)) {
+      return;
+    }
+
+    let cancelled = false;
+    let animation: { cancel?: () => void } | null = null;
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+      animation = anime.animate(panelNode, {
+        opacity: [0, 1],
+        translateY: [8, 0],
+        duration: MOTION_DURATIONS.short,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      animation?.cancel?.();
+    };
+  }, [authSession, activeTab]);
+
+  useEffect(() => {
+    if (!authSession) {
+      return;
+    }
+
+    const tabRowNode = tabRowRef.current;
+    const tabIndicatorNode = tabIndicatorRef.current;
+    if (!tabRowNode || !tabIndicatorNode) {
+      return;
+    }
+
+    const placeIndicator = () => {
+      const activeTabButton = tabRowNode.querySelector<HTMLButtonElement>(
+        'button[role="tab"][aria-selected="true"]',
+      );
+      if (!activeTabButton) {
+        return;
+      }
+      tabIndicatorNode.style.width = `${activeTabButton.offsetWidth}px`;
+      tabIndicatorNode.style.transform = `translateX(${activeTabButton.offsetLeft}px)`;
+      tabIndicatorNode.style.opacity = "1";
+    };
+
+    placeIndicator();
+
+    const resizeObserver = new ResizeObserver(() => {
+      placeIndicator();
+    });
+    resizeObserver.observe(tabRowNode);
+    window.addEventListener("resize", placeIndicator);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", placeIndicator);
+    };
+  }, [authSession]);
+
+  useEffect(() => {
+    if (!authSession || !isMotionEnabled()) {
+      return;
+    }
+
+    const tabRowNode = tabRowRef.current;
+    const tabIndicatorNode = tabIndicatorRef.current;
+    if (!tabRowNode || !tabIndicatorNode) {
+      return;
+    }
+
+    const activeTabButton = tabRowNode.querySelector<HTMLButtonElement>(
+      'button[role="tab"][aria-selected="true"]',
+    );
+    if (!activeTabButton) {
+      return;
+    }
+
+    let cancelled = false;
+    let animation: { cancel?: () => void } | null = null;
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+      animation = anime.animate(tabIndicatorNode, {
+        width: activeTabButton.offsetWidth,
+        translateX: activeTabButton.offsetLeft,
+        duration: MOTION_DURATIONS.short,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      animation?.cancel?.();
+    };
+  }, [authSession, activeTab]);
+
+  useEffect(() => {
+    if (!authSession || !isMotionEnabled()) {
+      return;
+    }
+
+    const sidebarNode = sidebarRef.current;
+    if (!sidebarNode) {
+      return;
+    }
+
+    const panelNode = sidebarNode.querySelector(
+      `[data-spotify-tab-panel="${activeTab}"]`,
+    );
+    if (!(panelNode instanceof Element)) {
+      return;
+    }
+
+    const rowNodes = Array.from(
+      panelNode.querySelectorAll(`.${styles.resultButton}`),
+    );
+    if (!rowNodes.length) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeAnimations: Array<{ cancel?: () => void }> = [];
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+
+      if (anime.stagger) {
+        const staggered = anime.animate(rowNodes, {
+          opacity: [0, 1],
+          translateX: [10, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: anime.stagger(MOTION_STAGGERS.tight),
+        });
+        activeAnimations = [staggered];
+        return;
+      }
+
+      activeAnimations = rowNodes.map((rowNode, index) =>
+        anime.animate(rowNode, {
+          opacity: [0, 1],
+          translateX: [10, 0],
+          duration: MOTION_DURATIONS.medium,
+          delay: index * MOTION_STAGGERS.tight,
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+      activeAnimations.forEach((animation) => animation.cancel?.());
+    };
+  }, [authSession, activeTab, listAnimationSignature]);
+
+  useEffect(() => {
+    if (!authSession || !isMotionEnabled()) {
+      return;
+    }
+
+    if (primarySelectionUrl === lastPlayerSelectionUrlRef.current) {
+      return;
+    }
+    lastPlayerSelectionUrlRef.current = primarySelectionUrl;
+
+    const paneNode = playerPaneRef.current;
+    if (!paneNode) {
+      return;
+    }
+
+    let cancelled = false;
+    let animation: { cancel?: () => void } | null = null;
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+      animation = anime.animate(paneNode, {
+        scale: [0.99, 1],
+        opacity: [0.94, 1],
+        duration: MOTION_DURATIONS.short + 30,
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      animation?.cancel?.();
+    };
+  }, [authSession, primarySelectionUrl]);
+
+  useEffect(() => {
+    if (!authSession || !activeSelection || !isMotionEnabled()) {
+      return;
+    }
+
+    const cardNode = nowPlayingCardRef.current;
+    const artworkNode = nowPlayingArtworkRef.current;
+    const copyNode = nowPlayingCopyRef.current;
+    if (!cardNode || !artworkNode || !copyNode) {
+      return;
+    }
+
+    let cancelled = false;
+    let activeAnimations: Array<{ cancel?: () => void }> = [];
+
+    void loadAnimeJs().then((anime) => {
+      if (cancelled || !anime?.animate) {
+        return;
+      }
+      activeAnimations = [
+        anime.animate(cardNode, {
+          opacity: [0.72, 1],
+          scale: [0.992, 1],
+          duration: NOW_PLAYING_ANIMATION_DURATION_MS,
+        }),
+        anime.animate(artworkNode, {
+          opacity: [0.6, 1],
+          scale: [0.94, 1],
+          duration: NOW_PLAYING_ANIMATION_DURATION_MS + 30,
+        }),
+        anime.animate(copyNode, {
+          opacity: [0, 1],
+          translateY: [6, 0],
+          duration: NOW_PLAYING_ANIMATION_DURATION_MS + 20,
+        }),
+      ];
+    });
+
+    return () => {
+      cancelled = true;
+      activeAnimations.forEach((animation) => animation.cancel?.());
+    };
+  }, [authSession, activeSelection]);
+
+  useEffect(() => {
+    if (!isMotionEnabled()) {
+      return;
+    }
+
+    const rootNode = widgetRootRef.current;
+    if (!rootNode) {
+      return;
+    }
+
+    const isInteractiveButton = (button: HTMLButtonElement) =>
+      button.classList.contains(styles.connectButton) ||
+      button.classList.contains(styles.disconnectButton) ||
+      button.classList.contains(styles.tabButton) ||
+      button.classList.contains(styles.resultButton) ||
+      button.classList.contains(styles.button);
+
+    let cancelled = false;
+
+    const animateButton = (
+      button: HTMLButtonElement,
+      options: { scale: number; translateY: number; duration: number },
+    ) => {
+      void loadAnimeJs().then((anime) => {
+        if (cancelled || !anime?.animate) {
+          return;
+        }
+        anime.animate(button, options);
+      });
+    };
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") {
+        return;
+      }
+      const button = getInteractiveButton(event.target);
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return;
+      }
+      animateButton(button, {
+        scale: 1.015,
+        translateY: -1,
+        duration: MOTION_DURATIONS.quick,
+      });
+    };
+
+    const handlePointerLeave = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target);
+      if (!button || !isInteractiveButton(button)) {
+        return;
+      }
+      animateButton(button, {
+        scale: 1,
+        translateY: 0,
+        duration: MOTION_DURATIONS.quick,
+      });
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target);
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return;
+      }
+      animateButton(button, {
+        scale: 0.98,
+        translateY: 0,
+        duration: Math.max(80, MOTION_DURATIONS.quick - 50),
+      });
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const button = getInteractiveButton(event.target);
+      if (!button || !isInteractiveButton(button) || button.disabled) {
+        return;
+      }
+      animateButton(button, {
+        scale: button.matches(":hover") ? 1.015 : 1,
+        translateY: button.matches(":hover") ? -1 : 0,
+        duration: MOTION_DURATIONS.quick,
+      });
+    };
+
+    rootNode.addEventListener("pointerenter", handlePointerEnter, true);
+    rootNode.addEventListener("pointerleave", handlePointerLeave, true);
+    rootNode.addEventListener("pointerdown", handlePointerDown, true);
+    rootNode.addEventListener("pointerup", handlePointerUp, true);
+    rootNode.addEventListener("pointercancel", handlePointerUp, true);
+
+    return () => {
+      cancelled = true;
+      rootNode.removeEventListener("pointerenter", handlePointerEnter, true);
+      rootNode.removeEventListener("pointerleave", handlePointerLeave, true);
+      rootNode.removeEventListener("pointerdown", handlePointerDown, true);
+      rootNode.removeEventListener("pointerup", handlePointerUp, true);
+      rootNode.removeEventListener("pointercancel", handlePointerUp, true);
+    };
+  }, [authSession]);
+
   const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     runSearch(searchQuery);
@@ -515,6 +961,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   if (!authSession) {
     return (
       <div
+        ref={widgetRootRef}
         className={[
           styles.widget,
           isFullscreen ? styles.widgetFullscreen : "",
@@ -574,6 +1021,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
 
   return (
     <div
+      ref={widgetRootRef}
       className={[
         styles.widget,
         isFullscreen ? styles.widgetFullscreen : "",
@@ -616,11 +1064,31 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         </header>
 
         <div className={styles.spotifyLayout}>
-          <div className={styles.playerPane}>
+          <div ref={playerPaneRef} className={styles.playerPane}>
+            {activeSelection ? (
+              <div ref={nowPlayingCardRef} className={styles.nowPlayingCard}>
+                <div ref={nowPlayingArtworkRef} className={styles.nowPlayingArtwork}>
+                  {activeSelection.artworkUrl ? (
+                    <img
+                      src={activeSelection.artworkUrl}
+                      alt=""
+                      className={styles.nowPlayingArtworkImage}
+                    />
+                  ) : (
+                    <MediaBrandIcon brand="spotify" size={16} />
+                  )}
+                </div>
+                <div ref={nowPlayingCopyRef} className={styles.nowPlayingCopy}>
+                  <div className={styles.nowPlayingLabel}>Now playing</div>
+                  <div className={styles.nowPlayingTitle}>{activeSelection.title}</div>
+                  <div className={styles.nowPlayingSubtitle}>
+                    {activeSelection.subtitle}
+                  </div>
+                </div>
+              </div>
+            ) : null}
             <SpotifyEmbedPlayer
-              selection={
-                embedSelection ?? recentSelections[0]?.selection ?? null
-              }
+              selection={activeSelection}
               colorScheme={resolveColorScheme(settings.colorScheme)}
               embedSize={
                 isFullscreen
@@ -639,12 +1107,18 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             ) : null}
           </div>
 
-          <aside className={styles.spotifySidebar}>
+          <aside ref={sidebarRef} className={styles.spotifySidebar}>
             <div
+              ref={tabRowRef}
               className={styles.tabRow}
               role="tablist"
               aria-label="Browse Spotify"
             >
+              <span
+                ref={tabIndicatorRef}
+                aria-hidden="true"
+                className={styles.tabIndicator}
+              />
               {tabs.map(({ id, label, Icon }) => (
                 <button
                   key={id}
@@ -666,6 +1140,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             {activeTab === "search" ? (
               <form
                 className={styles.searchPanel}
+                data-spotify-tab-panel="search"
                 onSubmit={handleSearchSubmit}
               >
                 <div className={styles.searchRow}>
@@ -728,7 +1203,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             ) : null}
 
             {activeTab === "recent" ? (
-              <div className={styles.librarySection}>
+              <div className={styles.librarySection} data-spotify-tab-panel="recent">
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>Recently played</span>
                   {recentSelections.length ? (
@@ -761,7 +1236,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
             ) : null}
 
             {activeTab === "library" ? (
-              <div className={styles.librarySection}>
+              <div className={styles.librarySection} data-spotify-tab-panel="library">
                 <div className={styles.sectionHeader}>
                   <span className={styles.sectionTitle}>
                     Your Spotify library
