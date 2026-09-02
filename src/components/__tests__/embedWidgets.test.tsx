@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { SettingsProvider } from "../../lib/useSettings";
 import { DEFAULT_SETTINGS, saveSettings } from "../../lib/settings";
 import { MusicEmbedWidget } from "../MusicEmbedWidget";
@@ -263,9 +263,13 @@ describe("SpotifyWidget", () => {
     ).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: /Library/i }));
-    expect(await screen.findByText("Your Spotify library")).toBeInTheDocument();
-    expect(screen.getByText("Dreams")).toBeInTheDocument();
-    expect(screen.getByText("Dreams Podcast")).toBeInTheDocument();
+    const libraryTitle = await screen.findByText("Your Spotify library");
+    const libraryPanel = libraryTitle.closest('[data-spotify-tab-panel="library"]');
+    if (!libraryPanel) {
+      throw new Error("Spotify library panel not found");
+    }
+    expect(within(libraryPanel).getByText("Dreams")).toBeInTheDocument();
+    expect(within(libraryPanel).getByText("Dreams Podcast")).toBeInTheDocument();
   });
 
   it("plays a search result through the embedded player", async () => {
