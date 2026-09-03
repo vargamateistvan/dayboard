@@ -202,6 +202,16 @@ function formatForecastDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
+const GEOLOCATION_PERMISSION_DENIED = 1;
+
+function getLocationErrorMessage(positionError: GeolocationPositionError | null): string {
+  if (positionError?.code === GEOLOCATION_PERMISSION_DENIED) {
+    return "Location access denied. Enable location to see weather.";
+  }
+
+  return "Location is temporarily unavailable. Try again in a moment.";
+}
+
 async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSystem): Promise<WeatherData> {
   const isImperial = unitSystem === "imperial";
   const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,weather_code&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&precipitation_unit=mm&forecast_days=7`;
@@ -315,6 +325,13 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
+
+    if (!navigator.geolocation) {
+      setError("Geolocation is unavailable in this browser.");
+      setLoading(false);
+      return;
+    }
+
     navigator.geolocation.getCurrentPosition(
       async ({ coords }) => {
         try {
@@ -328,8 +345,8 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
           setLoading(false);
         }
       },
-      () => {
-        setError("Location access denied. Enable location to see weather.");
+      (positionError) => {
+        setError(getLocationErrorMessage(positionError));
         setLoading(false);
       },
     );

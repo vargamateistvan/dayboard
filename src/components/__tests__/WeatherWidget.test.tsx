@@ -210,6 +210,24 @@ describe('WeatherWidget', () => {
     expect(screen.getByText(/Location access denied/)).toBeInTheDocument()
   })
 
+  it('shows temporary location error when geolocation is unavailable', async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation(
+      (_success: unknown, error: PositionErrorCallback) => {
+        error({ code: 2, message: 'unavailable' } as GeolocationPositionError)
+      },
+    )
+    renderWithSettings()
+    await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
+    expect(screen.getByText(/Location is temporarily unavailable/)).toBeInTheDocument()
+  })
+
+  it('shows browser support error when geolocation is not available', async () => {
+    vi.stubGlobal('navigator', {} as Navigator)
+    renderWithSettings()
+    await waitFor(() => expect(screen.queryByLabelText('Loading weather')).not.toBeInTheDocument())
+    expect(screen.getByText(/Geolocation is unavailable in this browser/)).toBeInTheDocument()
+  })
+
   it('shows error message when fetch fails', async () => {
     mockGeolocation.getCurrentPosition.mockImplementation((success: PositionCallback) => {
       success({ coords: { latitude: 47.5, longitude: 19.0 } } as GeolocationPosition)
