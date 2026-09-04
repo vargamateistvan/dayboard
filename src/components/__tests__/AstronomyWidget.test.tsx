@@ -143,6 +143,28 @@ describe("AstronomyWidget", () => {
     expect(screen.getByText(/Location access denied/)).toBeInTheDocument();
   });
 
+  it("shows temporary location error when geolocation is unavailable", async () => {
+    mockGeolocation.getCurrentPosition.mockImplementation(
+      (_success: unknown, error: PositionErrorCallback) => {
+        error({ code: 2, message: "unavailable" } as GeolocationPositionError);
+      },
+    );
+    renderWithSettings();
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Loading astronomy")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Location is temporarily unavailable/)).toBeInTheDocument();
+  });
+
+  it("shows browser support error when geolocation is not available", async () => {
+    vi.stubGlobal("navigator", {} as Navigator);
+    renderWithSettings();
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Loading astronomy")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText(/Geolocation is unavailable in this browser/)).toBeInTheDocument();
+  });
+
   it("uses the configured refresh interval", () => {
     const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
     mockGeolocation.getCurrentPosition.mockImplementation(() => {

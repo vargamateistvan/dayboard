@@ -518,6 +518,16 @@ function AltitudeChart({
   );
 }
 
+const GEOLOCATION_PERMISSION_DENIED = 1;
+
+function getLocationErrorMessage(positionError: GeolocationPositionError | null): string {
+  if (positionError?.code === GEOLOCATION_PERMISSION_DENIED) {
+    return "Location access denied. Enable location to see astronomy.";
+  }
+
+  return "Location is temporarily unavailable. Try again in a moment.";
+}
+
 async function fetchAstronomy(lat: number, lon: number): Promise<AstronomyData> {
   const astronomyUrl =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
@@ -595,12 +605,18 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     };
 
     if (settings.astronomyUseDeviceLocation) {
+      if (!navigator.geolocation) {
+        setError("Geolocation is unavailable in this browser.");
+        setLoading(false);
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         ({ coords }) => {
           void runFetch(coords.latitude, coords.longitude);
         },
-        () => {
-          setError("Location access denied. Enable location to see astronomy.");
+        (positionError) => {
+          setError(getLocationErrorMessage(positionError));
           setLoading(false);
         },
       );
