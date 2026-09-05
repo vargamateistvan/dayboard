@@ -1,20 +1,20 @@
-export function requestNotificationPermission() {
+export type NotificationPermissionStatus = NotificationPermission | 'unsupported'
+
+export function getNotificationPermission(): NotificationPermissionStatus {
   if (!('Notification' in window)) {
-    console.log('This browser does not support notifications')
-    return false
+    return 'unsupported'
   }
 
-  if (Notification.permission === 'granted') {
-    return true
+  return Notification.permission
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermissionStatus> {
+  const currentPermission = getNotificationPermission()
+  if (currentPermission === 'unsupported' || currentPermission !== 'default') {
+    return currentPermission
   }
 
-  if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then((permission) => {
-      return permission === 'granted'
-    })
-  }
-
-  return false
+  return Notification.requestPermission()
 }
 
 export function showNotification(title: string, options?: NotificationOptions) {
@@ -22,20 +22,6 @@ export function showNotification(title: string, options?: NotificationOptions) {
     new Notification(title, {
       icon: '/dayboard/favicon.svg',
       ...options,
-    })
-  }
-}
-
-export function showPomodoroNotification(phase: 'work' | 'break', autoCycle: boolean) {
-  if (phase === 'work') {
-    showNotification('Work Session Complete!', {
-      body: autoCycle ? 'Break session starting...' : 'Time for a break!',
-      tag: 'pomodoro',
-    })
-  } else {
-    showNotification('Break Over!', {
-      body: autoCycle ? 'Work session starting...' : 'Ready to work?',
-      tag: 'pomodoro',
     })
   }
 }

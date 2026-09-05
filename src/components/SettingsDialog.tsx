@@ -62,6 +62,11 @@ import {
   type CustomColors,
   type WeatherUnitSystem,
 } from "../lib/settings";
+import {
+  getNotificationPermission,
+  requestNotificationPermission,
+  type NotificationPermissionStatus,
+} from "../lib/notifications";
 import { searchSportsTeams, type SportsTeamSearchResult } from "../lib/sports";
 import {
   buildGoogleCalendarFeedUrl,
@@ -98,6 +103,8 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  Bell,
+  MonitorCheck,
 } from "lucide-react";
 import { MediaBrandIcon } from "./MediaBrandIcon";
 import styles from "./SettingsDialog.module.css";
@@ -287,7 +294,7 @@ interface Props {
   readonly selectedPresetName?: string;
 }
 
-type SettingsTabId = "appearance" | "layout" | "widgets" | "presets";
+type SettingsTabId = "appearance" | "layout" | "widgets" | "notifications" | "presets";
 
 const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTabId; label: string; description: string }> = [
   {
@@ -304,6 +311,11 @@ const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTabId; label: string; descripti
     id: "widgets",
     label: "Widgets",
     description: "Widget-specific content and refresh behavior.",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    description: "In-app reminders and browser notification permissions.",
   },
   {
     id: "presets",
@@ -1160,6 +1172,9 @@ function PresetCard({
 export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionStatus>(
+    () => getNotificationPermission(),
+  );
   const {
     visibility,
     order,
@@ -1900,6 +1915,17 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       event.preventDefault();
       setActiveTab(SETTINGS_TABS[SETTINGS_TABS.length - 1].id);
     }
+  };
+
+  const handleDesktopNotificationsChange = async (enabled: boolean) => {
+    if (!enabled) {
+      updateSettings({ desktopNotificationsEnabled: false });
+      return;
+    }
+
+    const permission = await requestNotificationPermission();
+    setNotificationPermission(permission);
+    updateSettings({ desktopNotificationsEnabled: permission === "granted" });
   };
 
   const save = () => {
@@ -3540,6 +3566,82 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                     </div>
                   </section>
                 )}
+              </>
+            )}
+
+            {activeTab === "notifications" && (
+              <>
+                <section className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>Notification Delivery</h3>
+                    <Bell size={18} aria-hidden="true" />
+                  </div>
+                  <p className={styles.hint}>
+                    Show notifications in Dayboard when calendar events or Pomodoro sessions need your attention.
+                  </p>
+                  <label className={styles.notificationOption}>
+                    <input
+                      type="checkbox"
+                      checked={settings.notificationsEnabled}
+                      onChange={(event) => updateSettings({ notificationsEnabled: event.target.checked })}
+                    />
+                    <span>
+                      <strong>In-app notifications</strong>
+                      <small>Display dismissible reminders in the bottom-right corner.</small>
+                    </span>
+                  </label>
+                  <label className={styles.notificationOption}>
+                    <input
+                      type="checkbox"
+                      checked={settings.calendarNotificationsEnabled}
+                      disabled={!settings.notificationsEnabled}
+                      onChange={(event) => updateSettings({ calendarNotificationsEnabled: event.target.checked })}
+                    />
+                    <span>
+                      <strong>Calendar reminders</strong>
+                      <small>Alert you up to 15 minutes before an event starts.</small>
+                    </span>
+                  </label>
+                  <label className={styles.notificationOption}>
+                    <input
+                      type="checkbox"
+                      checked={settings.timerNotificationsEnabled}
+                      disabled={!settings.notificationsEnabled}
+                      onChange={(event) => updateSettings({ timerNotificationsEnabled: event.target.checked })}
+                    />
+                    <span>
+                      <strong>Pomodoro reminders</strong>
+                      <small>Alert you when a work or break session ends.</small>
+                    </span>
+                  </label>
+                </section>
+                <section className={styles.section}>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>Browser Notifications</h3>
+                    <MonitorCheck size={18} aria-hidden="true" />
+                  </div>
+                  <p className={styles.hint}>
+                    {notificationPermission === "granted"
+                      ? "Browser notifications are allowed."
+                      : notificationPermission === "denied"
+                        ? "Browser notifications are blocked. Update your browser site settings to allow them."
+                        : notificationPermission === "unsupported"
+                          ? "This browser does not support notifications."
+                          : "Enable browser notifications to receive reminders outside Dayboard."}
+                  </p>
+                  <label className={styles.notificationOption}>
+                    <input
+                      type="checkbox"
+                      checked={settings.desktopNotificationsEnabled}
+                      disabled={notificationPermission === "denied" || notificationPermission === "unsupported"}
+                      onChange={(event) => void handleDesktopNotificationsChange(event.target.checked)}
+                    />
+                    <span>
+                      <strong>Desktop notifications</strong>
+                      <small>Show enabled Dayboard reminders through your browser and operating system.</small>
+                    </span>
+                  </label>
+                </section>
               </>
             )}
 

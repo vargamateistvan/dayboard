@@ -146,6 +146,44 @@
   line-height: 1.5;
 }
 
+.notificationOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.notificationOption:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.notificationOption input {
+  margin: 0.2rem 0 0;
+  accent-color: var(--color-accent);
+}
+
+.notificationOption span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.notificationOption strong {
+  font-size: var(--font-size-sm);
+}
+
+.notificationOption small {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  line-height: 1.45;
+}
+
 .emptyState {
   margin: 0;
   padding: var(--space-5);

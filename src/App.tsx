@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, useMemo, type ComponentProps 
 import { Check, ChevronDown, Info, Maximize2, Minimize2, Settings } from 'lucide-react'
 import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
 import { SettingsProvider, useSettings } from './lib/useSettings'
-import { useEventNotifications } from './lib/useEventNotifications'
+import { useEventNotifications, type EventNotification, type NotificationType } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
 import { type Widget, useWidgetVisibility } from './lib/useWidgetVisibility'
 import { getWidgetLabel } from './lib/widgetMetadata'
@@ -29,6 +29,7 @@ import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { InfoDialog } from './components/InfoDialog'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
+import { NotificationCenter } from './components/NotificationCenter'
 import './themes/base.css'
 import './themes/default.css'
 import './themes/retro.css'
@@ -120,7 +121,7 @@ type WidgetRenderer = (
   isFullscreen: boolean,
   rowCount?: number,
   onAddNotification?: (notification: {
-    type: 'event' | 'weather' | 'timer'
+    type: NotificationType
     title: string
     body?: string
   }) => void,
@@ -133,11 +134,15 @@ const WIDGET_RENDERERS: Record<Widget, WidgetRenderer> = {
   astronomy: (isFullscreen: boolean) => <AstronomyWidget isFullscreen={isFullscreen} />,
   flights: (isFullscreen: boolean) => <FlightWidget isFullscreen={isFullscreen} />,
   calendar: (isFullscreen: boolean, _rowCount?: number, onAddNotification?: (notification: {
-    type: 'event' | 'weather' | 'timer'
+    type: NotificationType
     title: string
     body?: string
   }) => void) => <CalendarWidget isFullscreen={isFullscreen} onAddNotification={onAddNotification} />,
-  timer: (isFullscreen: boolean) => <TimerPanel isFullscreen={isFullscreen} />,
+  timer: (isFullscreen: boolean, _rowCount?: number, onAddNotification?: (notification: {
+    type: NotificationType
+    title: string
+    body?: string
+  }) => void) => <TimerPanel isFullscreen={isFullscreen} onAddNotification={onAddNotification} />,
   tasks: (isFullscreen: boolean) => <TaskWidget isFullscreen={isFullscreen} />,
   kanban: (isFullscreen: boolean) => <MiniKanbanWidget isFullscreen={isFullscreen} />,
   notes: (isFullscreen: boolean) => <NotesWidget isFullscreen={isFullscreen} />,
@@ -243,7 +248,7 @@ interface WidgetCellProps {
   readonly placement: { column: number; row: number; columnSpan: number; rowSpan: number }
   readonly onToggleFullscreen: (widget: Widget) => void
   readonly onAddNotification: (notification: {
-    type: 'event' | 'weather' | 'timer'
+    type: NotificationType
     title: string
     body?: string
   }) => void
@@ -293,12 +298,27 @@ function WidgetCell({
 
 interface ToolbarProps {
   readonly appFullscreen: boolean
+  readonly notificationHistory: EventNotification[]
+  readonly unreadNotificationCount: number
   readonly onOpenInfo: () => void
   readonly onOpenSettings: () => void
   readonly onToggleAppFullscreen: () => void
+  readonly onMarkNotificationsRead: () => void
+  readonly onRemoveNotificationEntry: (id: string) => void
+  readonly onClearNotificationHistory: () => void
 }
 
-function Toolbar({ appFullscreen, onOpenInfo, onOpenSettings, onToggleAppFullscreen }: ToolbarProps) {
+function Toolbar({
+  appFullscreen,
+  notificationHistory,
+  unreadNotificationCount,
+  onOpenInfo,
+  onOpenSettings,
+  onToggleAppFullscreen,
+  onMarkNotificationsRead,
+  onRemoveNotificationEntry,
+  onClearNotificationHistory,
+}: ToolbarProps) {
   return (
     <div className={styles.toolbarButtons}>
       <button
@@ -310,6 +330,13 @@ function Toolbar({ appFullscreen, onOpenInfo, onOpenSettings, onToggleAppFullscr
       >
         <Info size={18} />
       </button>
+      <NotificationCenter
+        history={notificationHistory}
+        unreadCount={unreadNotificationCount}
+        onMarkAllRead={onMarkNotificationsRead}
+        onDismiss={onRemoveNotificationEntry}
+        onClearAll={onClearNotificationHistory}
+      />
       <button
         className={styles.toolbarButton}
         onClick={onOpenSettings}
@@ -372,6 +399,8 @@ interface DashboardLayoutProps {
   readonly orderedVisibleWidgets: Widget[]
   readonly placements: ReturnType<typeof useWidgetVisibility>['placements']
   readonly notifications: ComponentProps<typeof NotificationBadge>['notifications']
+  readonly notificationHistory: EventNotification[]
+  readonly unreadNotificationCount: number
   readonly infoOpen: boolean
   readonly settingsOpen: boolean
   readonly onOpenInfo: () => void
@@ -382,8 +411,11 @@ interface DashboardLayoutProps {
   readonly onCloseSettings: () => void
   readonly onSelectPreset: (presetName: string) => void
   readonly onDismissNotification: ComponentProps<typeof NotificationBadge>['onDismiss']
+  readonly onMarkNotificationsRead: () => void
+  readonly onRemoveNotificationEntry: (id: string) => void
+  readonly onClearNotificationHistory: () => void
   readonly onAddNotification: (notification: {
-    type: 'event' | 'weather' | 'timer'
+    type: NotificationType
     title: string
     body?: string
   }) => void
@@ -399,6 +431,8 @@ function DashboardLayout({
   orderedVisibleWidgets,
   placements,
   notifications,
+  notificationHistory,
+  unreadNotificationCount,
   infoOpen,
   settingsOpen,
   onOpenInfo,
@@ -409,6 +443,9 @@ function DashboardLayout({
   onCloseSettings,
   onSelectPreset,
   onDismissNotification,
+  onMarkNotificationsRead,
+  onRemoveNotificationEntry,
+  onClearNotificationHistory,
   onAddNotification,
 }: DashboardLayoutProps) {
   const mainRef = useRef<HTMLElement | null>(null)
@@ -593,9 +630,14 @@ function DashboardLayout({
       ) : null}
       <Toolbar
         appFullscreen={appFullscreen}
+        notificationHistory={notificationHistory}
+        unreadNotificationCount={unreadNotificationCount}
         onOpenInfo={onOpenInfo}
         onOpenSettings={onOpenSettings}
         onToggleAppFullscreen={onToggleAppFullscreen}
+        onMarkNotificationsRead={onMarkNotificationsRead}
+        onRemoveNotificationEntry={onRemoveNotificationEntry}
+        onClearNotificationHistory={onClearNotificationHistory}
       />
 
       <main
@@ -796,9 +838,18 @@ function useShellPanels() {
 }
 
 function Dashboard() {
-  const { notifications, addNotification, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
+  const {
+    notifications,
+    history: notificationHistory,
+    unreadCount: unreadNotificationCount,
+    addNotification,
+    dismissNotification,
+    removeHistoryEntry,
+    clearHistory,
+    markHistoryRead,
+  } = useEventNotifications(settings)
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
   const { appFullscreen, toggleAppFullscreen } = useAppFullscreen()
   const presets = usePresets()
@@ -828,6 +879,8 @@ function Dashboard() {
     orderedVisibleWidgets,
     placements,
     notifications,
+    notificationHistory,
+    unreadNotificationCount,
     infoOpen,
     settingsOpen,
     onOpenInfo: openInfo,
@@ -838,6 +891,9 @@ function Dashboard() {
     onCloseSettings: closeSettings,
     onSelectPreset: handlePresetChange,
     onDismissNotification: dismissNotification,
+    onMarkNotificationsRead: markHistoryRead,
+    onRemoveNotificationEntry: removeHistoryEntry,
+    onClearNotificationHistory: clearHistory,
     onAddNotification: addNotification,
   } satisfies DashboardLayoutProps
 

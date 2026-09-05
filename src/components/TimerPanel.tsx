@@ -2,10 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useTimer } from "../lib/useTimer";
 import { useSettings } from "../lib/useSettings";
 import { usePomodoroStats } from "../lib/usePomodoroStats";
-import {
-  requestNotificationPermission,
-  showPomodoroNotification,
-} from "../lib/notifications";
+import type { EventNotification } from "../lib/useEventNotifications";
 import {
   Play,
   Pause,
@@ -107,7 +104,7 @@ function Stopwatch() {
 }
 
 // ---------- Countdown ----------
-function Countdown() {
+function Countdown({ onAddNotification }: Pick<TimerPanelProps, "onAddNotification">) {
   const [inputMin, setInputMin] = useState(5);
   const [done, setDone] = useState(false);
   const durationMs = inputMin * 60_000;
@@ -116,6 +113,11 @@ function Countdown() {
     onComplete: () => {
       setDone(true);
       beep("done");
+      onAddNotification?.({
+        type: "timer",
+        title: "Countdown complete",
+        body: "Your countdown has finished.",
+      });
     },
   });
   const remaining = Math.max(0, durationMs - elapsedMs);
@@ -216,7 +218,7 @@ function Countdown() {
 // ---------- Pomodoro ----------
 type PomodoroPhase = "work" | "break";
 
-function Pomodoro() {
+function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotification">) {
   const { settings, updateSettings } = useSettings();
   const { recordSession } = usePomodoroStats();
   const [phase, setPhase] = useState<PomodoroPhase>("work");
@@ -234,7 +236,17 @@ function Pomodoro() {
 
   const handleComplete = () => {
     beep("done");
-    showPomodoroNotification(phase, autoCycle);
+    onAddNotification?.({
+      type: "timer",
+      title: phase === "work" ? "Work session complete" : "Break complete",
+      body: autoCycle
+        ? phase === "work"
+          ? "Break session starting..."
+          : "Work session starting..."
+        : phase === "work"
+          ? "Time for a break!"
+          : "Ready to work?",
+    });
     recordSession(phase === "work" ? settings.pomodoroWorkMinutes : 0);
 
     if (autoCycle) {
@@ -261,10 +273,6 @@ function Pomodoro() {
       beep("tick");
     }
   }, [remaining, state]);
-
-  useEffect(() => {
-    requestNotificationPermission();
-  }, []);
 
   const startNext = () => {
     if (phase === "work") setSessions((s) => s + 1);
@@ -449,9 +457,10 @@ const TABS: { id: Mode; label: string; icon: React.ReactNode }[] = [
 
 interface TimerPanelProps {
   readonly isFullscreen?: boolean;
+  readonly onAddNotification?: (notification: Omit<EventNotification, "id" | "timestamp">) => void;
 }
 
-export function TimerPanel({ isFullscreen = false }: TimerPanelProps) {
+export function TimerPanel({ isFullscreen = false, onAddNotification }: TimerPanelProps) {
   const [mode, setMode] = useState<Mode>(() => loadStoredMode());
 
   const handleModeChange = (nextMode: Mode) => {
@@ -483,8 +492,8 @@ export function TimerPanel({ isFullscreen = false }: TimerPanelProps) {
       </div>
       <div className={styles.content}>
         {mode === "stopwatch" && <Stopwatch />}
-        {mode === "countdown" && <Countdown />}
-        {mode === "pomodoro" && <Pomodoro />}
+        {mode === "countdown" && <Countdown onAddNotification={onAddNotification} />}
+        {mode === "pomodoro" && <Pomodoro onAddNotification={onAddNotification} />}
       </div>
     </div>
   );

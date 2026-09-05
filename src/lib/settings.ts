@@ -105,6 +105,10 @@ export interface Settings {
   sportsRefreshMinutes: number
   pomodoroWorkMinutes: number
   pomodoroBreakMinutes: number
+  notificationsEnabled: boolean
+  desktopNotificationsEnabled: boolean
+  calendarNotificationsEnabled: boolean
+  timerNotificationsEnabled: boolean
   worldClockCity: string
   worldClockTimeZone: string
   customColors?: CustomColors
@@ -245,6 +249,10 @@ export const DEFAULT_SETTINGS: Settings = {
   sportsRefreshMinutes: 15,
   pomodoroWorkMinutes: 25,
   pomodoroBreakMinutes: 5,
+  notificationsEnabled: true,
+  desktopNotificationsEnabled: false,
+  calendarNotificationsEnabled: true,
+  timerNotificationsEnabled: true,
   worldClockCity: 'New York',
   worldClockTimeZone: 'America/New_York',
   customColors: DEFAULT_CUSTOM_COLORS,
@@ -707,6 +715,22 @@ function normalizePomodoroBreakMinutes(value: unknown): number {
   return normalizePositiveInteger(value, DEFAULT_SETTINGS.pomodoroBreakMinutes)
 }
 
+function normalizeNotificationsEnabled(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.notificationsEnabled)
+}
+
+function normalizeDesktopNotificationsEnabled(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.desktopNotificationsEnabled)
+}
+
+function normalizeCalendarNotificationsEnabled(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.calendarNotificationsEnabled)
+}
+
+function normalizeTimerNotificationsEnabled(value: unknown): boolean {
+  return normalizeBoolean(value, DEFAULT_SETTINGS.timerNotificationsEnabled)
+}
+
 function normalizeCustomColors(value: unknown): CustomColors {
   if (!value || typeof value !== 'object') {
     return DEFAULT_CUSTOM_COLORS
@@ -828,6 +852,18 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     pomodoroBreakMinutes: normalizePomodoroBreakMinutes(
       (rest as { pomodoroBreakMinutes?: unknown }).pomodoroBreakMinutes,
     ),
+    notificationsEnabled: normalizeNotificationsEnabled(
+      (rest as { notificationsEnabled?: unknown }).notificationsEnabled,
+    ),
+    desktopNotificationsEnabled: normalizeDesktopNotificationsEnabled(
+      (rest as { desktopNotificationsEnabled?: unknown }).desktopNotificationsEnabled,
+    ),
+    calendarNotificationsEnabled: normalizeCalendarNotificationsEnabled(
+      (rest as { calendarNotificationsEnabled?: unknown }).calendarNotificationsEnabled,
+    ),
+    timerNotificationsEnabled: normalizeTimerNotificationsEnabled(
+      (rest as { timerNotificationsEnabled?: unknown }).timerNotificationsEnabled,
+    ),
     customColors: normalizeCustomColors(
       (rest as { customColors?: unknown }).customColors,
     ),
@@ -902,6 +938,10 @@ export function saveSettings(settings: Settings): void {
       sportsRefreshMinutes: normalizeSportsRefreshMinutes(settings.sportsRefreshMinutes),
       pomodoroWorkMinutes: normalizePomodoroWorkMinutes(settings.pomodoroWorkMinutes),
       pomodoroBreakMinutes: normalizePomodoroBreakMinutes(settings.pomodoroBreakMinutes),
+      notificationsEnabled: normalizeNotificationsEnabled(settings.notificationsEnabled),
+      desktopNotificationsEnabled: normalizeDesktopNotificationsEnabled(settings.desktopNotificationsEnabled),
+      calendarNotificationsEnabled: normalizeCalendarNotificationsEnabled(settings.calendarNotificationsEnabled),
+      timerNotificationsEnabled: normalizeTimerNotificationsEnabled(settings.timerNotificationsEnabled),
       worldClockCity: normalizeWorldClockCity(settings.worldClockCity),
       worldClockTimeZone: normalizeWorldClockTimeZone(settings.worldClockTimeZone),
       customColors: normalizeCustomColors(settings.customColors),

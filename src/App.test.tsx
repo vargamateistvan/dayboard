@@ -87,7 +87,13 @@ const widgetPlacements = {
 vi.mock('./lib/useEventNotifications', () => ({
   useEventNotifications: () => ({
     notifications: [],
+    history: [],
+    unreadCount: 0,
+    addNotification: vi.fn(),
     dismissNotification: vi.fn(),
+    removeHistoryEntry: vi.fn(),
+    clearHistory: vi.fn(),
+    markHistoryRead: vi.fn(),
   }),
 }))
 
