@@ -46,7 +46,8 @@ function getManualCoordinates(latitude: string, longitude: string): Coordinates 
 function buildGoogleMapsEmbedUrl(coordinates: Coordinates): string {
   const latitude = coordinates.latitude.toFixed(6)
   const longitude = coordinates.longitude.toFixed(6)
-  return `https://www.google.com/maps?q=${latitude},${longitude}&z=10&output=embed`
+  // `ll` centers the map without dropping a marker; `q` would render a red pin.
+  return `https://www.google.com/maps?ll=${latitude},${longitude}&z=10&output=embed`
 }
 
 function formatLastRefresh(lastRefreshedAt: number, now: number): string {

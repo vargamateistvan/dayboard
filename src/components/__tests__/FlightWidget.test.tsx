@@ -139,7 +139,7 @@ describe('FlightWidget', () => {
 
     const mapFrame = screen.getByTitle('Google Maps centered on flight radar location')
     expect(mapFrame).toBeInTheDocument()
-    expect(mapFrame).toHaveAttribute('src', expect.stringContaining('https://www.google.com/maps?q=47.497900,19.040200&z=10&output=embed'))
+    expect(mapFrame).toHaveAttribute('src', expect.stringContaining('https://www.google.com/maps?ll=47.497900,19.040200&z=10&output=embed'))
   })
 
   it('falls back to manual coordinates when geolocation is denied', async () => {
