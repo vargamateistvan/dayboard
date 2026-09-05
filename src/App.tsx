@@ -116,13 +116,27 @@ function presetMatchesSettings(
   return deepEqual(preset.settings, settings) && presetMatchesLayout(preset, rowCount, visibility, placements)
 }
 
-const WIDGET_RENDERERS = {
-  clock: (isFullscreen: boolean, rowCount: number) => <ClockWidget isFullscreen={isFullscreen} rowCount={rowCount} />,
+type WidgetRenderer = (
+  isFullscreen: boolean,
+  rowCount?: number,
+  onAddNotification?: (notification: {
+    type: 'event' | 'weather' | 'timer'
+    title: string
+    body?: string
+  }) => void,
+) => JSX.Element | null
+
+const WIDGET_RENDERERS: Record<Widget, WidgetRenderer> = {
+  clock: (isFullscreen: boolean, rowCount?: number) => <ClockWidget isFullscreen={isFullscreen} rowCount={rowCount ?? 1} />,
   timezoneClock: (isFullscreen: boolean) => <TimezoneClockWidget isFullscreen={isFullscreen} />,
   weather: (isFullscreen: boolean) => <WeatherWidget isFullscreen={isFullscreen} />,
   astronomy: (isFullscreen: boolean) => <AstronomyWidget isFullscreen={isFullscreen} />,
   flights: (isFullscreen: boolean) => <FlightWidget isFullscreen={isFullscreen} />,
-  calendar: (isFullscreen: boolean) => <CalendarWidget isFullscreen={isFullscreen} />,
+  calendar: (isFullscreen: boolean, _rowCount?: number, onAddNotification?: (notification: {
+    type: 'event' | 'weather' | 'timer'
+    title: string
+    body?: string
+  }) => void) => <CalendarWidget isFullscreen={isFullscreen} onAddNotification={onAddNotification} />,
   timer: (isFullscreen: boolean) => <TimerPanel isFullscreen={isFullscreen} />,
   tasks: (isFullscreen: boolean) => <TaskWidget isFullscreen={isFullscreen} />,
   kanban: (isFullscreen: boolean) => <MiniKanbanWidget isFullscreen={isFullscreen} />,
@@ -135,7 +149,7 @@ const WIDGET_RENDERERS = {
   sports: (isFullscreen: boolean) => <SportsScoresWidget isFullscreen={isFullscreen} />,
   quote: (isFullscreen: boolean) => <QuoteWidget isFullscreen={isFullscreen} />,
   deviceInfo: (isFullscreen: boolean) => <DeviceInfoWidget isFullscreen={isFullscreen} />,
-} satisfies Record<Widget, (isFullscreen: boolean, rowCount: number) => JSX.Element | null>
+}
 
 interface PresetSelectorProps {
   readonly presets: SettingsPreset[]
@@ -228,6 +242,11 @@ interface WidgetCellProps {
   readonly rowCount: number
   readonly placement: { column: number; row: number; columnSpan: number; rowSpan: number }
   readonly onToggleFullscreen: (widget: Widget) => void
+  readonly onAddNotification: (notification: {
+    type: 'event' | 'weather' | 'timer'
+    title: string
+    body?: string
+  }) => void
 }
 
 function WidgetCell({
@@ -238,6 +257,7 @@ function WidgetCell({
   rowCount,
   placement,
   onToggleFullscreen,
+  onAddNotification,
 }: WidgetCellProps) {
   return (
     <div
@@ -266,7 +286,7 @@ function WidgetCell({
       >
         {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen, rowCount)}</div>
+      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen, rowCount, onAddNotification)}</div>
     </div>
   )
 }
@@ -362,6 +382,11 @@ interface DashboardLayoutProps {
   readonly onCloseSettings: () => void
   readonly onSelectPreset: (presetName: string) => void
   readonly onDismissNotification: ComponentProps<typeof NotificationBadge>['onDismiss']
+  readonly onAddNotification: (notification: {
+    type: 'event' | 'weather' | 'timer'
+    title: string
+    body?: string
+  }) => void
 }
 
 function DashboardLayout({
@@ -384,6 +409,7 @@ function DashboardLayout({
   onCloseSettings,
   onSelectPreset,
   onDismissNotification,
+  onAddNotification,
 }: DashboardLayoutProps) {
   const mainRef = useRef<HTMLElement | null>(null)
   const [singleColumnLayout, setSingleColumnLayout] = useState(false)
@@ -587,6 +613,7 @@ function DashboardLayout({
             rowCount={rowCount}
             placement={placements[widget]}
             onToggleFullscreen={onToggleWidgetFullscreen}
+            onAddNotification={onAddNotification}
           />
         ))}
       </main>
@@ -769,7 +796,7 @@ function useShellPanels() {
 }
 
 function Dashboard() {
-  const { notifications, dismissNotification } = useEventNotifications()
+  const { notifications, addNotification, dismissNotification } = useEventNotifications()
   const { focusMode } = useFocusMode()
   const { settings, updateSettings } = useSettings()
   const { visibility, order, placements, rowCount } = useWidgetVisibility()
@@ -811,6 +838,7 @@ function Dashboard() {
     onCloseSettings: closeSettings,
     onSelectPreset: handlePresetChange,
     onDismissNotification: dismissNotification,
+    onAddNotification: addNotification,
   } satisfies DashboardLayoutProps
 
   return (

@@ -11,6 +11,7 @@ import {
 } from '../lib/parseCalendarFeed'
 import { DEFAULT_CALENDAR_COLOR, type CalendarWeekStartsOn, mergeCalendarFeeds } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
+import type { EventNotification } from '../lib/useEventNotifications'
 import styles from './CalendarWidget.module.css'
 
 const WEEKDAY_LABELS_BY_START: Record<CalendarWeekStartsOn, string[]> = {
@@ -52,6 +53,7 @@ interface WeekDaySchedule {
 
 interface CalendarWidgetProps {
   readonly isFullscreen?: boolean
+  readonly onAddNotification?: (notification: Omit<EventNotification, 'id' | 'timestamp'>) => void
 }
 
 function formatTime(d: Date): string {
@@ -479,13 +481,15 @@ function MonthTooltipContent({
   )
 }
 
-export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
+export function CalendarWidget({ isFullscreen = false, onAddNotification }: CalendarWidgetProps) {
   const { settings } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [fetchedFeeds, setFetchedFeeds] = useState<FetchedCalendarFeed[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
+  const [now, setNow] = useState<Date>(() => new Date())
+  const notificationKeysRef = useRef<Set<string>>(new Set())
   const [activeTooltip, setActiveTooltip] = useState<{
     event: CalendarEvent
     anchorElement: HTMLElement
@@ -504,8 +508,14 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
     [settings.globalCalendarFeeds, settings.calendarFeeds],
   )
   const hasCalendarFeeds = mergedCalendarFeeds.length > 0
-  const now = useMemo(() => new Date(), [])
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
+
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    tick()
+    const intervalId = window.setInterval(tick, 60000)
+    return () => window.clearInterval(intervalId)
+  }, [])
   const monthGridRange = useMemo(
     () => getMonthGridRange(selectedDate, settings.calendarWeekStartsOn),
     [selectedDate, settings.calendarWeekStartsOn],
@@ -640,6 +650,38 @@ export function CalendarWidget({ isFullscreen = false }: CalendarWidgetProps) {
 
     return true
   })
+
+  useEffect(() => {
+    if (!onAddNotification || !isToday) {
+      return
+    }
+
+    const upcomingEvent = visibleEvents.find((event) => {
+      if (event.allDay || event.end <= now) {
+        return false
+      }
+
+      const minutesUntilStart = event.start.getTime() - now.getTime()
+      return minutesUntilStart >= 0 && minutesUntilStart <= 15 * 60 * 1000
+    })
+
+    if (!upcomingEvent) {
+      return
+    }
+
+    const eventKey = getEventKey(upcomingEvent)
+    if (notificationKeysRef.current.has(eventKey)) {
+      return
+    }
+
+    notificationKeysRef.current.add(eventKey)
+    onAddNotification({
+      type: 'event',
+      title: 'Upcoming event',
+      body: `${upcomingEvent.title} starts ${formatTime(upcomingEvent.start)}`,
+    })
+  }, [isToday, now, onAddNotification, visibleEvents])
+
   const currentEvents = new Set(
     isToday
       ? visibleEvents.filter((event) => event.start <= now && event.end > now).map(getEventKey)

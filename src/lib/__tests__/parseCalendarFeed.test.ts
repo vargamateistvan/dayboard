@@ -289,6 +289,22 @@ describe('parseCalendarFeed — CSV', () => {
     ])
   })
 
+  it('parses CSV values that contain commas inside quoted fields', () => {
+    const csv = `title,start,end,location,notes,organizer,guests
+"Quarterly planning, leadership",2024-08-07T09:00:00,2024-08-07T10:00:00,"HQ Room 4, East Wing","Bring roadmap notes, and agenda","Alex Lead","Jamie Guest;Taylor Invitee"`
+
+    const events = parseCsv(csv)
+    expect(events).toHaveLength(1)
+    expect(events[0].title).toBe('Quarterly planning, leadership')
+    expect(events[0].location).toBe('HQ Room 4, East Wing')
+    expect(events[0].notes).toBe('Bring roadmap notes, and agenda')
+    expect(events[0].organizer).toEqual({ name: 'Alex Lead' })
+    expect(events[0].attendees).toEqual([
+      { name: 'Jamie Guest' },
+      { name: 'Taylor Invitee' },
+    ])
+  })
+
   it('returns empty array for empty string', () => {
     expect(parseCsv('')).toEqual([])
   })

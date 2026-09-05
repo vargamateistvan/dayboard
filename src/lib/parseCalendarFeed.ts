@@ -110,6 +110,38 @@ function normalizeContactValue(value: unknown): string | undefined {
   return trimmedValue.toLowerCase().startsWith('mailto:') ? trimmedValue.slice('mailto:'.length) : trimmedValue
 }
 
+function parseCsvLine(line: string): string[] {
+  const values: string[] = []
+  let current = ''
+  let inQuotes = false
+
+  for (let index = 0; index < line.length; index += 1) {
+    const char = line[index]
+
+    if (char === '"') {
+      if (inQuotes && line[index + 1] === '"') {
+        current += '"'
+        index += 1
+        continue
+      }
+
+      inQuotes = !inQuotes
+      continue
+    }
+
+    if (char === ',' && !inQuotes) {
+      values.push(current.trim())
+      current = ''
+      continue
+    }
+
+    current += char
+  }
+
+  values.push(current.trim())
+  return values
+}
+
 function getEventNotes(event: ICalEvent): string | undefined {
   const plainDescription = normalizeTextValue(event.component.getFirstPropertyValue('description'))
   if (plainDescription) {
@@ -304,7 +336,7 @@ export function parseCsv(text: string, range = dayRange()): CalendarEvent[] {
   const lines = text.trim().split(/\r?\n/)
   if (lines.length < 2) return []
 
-  const header = lines[0].toLowerCase().split(',').map((h) => h.trim())
+  const header = parseCsvLine(lines[0].replace(/^\uFEFF/, '')).map((h) => h.trim().toLowerCase())
   const titleIdx = header.indexOf('title')
   const startIdx = header.indexOf('start')
   const endIdx = header.indexOf('end')
@@ -321,9 +353,9 @@ export function parseCsv(text: string, range = dayRange()): CalendarEvent[] {
 
   const events: CalendarEvent[] = []
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(',').map((c) => c.trim())
+    const cols = parseCsvLine(lines[i])
     try {
-      const title = cols[titleIdx] ?? ''
+      const title = normalizeTextValue(cols[titleIdx]) ?? ''
       const start = new Date(cols[startIdx])
       const end = endIdx !== -1 && cols[endIdx] ? new Date(cols[endIdx]) : new Date(start.getTime() + 3600_000)
       const rawUrl =

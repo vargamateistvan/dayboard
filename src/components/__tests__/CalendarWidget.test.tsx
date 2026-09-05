@@ -145,6 +145,48 @@ describe('CalendarWidget', () => {
     vi.unstubAllGlobals()
   })
 
+  it('triggers an upcoming event notification when an event starts soon', async () => {
+    const onAddNotification = vi.fn()
+    const startsSoon = new Date(Date.now() + 4 * 60 * 1000)
+    const endsSoon = new Date(startsSoon.getTime() + 30 * 60 * 1000)
+    const soonCalendar = `BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+SUMMARY:Design review
+DTSTART:${formatIcsUtc(startsSoon)}
+DTEND:${formatIcsUtc(endsSoon)}
+END:VEVENT
+END:VCALENDAR`
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, text: async () => soonCalendar }),
+    )
+
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      calendarFeeds: [{ url: 'https://example.com/cal.ics', color: DEFAULT_CALENDAR_COLORS[0] }],
+    })
+
+    render(
+      <SettingsProvider>
+        <CalendarWidget onAddNotification={onAddNotification} />
+      </SettingsProvider>,
+    )
+
+    await waitFor(() =>
+      expect(onAddNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'event',
+          title: 'Upcoming event',
+        }),
+      ),
+    )
+
+    expect(onAddNotification).toHaveBeenCalledTimes(1)
+    vi.unstubAllGlobals()
+  })
+
   it('starts the calendar week on Monday by default', () => {
     renderWithSettings([])
 
