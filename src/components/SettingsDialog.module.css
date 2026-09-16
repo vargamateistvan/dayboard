@@ -132,6 +132,19 @@
   gap: var(--space-3);
 }
 
+.sectionLink {
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sectionLink:hover,
+.sectionLink:focus-visible {
+  color: var(--color-accent-hover);
+  text-decoration: underline;
+}
+
 .sectionTitle {
   font-size: var(--font-size-sm);
   font-weight: 600;

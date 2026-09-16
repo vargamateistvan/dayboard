@@ -63,6 +63,8 @@ export interface Settings {
   theme: Theme
   colorScheme: ColorScheme
   fontPreset: FontPreset
+  customGoogleFontUrl: string
+  customGoogleFontFamily: string
   clockTimeFontSizeRem: number | null
   clockDateFontSizeRem: number | null
   clockTimeStretchPercent: number | null
@@ -207,6 +209,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'default',
   colorScheme: 'system',
   fontPreset: 'space-grotesk',
+  customGoogleFontUrl: '',
+  customGoogleFontFamily: '',
   clockTimeFontSizeRem: null,
   clockDateFontSizeRem: null,
   clockTimeStretchPercent: null,
@@ -353,6 +357,70 @@ function normalizeFontPreset(fontPreset: unknown): FontPreset {
 
   const matched = FONT_PRESET_OPTIONS.find((option) => option.id === fontPreset)
   return matched?.id ?? DEFAULT_SETTINGS.fontPreset
+}
+
+function extractHrefFromLinkTag(value: string): string {
+  const hrefMatch = value.match(/\bhref\s*=\s*(["'])(.*?)\1/i) ?? value.match(/\bhref\s*=\s*([^\s>]+)/i)
+  return hrefMatch?.[2] ?? hrefMatch?.[1] ?? value
+}
+
+export function normalizeGoogleFontUrl(value: unknown): string {
+  if (typeof value !== 'string') {
+    return ''
+  }
+
+  const candidate = extractHrefFromLinkTag(value).trim()
+  if (!candidate) {
+    return ''
+  }
+
+  try {
+    const url = new URL(candidate)
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname !== 'fonts.googleapis.com' ||
+      (url.pathname !== '/css' && url.pathname !== '/css2') ||
+      !url.searchParams.has('family')
+    ) {
+      return ''
+    }
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
+export function deriveGoogleFontFamilyFromUrl(value: unknown): string {
+  const normalizedUrl = normalizeGoogleFontUrl(value)
+  if (!normalizedUrl) {
+    return ''
+  }
+
+  const url = new URL(normalizedUrl)
+  const firstFamily = url.searchParams.getAll('family')[0]
+  if (!firstFamily) {
+    return ''
+  }
+
+  return firstFamily.split(':')[0].replace(/\+/g, ' ').trim()
+}
+
+function normalizeCustomGoogleFontFamily(value: unknown, fontUrl: unknown): string {
+  const normalizedUrl = normalizeGoogleFontUrl(fontUrl)
+  if (!normalizedUrl) {
+    return ''
+  }
+
+  const explicitFamily = typeof value === 'string' ? value.trim() : ''
+  if (explicitFamily) {
+    return explicitFamily
+  }
+
+  return deriveGoogleFontFamilyFromUrl(normalizedUrl)
+}
+
+function toCssQuotedFontFamily(fontFamily: string): string {
+  return `'${fontFamily.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 }
 
 function normalizeClockFontSizeRem(value: unknown): number | null {
@@ -763,6 +831,11 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     ...DEFAULT_SETTINGS,
     ...rest,
     fontPreset: normalizeFontPreset(rest.fontPreset),
+    customGoogleFontUrl: normalizeGoogleFontUrl((rest as { customGoogleFontUrl?: unknown }).customGoogleFontUrl),
+    customGoogleFontFamily: normalizeCustomGoogleFontFamily(
+      (rest as { customGoogleFontFamily?: unknown }).customGoogleFontFamily,
+      (rest as { customGoogleFontUrl?: unknown }).customGoogleFontUrl,
+    ),
     clockTimeFontSizeRem: normalizeClockFontSizeRem((rest as { clockTimeFontSizeRem?: unknown }).clockTimeFontSizeRem),
     clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
     clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
@@ -870,6 +943,10 @@ function normalizeStoredSettings(value: unknown): Settings | null {
   }
 }
 
+export function normalizeSettings(settings: Settings): Settings {
+  return normalizeStoredSettings(settings) ?? { ...DEFAULT_SETTINGS }
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -881,70 +958,76 @@ export function loadSettings(): Settings {
 }
 
 export function saveSettings(settings: Settings): void {
+  const normalizedSettings = normalizeSettings(settings)
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
-      theme: settings.theme,
-      colorScheme: settings.colorScheme,
-      fontPreset: normalizeFontPreset(settings.fontPreset),
-      clockTimeFontSizeRem: normalizeClockFontSizeRem(settings.clockTimeFontSizeRem),
-      clockDateFontSizeRem: normalizeClockFontSizeRem(settings.clockDateFontSizeRem),
-      clockTimeStretchPercent: normalizeClockTimeStretchPercent(settings.clockTimeStretchPercent),
-      showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(settings.showBuyMeACoffeeWidget),
-      calendarFeeds: normalizeCalendarFeeds(settings.calendarFeeds),
-      globalCalendarFeeds: normalizeCalendarFeeds(settings.globalCalendarFeeds),
-      calendarHidePastEvents: normalizeCalendarHidePastEvents(settings.calendarHidePastEvents),
-      calendarShowMonthlyOverview: normalizeCalendarShowMonthlyOverview(settings.calendarShowMonthlyOverview),
-      calendarExtraInfoPreview: normalizeCalendarExtraInfoPreview(settings.calendarExtraInfoPreview),
-      calendarShowAllDayEvents: normalizeCalendarShowAllDayEvents(settings.calendarShowAllDayEvents),
-      calendarWeekStartsOn: normalizeCalendarWeekStartsOn(settings.calendarWeekStartsOn),
-      weatherRefreshMinutes: normalizeWeatherRefreshMinutes(settings.weatherRefreshMinutes),
-      weatherUnitSystem: normalizeWeatherUnitSystem(settings.weatherUnitSystem),
-      weatherShowExtraDetails: normalizeWeatherShowExtraDetails(settings.weatherShowExtraDetails),
-      astronomyRefreshMinutes: normalizeAstronomyRefreshMinutes(settings.astronomyRefreshMinutes),
-      astronomyUseDeviceLocation: normalizeAstronomyUseDeviceLocation(settings.astronomyUseDeviceLocation),
-      astronomyManualLatitude: normalizeAstronomyCoordinate(settings.astronomyManualLatitude),
-      astronomyManualLongitude: normalizeAstronomyCoordinate(settings.astronomyManualLongitude),
-      flightsRadiusKm: normalizeFlightsRadiusKm(settings.flightsRadiusKm),
-      flightsRadarRadiusKm: normalizeFlightsRadarRadiusKm(settings.flightsRadarRadiusKm),
-      flightsRefreshSeconds: normalizeFlightsRefreshSeconds(settings.flightsRefreshSeconds),
-      flightsShowLabels: normalizeFlightsShowLabels(settings.flightsShowLabels),
-      flightsShowGoogleMap: normalizeFlightsShowGoogleMap(settings.flightsShowGoogleMap),
-      flightsShowOnlyAirborne: normalizeFlightsShowOnlyAirborne(settings.flightsShowOnlyAirborne),
-      flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation(settings.flightsUseDeviceLocation),
-      flightsManualLatitude: normalizeFlightsCoordinate(settings.flightsManualLatitude),
-      flightsManualLongitude: normalizeFlightsCoordinate(settings.flightsManualLongitude),
-      spotifyEmbedUrl: normalizeEmbedUrl(settings.spotifyEmbedUrl),
+      theme: normalizedSettings.theme,
+      colorScheme: normalizedSettings.colorScheme,
+      fontPreset: normalizedSettings.fontPreset,
+      customGoogleFontUrl: normalizedSettings.customGoogleFontUrl,
+      customGoogleFontFamily: normalizeCustomGoogleFontFamily(
+        normalizedSettings.customGoogleFontFamily,
+        normalizedSettings.customGoogleFontUrl,
+      ),
+      clockTimeFontSizeRem: normalizedSettings.clockTimeFontSizeRem,
+      clockDateFontSizeRem: normalizedSettings.clockDateFontSizeRem,
+      clockTimeStretchPercent: normalizedSettings.clockTimeStretchPercent,
+      showBuyMeACoffeeWidget: normalizedSettings.showBuyMeACoffeeWidget,
+      calendarFeeds: normalizedSettings.calendarFeeds,
+      globalCalendarFeeds: normalizedSettings.globalCalendarFeeds,
+      calendarHidePastEvents: normalizedSettings.calendarHidePastEvents,
+      calendarShowMonthlyOverview: normalizedSettings.calendarShowMonthlyOverview,
+      calendarExtraInfoPreview: normalizedSettings.calendarExtraInfoPreview,
+      calendarShowAllDayEvents: normalizedSettings.calendarShowAllDayEvents,
+      calendarWeekStartsOn: normalizedSettings.calendarWeekStartsOn,
+      weatherRefreshMinutes: normalizedSettings.weatherRefreshMinutes,
+      weatherUnitSystem: normalizedSettings.weatherUnitSystem,
+      weatherShowExtraDetails: normalizedSettings.weatherShowExtraDetails,
+      astronomyRefreshMinutes: normalizedSettings.astronomyRefreshMinutes,
+      astronomyUseDeviceLocation: normalizedSettings.astronomyUseDeviceLocation,
+      astronomyManualLatitude: normalizedSettings.astronomyManualLatitude,
+      astronomyManualLongitude: normalizedSettings.astronomyManualLongitude,
+      flightsRadiusKm: normalizedSettings.flightsRadiusKm,
+      flightsRadarRadiusKm: normalizedSettings.flightsRadarRadiusKm,
+      flightsRefreshSeconds: normalizedSettings.flightsRefreshSeconds,
+      flightsShowLabels: normalizedSettings.flightsShowLabels,
+      flightsShowGoogleMap: normalizedSettings.flightsShowGoogleMap,
+      flightsShowOnlyAirborne: normalizedSettings.flightsShowOnlyAirborne,
+      flightsUseDeviceLocation: normalizedSettings.flightsUseDeviceLocation,
+      flightsManualLatitude: normalizedSettings.flightsManualLatitude,
+      flightsManualLongitude: normalizedSettings.flightsManualLongitude,
+      spotifyEmbedUrl: normalizedSettings.spotifyEmbedUrl,
       spotifyEmbedLinks: normalizeSavedMediaLinks(
-        settings.spotifyEmbedLinks,
-        settings.spotifyEmbedUrl ? createSavedMediaLink(settings.spotifyEmbedUrl) : undefined,
+        normalizedSettings.spotifyEmbedLinks,
+        normalizedSettings.spotifyEmbedUrl ? createSavedMediaLink(normalizedSettings.spotifyEmbedUrl) : undefined,
       ),
-      appleMusicEmbedUrl: normalizeEmbedUrl(settings.appleMusicEmbedUrl),
+      appleMusicEmbedUrl: normalizedSettings.appleMusicEmbedUrl,
       appleMusicEmbedLinks: normalizeSavedMediaLinks(
-        settings.appleMusicEmbedLinks,
-        settings.appleMusicEmbedUrl ? createSavedMediaLink(settings.appleMusicEmbedUrl) : undefined,
+        normalizedSettings.appleMusicEmbedLinks,
+        normalizedSettings.appleMusicEmbedUrl ? createSavedMediaLink(normalizedSettings.appleMusicEmbedUrl) : undefined,
       ),
-      applePodcastEmbedUrl: normalizeEmbedUrl(settings.applePodcastEmbedUrl),
+      applePodcastEmbedUrl: normalizedSettings.applePodcastEmbedUrl,
       applePodcastEmbedLinks: normalizeSavedMediaLinks(
-        settings.applePodcastEmbedLinks,
-        settings.applePodcastEmbedUrl ? createSavedMediaLink(settings.applePodcastEmbedUrl) : undefined,
+        normalizedSettings.applePodcastEmbedLinks,
+        normalizedSettings.applePodcastEmbedUrl ? createSavedMediaLink(normalizedSettings.applePodcastEmbedUrl) : undefined,
       ),
-      stockSymbols: normalizeStockSymbols(settings.stockSymbols),
-      currencyPairs: normalizeCurrencyPairs(settings.currencyPairs),
-      financeRefreshMinutes: normalizeFinanceRefreshMinutes(settings.financeRefreshMinutes),
-      sportsFavoriteTeams: normalizeSportsFavoriteTeams(settings.sportsFavoriteTeams),
-      sportsEnabledLeagues: normalizeSportsEnabledLeagues(settings.sportsEnabledLeagues),
-      sportsFollowedLeagues: normalizeSportsFollowedLeagues(settings.sportsFollowedLeagues),
-      sportsRefreshMinutes: normalizeSportsRefreshMinutes(settings.sportsRefreshMinutes),
-      pomodoroWorkMinutes: normalizePomodoroWorkMinutes(settings.pomodoroWorkMinutes),
-      pomodoroBreakMinutes: normalizePomodoroBreakMinutes(settings.pomodoroBreakMinutes),
-      notificationsEnabled: normalizeNotificationsEnabled(settings.notificationsEnabled),
-      desktopNotificationsEnabled: normalizeDesktopNotificationsEnabled(settings.desktopNotificationsEnabled),
-      calendarNotificationsEnabled: normalizeCalendarNotificationsEnabled(settings.calendarNotificationsEnabled),
-      timerNotificationsEnabled: normalizeTimerNotificationsEnabled(settings.timerNotificationsEnabled),
-      worldClockCity: normalizeWorldClockCity(settings.worldClockCity),
-      worldClockTimeZone: normalizeWorldClockTimeZone(settings.worldClockTimeZone),
-      customColors: normalizeCustomColors(settings.customColors),
+      stockSymbols: normalizedSettings.stockSymbols,
+      currencyPairs: normalizedSettings.currencyPairs,
+      financeRefreshMinutes: normalizedSettings.financeRefreshMinutes,
+      sportsFavoriteTeams: normalizedSettings.sportsFavoriteTeams,
+      sportsEnabledLeagues: normalizedSettings.sportsEnabledLeagues,
+      sportsFollowedLeagues: normalizedSettings.sportsFollowedLeagues,
+      sportsRefreshMinutes: normalizedSettings.sportsRefreshMinutes,
+      pomodoroWorkMinutes: normalizedSettings.pomodoroWorkMinutes,
+      pomodoroBreakMinutes: normalizedSettings.pomodoroBreakMinutes,
+      notificationsEnabled: normalizedSettings.notificationsEnabled,
+      desktopNotificationsEnabled: normalizedSettings.desktopNotificationsEnabled,
+      calendarNotificationsEnabled: normalizedSettings.calendarNotificationsEnabled,
+      timerNotificationsEnabled: normalizedSettings.timerNotificationsEnabled,
+      worldClockCity: normalizedSettings.worldClockCity,
+      worldClockTimeZone: normalizedSettings.worldClockTimeZone,
+      customColors: normalizedSettings.customColors,
     }),
   )
 }
@@ -961,10 +1044,31 @@ export function applyTheme(settings: Settings): void {
   const selectedFontPreset =
     FONT_PRESET_OPTIONS.find((option) => option.id === settings.fontPreset)
     ?? FONT_PRESET_OPTIONS.find((option) => option.id === DEFAULT_SETTINGS.fontPreset)
+  const customGoogleFontUrl = normalizeGoogleFontUrl(settings.customGoogleFontUrl)
+  const customGoogleFontFamily = normalizeCustomGoogleFontFamily(
+    settings.customGoogleFontFamily,
+    customGoogleFontUrl,
+  )
+  const customFontLinkId = 'dayboard-custom-google-font'
+
+  document.getElementById(customFontLinkId)?.remove()
 
   if (selectedFontPreset) {
-    document.documentElement.style.setProperty('--font-family', selectedFontPreset.fontFamily)
-    document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono)
+    let activeFontFamily = selectedFontPreset.fontFamily
+    if (customGoogleFontUrl && customGoogleFontFamily) {
+      const link = document.createElement('link')
+      link.id = customFontLinkId
+      link.rel = 'stylesheet'
+      link.href = customGoogleFontUrl
+      document.head.append(link)
+      activeFontFamily = `${toCssQuotedFontFamily(customGoogleFontFamily)}, ${selectedFontPreset.fontFamily}`
+    }
+
+    document.documentElement.style.setProperty('--font-family', activeFontFamily, 'important')
+    document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono, 'important')
+    document.documentElement.style.setProperty('font-family', 'var(--font-family)', 'important')
+    document.body?.style.setProperty('font-family', 'var(--font-family)', 'important')
+    document.getElementById('root')?.style.setProperty('font-family', 'var(--font-family)', 'important')
   }
 
   for (const variableName of CUSTOM_THEME_VARIABLES) {
@@ -1002,6 +1106,14 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (!settings.fontPreset) {
     errors.push('Invalid fontPreset')
+  }
+
+  if (settings.customGoogleFontUrl && !normalizeGoogleFontUrl(settings.customGoogleFontUrl)) {
+    errors.push('customGoogleFontUrl must be a valid Google Fonts stylesheet URL')
+  }
+
+  if (typeof settings.customGoogleFontFamily !== 'string') {
+    errors.push('customGoogleFontFamily must be a string')
   }
 
   if (
@@ -1255,6 +1367,8 @@ export function isValidSettings(value: unknown): value is Settings {
     typeof s.theme === 'string' &&
     typeof s.colorScheme === 'string' &&
     typeof s.fontPreset === 'string' &&
+    (s.customGoogleFontUrl === undefined || typeof s.customGoogleFontUrl === 'string') &&
+    (s.customGoogleFontFamily === undefined || typeof s.customGoogleFontFamily === 'string') &&
     typeof s.showBuyMeACoffeeWidget === 'boolean' &&
     Array.isArray(s.calendarFeeds) &&
     typeof s.weatherRefreshMinutes === 'number' &&
@@ -1493,7 +1607,9 @@ export function loadPreset(name: string): SettingsPreset | null {
 export function applyPreset(name: string): void {
   const preset = loadPreset(name)
   if (!preset) throw new Error(`Preset '${name}' not found`)
-  saveSettings(preset.settings)
+  const normalizedSettings = normalizeSettings(preset.settings)
+  saveSettings(normalizedSettings)
+  applyTheme(normalizedSettings)
   if (preset.layout) {
     saveWidgetLayoutState(preset.layout)
   }

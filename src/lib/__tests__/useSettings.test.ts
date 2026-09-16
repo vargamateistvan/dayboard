@@ -4,9 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   loadSettings,
   saveSettings,
+  applyTheme,
   resolveColorScheme,
   DEFAULT_SETTINGS,
   DEFAULT_CALENDAR_COLORS,
+  deriveGoogleFontFamilyFromUrl,
+  normalizeGoogleFontUrl,
   validateSettings,
   resetSettings,
   exportSettings,
@@ -128,6 +131,8 @@ describe('settings persistence', () => {
       theme: 'futuristic' as const,
       colorScheme: 'dark' as const,
       fontPreset: 'orbitron' as const,
+      customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto&display=swap',
+      customGoogleFontFamily: 'Roboto',
       clockTimeFontSizeRem: 18,
       clockDateFontSizeRem: 1.8,
       clockTimeStretchPercent: 130,
@@ -213,6 +218,32 @@ describe('settings persistence', () => {
   it('falls back to default font preset when saved value is invalid', () => {
     localStorage.setItem('dayboard:settings', JSON.stringify({ fontPreset: 'not-a-font' }))
     expect(loadSettings().fontPreset).toBe(DEFAULT_SETTINGS.fontPreset)
+  })
+
+  it('normalizes a copied Google Fonts link tag and derives its family', () => {
+    localStorage.setItem(
+      'dayboard:settings',
+      JSON.stringify({
+        customGoogleFontUrl:
+          '<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap" rel="stylesheet">',
+      }),
+    )
+
+    const loaded = loadSettings()
+
+    expect(loaded.customGoogleFontUrl).toBe(
+      'https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@400;700&display=swap',
+    )
+    expect(loaded.customGoogleFontFamily).toBe('Roboto Slab')
+  })
+
+  it('ignores non-Google stylesheet URLs', () => {
+    localStorage.setItem(
+      'dayboard:settings',
+      JSON.stringify({ customGoogleFontUrl: 'https://example.com/font.css' }),
+    )
+
+    expect(loadSettings().customGoogleFontUrl).toBe('')
   })
 
   it('falls back to default weather refresh minutes when saved value is invalid', () => {
@@ -315,6 +346,67 @@ describe('resolveColorScheme', () => {
     }))
     expect(resolveColorScheme('system')).toBe('light')
     vi.unstubAllGlobals()
+  })
+})
+
+describe('font theme application', () => {
+  beforeEach(() => {
+    document.head.innerHTML = ''
+    document.documentElement.removeAttribute('style')
+  })
+
+  afterEach(() => {
+    document.head.innerHTML = ''
+    document.documentElement.removeAttribute('style')
+  })
+
+  it('applies the selected font preset to root CSS variables', () => {
+    applyTheme({ ...DEFAULT_SETTINGS, fontPreset: 'orbitron' })
+
+    expect(document.documentElement.style.getPropertyValue('--font-family')).toContain('Orbitron')
+    expect(document.documentElement.style.getPropertyValue('--font-family-mono')).toContain('Geist Mono')
+    expect(document.documentElement.style.getPropertyValue('font-family')).toBe('var(--font-family)')
+  })
+
+  it('loads and applies a custom Google font ahead of the selected preset', () => {
+    applyTheme({
+      ...DEFAULT_SETTINGS,
+      customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+      customGoogleFontFamily: '',
+    })
+
+    expect(document.head.querySelector('#dayboard-custom-google-font')).toHaveAttribute(
+      'href',
+      'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+    )
+    expect(document.documentElement.style.getPropertyValue('--font-family')).toContain("'Roboto Slab'")
+  })
+
+  it('removes the custom Google font link when the custom font is cleared', () => {
+    applyTheme({
+      ...DEFAULT_SETTINGS,
+      customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto&display=swap',
+      customGoogleFontFamily: 'Roboto',
+    })
+    applyTheme(DEFAULT_SETTINGS)
+
+    expect(document.head.querySelector('#dayboard-custom-google-font')).toBeNull()
+  })
+})
+
+describe('Google font helpers', () => {
+  it('accepts only Google Fonts stylesheet URLs', () => {
+    expect(normalizeGoogleFontUrl('https://fonts.googleapis.com/css2?family=Inter&display=swap')).toBe(
+      'https://fonts.googleapis.com/css2?family=Inter&display=swap',
+    )
+    expect(normalizeGoogleFontUrl('http://fonts.googleapis.com/css2?family=Inter')).toBe('')
+    expect(normalizeGoogleFontUrl('https://fonts.gstatic.com/s/inter.woff2')).toBe('')
+  })
+
+  it('derives the first font family from a Google Fonts URL', () => {
+    expect(
+      deriveGoogleFontFamilyFromUrl('https://fonts.googleapis.com/css2?family=Playfair+Display&family=Inter'),
+    ).toBe('Playfair Display')
   })
 })
 
@@ -469,6 +561,38 @@ describe('settings profiles', () => {
         kanban: true,
       },
     })
+  })
+
+  it('applies preset font settings to the live theme', () => {
+    document.head.innerHTML = ''
+    document.documentElement.removeAttribute('style')
+
+    savePreset(
+      'font-preset',
+      {
+        ...DEFAULT_SETTINGS,
+        fontPreset: 'orbitron',
+        customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+        customGoogleFontFamily: '',
+      },
+    )
+
+    applyPreset('font-preset')
+
+    expect(loadSettings()).toMatchObject({
+      fontPreset: 'orbitron',
+      customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+      customGoogleFontFamily: 'Roboto Slab',
+    })
+    expect(document.head.querySelector('#dayboard-custom-google-font')).toHaveAttribute(
+      'href',
+      'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+    )
+    expect(document.documentElement.style.getPropertyValue('--font-family')).toContain("'Roboto Slab'")
+    expect(document.documentElement.style.getPropertyValue('--font-family')).toContain('Orbitron')
+
+    document.head.innerHTML = ''
+    document.documentElement.removeAttribute('style')
   })
 
   it('deletes a profile', () => {

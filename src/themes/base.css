@@ -72,9 +72,14 @@ html {
 }
 
 body {
+  font-family: var(--font-family);
   min-height: 100vh;
   background: var(--color-bg);
   transition: background var(--transition-base), color var(--transition-base);
+}
+
+#root {
+  font-family: var(--font-family);
 }
 
 @media (max-width: 1024px) and (orientation: landscape) and (max-height: 600px) {
@@ -86,13 +91,19 @@ body {
   }
 }
 
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 button {
   cursor: pointer;
-  font-family: inherit;
   border: none;
   background: none;
 }
 
-input {
-  font-family: inherit;
+svg text {
+  font-family: var(--font-family);
 }

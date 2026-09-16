@@ -43,8 +43,10 @@ import {
   SPORTS_LEAGUE_OPTIONS,
   applyPreset,
   deletePreset,
+  deriveGoogleFontFamilyFromUrl,
   isPresetScheduledNow,
   listPresets,
+  normalizeGoogleFontUrl,
   renamePreset,
   savePreset,
   type Settings,
@@ -146,6 +148,17 @@ const CALENDAR_EXTRA_INFO_PREVIEW_OPTIONS: {
   { id: "monthly", label: "Monthly" },
   { id: "weekly", label: "Weekly" },
 ];
+
+function buildCustomGoogleFontPatch(
+  value: string,
+  currentFamily: string,
+): Pick<Settings, "customGoogleFontUrl" | "customGoogleFontFamily"> {
+  const derivedFamily = deriveGoogleFontFamilyFromUrl(value);
+  return {
+    customGoogleFontUrl: value,
+    customGoogleFontFamily: value.trim() ? derivedFamily || currentFamily : "",
+  };
+}
 
 function isValidTimeZone(value: string): boolean {
   try {
@@ -1523,6 +1536,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
   const buildDraftSettings = (): Settings => ({
     ...settings,
+    customGoogleFontUrl: normalizeGoogleFontUrl(settings.customGoogleFontUrl),
+    customGoogleFontFamily: settings.customGoogleFontFamily.trim(),
     calendarFeeds,
     globalCalendarFeeds,
     weatherRefreshMinutes: weatherRefreshMin,
@@ -1829,6 +1844,10 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     const nextLinks = removeSavedMediaLink(links, url);
     setLinks(nextLinks);
     setActiveUrl(nextLinks[0]?.url ?? '');
+  };
+
+  const handleCustomGoogleFontUrlChange = (value: string) => {
+    updateSettings(buildCustomGoogleFontPatch(value, settings.customGoogleFontFamily));
   };
 
   const handleCreatePreset = () => {
@@ -2315,7 +2334,17 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                 </section>
 
                 <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>Fonts</h3>
+                  <div className={styles.sectionHeader}>
+                    <h3 className={styles.sectionTitle}>Fonts</h3>
+                    <a
+                      className={styles.sectionLink}
+                      href="https://fonts.google.com/"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Browse Google Fonts
+                    </a>
+                  </div>
                   <div className={styles.fontGrid}>
                     {FONT_PRESET_OPTIONS.map((fontOption) => (
                       <button
@@ -2326,7 +2355,13 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             ? styles.fontActive
                             : "",
                         ].join(" ")}
-                        onClick={() => updateSettings({ fontPreset: fontOption.id })}
+                        onClick={() =>
+                          updateSettings({
+                            fontPreset: fontOption.id,
+                            customGoogleFontUrl: "",
+                            customGoogleFontFamily: "",
+                          })
+                        }
                         aria-pressed={settings.fontPreset === fontOption.id}
                         type="button"
                       >
@@ -2342,6 +2377,39 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                       </button>
                     ))}
                   </div>
+                  <label className={styles.intervalLabel}>
+                    <span>Custom Google Font link</span>
+                    <input
+                      className={styles.input}
+                      type="url"
+                      value={settings.customGoogleFontUrl}
+                      onChange={(event) => handleCustomGoogleFontUrlChange(event.target.value)}
+                      placeholder="https://fonts.googleapis.com/css2?family=Roboto&display=swap"
+                    />
+                  </label>
+                  <label className={styles.intervalLabel}>
+                    <span>Custom font family</span>
+                    <input
+                      className={styles.input}
+                      type="text"
+                      value={settings.customGoogleFontFamily}
+                      onChange={(event) =>
+                        updateSettings({ customGoogleFontFamily: event.target.value })
+                      }
+                      placeholder="Auto-filled from the Google Font link"
+                    />
+                  </label>
+                  {settings.customGoogleFontUrl.trim() &&
+                  !normalizeGoogleFontUrl(settings.customGoogleFontUrl) ? (
+                    <p className={styles.mediaLinkError}>
+                      Use a Google Fonts stylesheet URL from fonts.googleapis.com.
+                      You can paste the copied Google Fonts &lt;link&gt; tag too.
+                    </p>
+                  ) : (
+                    <p className={styles.hint}>
+                      Paste the Google Fonts stylesheet link; it will load and override the selected preset font.
+                    </p>
+                  )}
                 </section>
 
                 <section className={styles.section}>

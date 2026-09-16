@@ -148,6 +148,29 @@ describe('SettingsDialog', () => {
     })
   })
 
+  it('links to Google Fonts from the fonts settings', () => {
+    renderSettingsDialog()
+
+    const googleFontsLink = screen.getByRole('link', { name: 'Browse Google Fonts' })
+
+    expect(googleFontsLink).toHaveAttribute('href', 'https://fonts.google.com/')
+    expect(googleFontsLink).toHaveAttribute('target', '_blank')
+  })
+
+  it('clears a custom Google font override when selecting a built-in font preset', () => {
+    renderSettingsDialog()
+
+    fireEvent.change(screen.getByLabelText('Custom Google Font link'), {
+      target: { value: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap' },
+    })
+    expect(screen.getByLabelText('Custom font family')).toHaveValue('Roboto Slab')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Orbitron' }))
+
+    expect(screen.getByLabelText('Custom Google Font link')).toHaveValue('')
+    expect(screen.getByLabelText('Custom font family')).toHaveValue('')
+  })
+
   it('persists weather display and refresh settings', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
@@ -718,7 +741,9 @@ describe('SettingsDialog', () => {
           settings: {
             colorScheme: 'light',
             theme: 'default',
-            fontPreset: 'space-grotesk',
+            fontPreset: 'orbitron',
+            customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+            customGoogleFontFamily: 'Roboto Slab',
             showBuyMeACoffeeWidget: true,
             calendarFeeds: [],
             calendarHidePastEvents: false,
@@ -762,6 +787,11 @@ describe('SettingsDialog', () => {
 
     expect(screen.getByRole('tab', { name: /Appearance/i })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Orbitron' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Custom Google Font link')).toHaveValue(
+      'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+    )
+    expect(screen.getByLabelText('Custom font family')).toHaveValue('Roboto Slab')
 
     fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
     fireEvent.click(screen.getByRole('tab', { name: /Presets/i }))
@@ -771,6 +801,9 @@ describe('SettingsDialog', () => {
       Work: {
         settings: {
           colorScheme: 'dark',
+          fontPreset: 'orbitron',
+          customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+          customGoogleFontFamily: 'Roboto Slab',
         },
       },
     })

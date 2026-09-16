@@ -176,6 +176,7 @@
   height: 100%;
   aspect-ratio: 1;
   overflow: visible;
+  font-family: var(--font-family);
 }
 
 .radarSweep,
