@@ -423,6 +423,30 @@ function toCssQuotedFontFamily(fontFamily: string): string {
   return `'${fontFamily.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
 }
 
+export function resolveSettingsFontFamily(
+  settings: Pick<Settings, 'fontPreset' | 'customGoogleFontUrl' | 'customGoogleFontFamily'>,
+): string {
+  const selectedFontPreset =
+    FONT_PRESET_OPTIONS.find((option) => option.id === settings.fontPreset)
+    ?? FONT_PRESET_OPTIONS.find((option) => option.id === DEFAULT_SETTINGS.fontPreset)
+
+  if (!selectedFontPreset) {
+    return FONT_PRESET_OPTIONS[0].fontFamily
+  }
+
+  const customGoogleFontUrl = normalizeGoogleFontUrl(settings.customGoogleFontUrl)
+  const customGoogleFontFamily = normalizeCustomGoogleFontFamily(
+    settings.customGoogleFontFamily,
+    customGoogleFontUrl,
+  )
+
+  if (!customGoogleFontUrl || !customGoogleFontFamily) {
+    return selectedFontPreset.fontFamily
+  }
+
+  return `${toCssQuotedFontFamily(customGoogleFontFamily)}, ${selectedFontPreset.fontFamily}`
+}
+
 function normalizeClockFontSizeRem(value: unknown): number | null {
   if (value == null || value === '') {
     return null
@@ -1054,17 +1078,15 @@ export function applyTheme(settings: Settings): void {
   document.getElementById(customFontLinkId)?.remove()
 
   if (selectedFontPreset) {
-    let activeFontFamily = selectedFontPreset.fontFamily
     if (customGoogleFontUrl && customGoogleFontFamily) {
       const link = document.createElement('link')
       link.id = customFontLinkId
       link.rel = 'stylesheet'
       link.href = customGoogleFontUrl
       document.head.append(link)
-      activeFontFamily = `${toCssQuotedFontFamily(customGoogleFontFamily)}, ${selectedFontPreset.fontFamily}`
     }
 
-    document.documentElement.style.setProperty('--font-family', activeFontFamily, 'important')
+    document.documentElement.style.setProperty('--font-family', resolveSettingsFontFamily(settings), 'important')
     document.documentElement.style.setProperty('--font-family-mono', selectedFontPreset.fontFamilyMono, 'important')
     document.documentElement.style.setProperty('font-family', 'var(--font-family)', 'important')
     document.body?.style.setProperty('font-family', 'var(--font-family)', 'important')

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState, useMemo, type ComponentProps } from 'react'
 import { Check, ChevronDown, Info, Maximize2, Minimize2, Settings } from 'lucide-react'
-import { applyPreset, listPresets, type SettingsPreset } from './lib/settings'
+import {
+  applyPreset,
+  listPresets,
+  normalizeGoogleFontUrl,
+  resolveSettingsFontFamily,
+  type SettingsPreset,
+} from './lib/settings'
 import { SettingsProvider, useSettings } from './lib/useSettings'
 import { useEventNotifications, type EventNotification, type NotificationType } from './lib/useEventNotifications'
 import { useFocusMode } from './lib/useFocusMode'
@@ -165,6 +171,38 @@ interface PresetSelectorProps {
 function PresetSelector({ presets, visiblePresetName, onSelectPreset }: PresetSelectorProps) {
   const [presetMenuOpen, setPresetMenuOpen] = useState(false)
   const presetMenuRef = useRef<HTMLDivElement | null>(null)
+  const visiblePreset = useMemo(
+    () => presets.find((preset) => preset.name === visiblePresetName),
+    [presets, visiblePresetName],
+  )
+  const visiblePresetNameStyle = visiblePreset
+    ? { fontFamily: resolveSettingsFontFamily(visiblePreset.settings) }
+    : undefined
+  const customPresetFontUrls = useMemo(
+    () => Array.from(
+      new Set(
+        presets
+          .map((preset) => normalizeGoogleFontUrl(preset.settings.customGoogleFontUrl))
+          .filter((url) => url.length > 0),
+      ),
+    ),
+    [presets],
+  )
+
+  useEffect(() => {
+    const links = customPresetFontUrls.map((fontUrl) => {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = fontUrl
+      link.dataset.dayboardPresetFont = 'true'
+      document.head.append(link)
+      return link
+    })
+
+    return () => {
+      links.forEach((link) => link.remove())
+    }
+  }, [customPresetFontUrls])
 
   useEffect(() => {
     if (!presetMenuOpen) {
@@ -205,7 +243,9 @@ function PresetSelector({ presets, visiblePresetName, onSelectPreset }: PresetSe
         onClick={() => setPresetMenuOpen((current) => !current)}
       >
         <span className={styles.presetSelectorLabel}>Preset</span>
-        <span className={styles.presetSelectorValue}>{visiblePresetName || 'Custom'}</span>
+        <span className={styles.presetSelectorValue} style={visiblePresetNameStyle}>
+          {visiblePresetName || 'Custom'}
+        </span>
         <ChevronDown
           size={16}
           className={[styles.presetSelectorChevron, presetMenuOpen ? styles.presetSelectorChevronOpen : ''].join(' ')}
@@ -229,7 +269,12 @@ function PresetSelector({ presets, visiblePresetName, onSelectPreset }: PresetSe
                 <span className={styles.presetMenuItemCheck}>
                   {isSelected ? <Check size={14} /> : null}
                 </span>
-                <span className={styles.presetMenuItemLabel}>{preset.name}</span>
+                <span
+                  className={styles.presetMenuItemLabel}
+                  style={{ fontFamily: resolveSettingsFontFamily(preset.settings) }}
+                >
+                  {preset.name}
+                </span>
               </button>
             )
           })}

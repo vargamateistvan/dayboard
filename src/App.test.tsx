@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import styles from './App.module.css'
+import { DEFAULT_SETTINGS, type Settings } from './lib/settings'
 import type { Widget } from './lib/useWidgetVisibility'
 
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
@@ -56,9 +57,7 @@ const widgetOrder: Widget[] = [...DEFAULT_WIDGET_ORDER]
 
 type TestPreset = {
   name: string
-  settings: {
-    colorScheme: 'light' | 'dark'
-  }
+  settings: Settings
   createdAt: number
   updatedAt: number
 }
@@ -219,7 +218,7 @@ function setWidgetState(
 function createPreset(name: string, colorScheme: 'light' | 'dark', timestamp: number): TestPreset {
   return {
     name,
-    settings: { colorScheme },
+    settings: { ...DEFAULT_SETTINGS, colorScheme },
     createdAt: timestamp,
     updatedAt: timestamp,
   }
@@ -301,6 +300,41 @@ describe('App fullscreen widgets', () => {
     expect(screen.getByLabelText('Preset options')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Work' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Focus' })).toBeInTheDocument()
+  })
+
+  it('shows preset names with their configured fonts', () => {
+    seedPresets(
+      {
+        ...createPreset('Work', 'light', 1),
+        settings: { ...DEFAULT_SETTINGS, fontPreset: 'orbitron' },
+      },
+      {
+        ...createPreset('Focus', 'dark', 2),
+        settings: {
+          ...DEFAULT_SETTINGS,
+          fontPreset: 'space-grotesk',
+          customGoogleFontUrl: 'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+          customGoogleFontFamily: 'Roboto Slab',
+        },
+      },
+    )
+
+    render(<App />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Select preset' }))
+
+    expect(screen.getByText('Work')).toHaveStyle({ fontFamily: "'Orbitron', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" })
+    expect(screen.getByText('Focus')).toHaveStyle({
+      fontFamily: "'Roboto Slab', 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Inter', 'Helvetica Neue', Arial, sans-serif",
+    })
+    expect(document.head.querySelector('link[data-dayboard-preset-font="true"]')).toHaveAttribute(
+      'href',
+      'https://fonts.googleapis.com/css2?family=Roboto+Slab&display=swap',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Work' }))
+
+    expect(screen.getByText('Work')).toHaveStyle({ fontFamily: "'Orbitron', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" })
   })
 
   it('closes the preset menu when Escape is pressed', () => {
