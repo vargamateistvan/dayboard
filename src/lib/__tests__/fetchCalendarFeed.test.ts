@@ -15,7 +15,7 @@ describe('getCalendarFeedRequestUrls', () => {
     ])
   })
 
-  it('never routes Google Calendar feeds through a third-party mirror', () => {
+  it('falls back to a mirror for public Google Calendar feeds away from localhost', () => {
     expect(
       getCalendarFeedRequestUrls(
         'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
@@ -23,7 +23,17 @@ describe('getCalendarFeedRequestUrls', () => {
       ),
     ).toEqual([
       'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+      'https://r.jina.ai/https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
     ])
+  })
+
+  it('never sends secret Google Calendar addresses to a third party', () => {
+    expect(
+      getCalendarFeedRequestUrls(
+        'https://calendar.google.com/calendar/ical/someone%40gmail.com/private-0123456789abcdef/basic.ics',
+        'dayboard.app',
+      ),
+    ).toEqual(['https://calendar.google.com/calendar/ical/someone%40gmail.com/private-0123456789abcdef/basic.ics'])
   })
 
   it('only requests the original URL for other feeds away from localhost', () => {
