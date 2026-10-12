@@ -2,8 +2,12 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { WidgetLayoutEditor } from '../WidgetLayoutEditor'
 import {
+  findRemovableRow,
+  insertGridRow,
   loadWidgetLayoutState,
+  removeGridRow,
   resolveWidgetDrop,
+  resolveWidgetDropWithNewRows,
   useWidgetVisibility,
 } from '../../lib/useWidgetVisibility'
 
@@ -13,7 +17,7 @@ import {
 // timer(1,3)
 
 function Harness() {
-  const { order, visibility, placements, rowCount, placeWidgets, toggleWidget, addRow, removeRow } =
+  const { order, visibility, placements, rowCount, placeWidgets, toggleWidget, insertRow, deleteRow } =
     useWidgetVisibility()
   return (
     <WidgetLayoutEditor
@@ -23,8 +27,8 @@ function Harness() {
       rowCount={rowCount}
       onPlaceWidgets={placeWidgets}
       onToggleWidget={toggleWidget}
-      onAddRow={addRow}
-      onRemoveRow={removeRow}
+      onInsertRow={insertRow}
+      onDeleteRow={deleteRow}
     />
   )
 }
@@ -75,6 +79,57 @@ describe('resolveWidgetDrop', () => {
     expect(
       resolveWidgetDrop(layout, 'tasks', { column: 1, row: 3, columnSpan: 1, rowSpan: 1 }),
     ).toBeNull()
+  })
+})
+
+describe('row helpers', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('inserts a row and shifts widgets at or below it', () => {
+    const next = insertGridRow(loadWidgetLayoutState(), 2)!
+    expect(next.rowCount).toBe(4)
+    expect(next.placements.clock).toMatchObject({ row: 1 })
+    expect(next.placements.weather).toMatchObject({ row: 3 })
+    expect(next.placements.calendar).toMatchObject({ row: 3, rowSpan: 2 })
+    expect(next.placements.timer).toMatchObject({ row: 4 })
+  })
+
+  it('deletes a row, shrinking spanning widgets and hiding ones that no longer fit', () => {
+    const layout = insertGridRow(loadWidgetLayoutState(), 4)!
+    const removal = removeGridRow(layout, 3)!
+    expect(removal.shrunk).toEqual(['calendar'])
+    expect(removal.removed).toEqual(['timer'])
+    expect(removal.layout.rowCount).toBe(3)
+    expect(removal.layout.placements.calendar).toMatchObject({ row: 2, rowSpan: 1 })
+    expect(removal.layout.visibility.timer).toBe(false)
+  })
+
+  it('refuses to go below the minimum row count', () => {
+    const layout = removeGridRow(insertGridRow(loadWidgetLayoutState(), 4)!, 4)!.layout
+    const twoRows = removeGridRow({ ...layout, visibility: { ...layout.visibility, timer: false } }, 3)!.layout
+    expect(twoRows.rowCount).toBe(2)
+    expect(removeGridRow(twoRows, 1)).toBeNull()
+  })
+
+  it('picks an empty row before one that shrinks a widget', () => {
+    const layout = loadWidgetLayoutState()
+    expect(findRemovableRow(layout)).toBeNull()
+
+    layout.visibility.timer = false
+    expect(findRemovableRow(layout)).toBe(3)
+    expect(findRemovableRow(insertGridRow(layout, 2)!)).toBe(2)
+  })
+
+  it('adds as few rows as needed to place a widget below a full grid', () => {
+    const layout = loadWidgetLayoutState()
+    expect(resolveWidgetDropWithNewRows(layout, 'tasks', [{ columnSpan: 1, rowSpan: 1 }], 2)).toEqual({
+      target: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 },
+      patch: { tasks: { column: 2, row: 4, columnSpan: 1, rowSpan: 1 } },
+      rowCount: 4,
+    })
+    expect(
+      resolveWidgetDropWithNewRows(layout, 'appleMusic', [{ columnSpan: 1, rowSpan: 2 }], 1)?.rowCount,
+    ).toBe(5)
   })
 })
 
@@ -148,5 +203,64 @@ describe('WidgetLayoutEditor', () => {
     fireEvent.keyDown(screen.getByTestId('layout-widget-weather'), { key: 'ArrowUp' })
     fireEvent.keyDown(screen.getByTestId('layout-widget-weather'), { key: 'ArrowDown', shiftKey: true })
     expect(screen.getByTestId('layout-widget-weather')).toHaveAccessibleName('Weather, column 1, row 2, 1 by 2')
+  })
+
+  it('disables the remove-row button when every row would lose a widget', () => {
+    render(<Harness />)
+    expect(screen.getByRole('button', { name: 'Remove row' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Timer from dashboard' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove row' }))
+
+    expect(screen.getByText('2 of 6 rows')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-widget-calendar')).toHaveAccessibleName('Calendar, column 2, row 2, 1 by 1')
+  })
+
+  it('inserts a row above a specific row', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Insert a row above row 2' }))
+
+    expect(screen.getByText('4 of 6 rows')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-widget-weather')).toHaveAccessibleName('Weather, column 1, row 3, 1 by 1')
+    expect(screen.getByTestId('layout-widget-clock')).toHaveAccessibleName('Clock, column 1, row 1, 2 by 1')
+  })
+
+  it('deletes a specific row and says which widgets it removes', () => {
+    render(<Harness />)
+    const deleteRow2 = screen.getByRole('button', { name: 'Delete row 2 — shrinks Calendar — removes Weather' })
+
+    fireEvent.mouseEnter(deleteRow2)
+    expect(screen.getByTestId('layout-widget-weather').className).toMatch(/layoutWidgetDoomed/)
+
+    fireEvent.click(deleteRow2)
+    expect(screen.queryByTestId('layout-widget-weather')).not.toBeInTheDocument()
+    expect(screen.getByTestId('layout-widget-timer')).toHaveAccessibleName('Timer, column 1, row 2, 1 by 1')
+    expect(screen.getByText('Deleted row 2 and removed Weather from dashboard')).toBeInTheDocument()
+  })
+
+  it('adds a row when a widget is dropped below the grid', () => {
+    render(<Harness />)
+    mockGridRect()
+    const tasks = screen.getByRole('button', { name: 'Add Tasks to dashboard' })
+
+    fireEvent.pointerDown(tasks, { button: 0, pointerId: 1, pointerType: 'mouse', clientX: 500, clientY: 500 })
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 504, clientY: 500 })
+    const zone = screen.getByText('Drop here to add a row').parentElement as HTMLElement
+    zone.getBoundingClientRect = () =>
+      ({ left: 0, top: 310, right: 200, bottom: 350, width: 200, height: 40, x: 0, y: 310 }) as DOMRect
+    fireEvent.pointerMove(window, { pointerId: 1, clientX: 150, clientY: 330 })
+    expect(screen.getByText('Release to add a row for Tasks')).toBeInTheDocument()
+    fireEvent.pointerUp(window, { pointerId: 1, clientX: 150, clientY: 330 })
+
+    expect(screen.getByText('4 of 6 rows')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-widget-tasks')).toHaveAccessibleName('Tasks, column 2, row 4, 1 by 1')
+  })
+
+  it('adds a row when a widget is clicked in the palette and the grid is full', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Apple Music Player to dashboard' }))
+
+    expect(screen.getByText('5 of 6 rows')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-widget-appleMusic')).toHaveAccessibleName('Apple Music Player, column 1, row 4, 1 by 2')
   })
 })

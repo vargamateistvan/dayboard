@@ -170,6 +170,120 @@
   gap: 0.5rem;
 }
 
+.layoutGridArea {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.35rem;
+}
+
+/* Row gutter mirrors the grid's padding, gap and row template so rows line up */
+.rowGutter {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border: 1px solid transparent;
+}
+
+.rowGutterCell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.15rem;
+  min-width: 1.6rem;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.rowGutterCellActive {
+  background: var(--color-surface-alt);
+}
+
+.rowGutterNumber {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowGutterBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast), color var(--transition-fast), background var(--transition-fast);
+}
+
+.rowGutterCell:hover .rowGutterBtn,
+.rowGutterBtn:focus-visible {
+  opacity: 1;
+}
+
+.rowGutterBtn:hover:not(:disabled),
+.rowGutterBtn:focus-visible {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.rowGutterBtnDanger:hover:not(:disabled),
+.rowGutterBtnDanger:focus-visible {
+  color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent);
+}
+
+.rowGutterCell:hover .rowGutterBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.layoutCellDeletePreview {
+  border-color: var(--color-error, #ef4444);
+  border-style: solid;
+  background: color-mix(in srgb, var(--color-error, #ef4444) 10%, var(--color-surface-alt));
+}
+
+/* Thin accent line at the top edge of the row where a new row will be inserted */
+.rowInsertMarker {
+  align-self: start;
+  z-index: 3;
+  height: 3px;
+  margin-top: calc(-0.25rem - 1.5px);
+  border-radius: 999px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
+/* Shown in place of the row controls while dragging */
+.newRowZone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 3rem;
+  margin-left: calc(1.6rem + 0.35rem);
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.newRowZoneActive {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent);
+}
+
+.newRowZoneInvalid {
+  border-color: var(--color-error, #ef4444);
+  color: var(--color-error, #ef4444);
+}
+
 .layoutRowControls {
   display: flex;
   align-items: center;
@@ -302,6 +416,17 @@
   opacity: 0.6;
 }
 
+/* Row deletion preview */
+.layoutWidgetShrinking {
+  border-style: dashed;
+}
+
+.layoutWidgetDoomed {
+  border-color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, var(--color-surface));
+  opacity: 0.7;
+}
+
 .layoutWidget:hover {
   box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
 }
@@ -432,8 +557,16 @@
   }
 }
 
-/* Bigger touch target for the resize corner */
+/* Touch screens: no hover, so row buttons stay visible; bigger resize corner */
 @media (pointer: coarse) {
+  .rowGutterBtn {
+    opacity: 1;
+  }
+
+  .rowGutterBtn:disabled {
+    opacity: 0.3;
+  }
+
   .layoutWidgetResizeHandle {
     width: 1.6rem;
     height: 1.6rem;

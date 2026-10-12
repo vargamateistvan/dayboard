@@ -724,8 +724,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     rowCount,
     toggleWidget,
     placeWidgets,
-    addRow,
-    removeRow,
+    insertRow,
+    deleteRow,
   } = useWidgetVisibility();
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>(
     settings.calendarFeeds.length > 0
@@ -1565,8 +1565,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                     rowCount={rowCount}
                     onPlaceWidgets={placeWidgets}
                     onToggleWidget={toggleWidget}
-                    onAddRow={addRow}
-                    onRemoveRow={removeRow}
+                    onInsertRow={insertRow}
+                    onDeleteRow={deleteRow}
                   />
                 </section>
               </>

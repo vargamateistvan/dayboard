@@ -389,6 +389,134 @@ export function resolveWidgetDrop(
     : null;
 }
 
+/** Inserts an empty row at `row`, shifting widgets at or below it down. */
+export function insertGridRow(
+  layout: WidgetLayoutState,
+  row: number,
+): WidgetLayoutState | null {
+  if (layout.rowCount >= MAX_GRID_ROWS || row < 1 || row > layout.rowCount + 1) {
+    return null;
+  }
+
+  const placements = clonePlacements(layout.placements);
+  for (const widget of WIDGET_IDS) {
+    if (placements[widget].row >= row) {
+      placements[widget] = { ...placements[widget], row: placements[widget].row + 1 };
+    }
+  }
+
+  return { ...layout, rowCount: layout.rowCount + 1, placements };
+}
+
+export interface GridRowRemoval {
+  readonly layout: WidgetLayoutState;
+  /** Visible widgets that lose a row. */
+  readonly shrunk: Widget[];
+  /** Visible widgets that no longer fit and go back to the palette. */
+  readonly removed: Widget[];
+}
+
+/**
+ * Deletes `row`. Widgets below move up, widgets spanning it lose a row, and
+ * widgets that would drop below their minimum height are hidden.
+ */
+export function removeGridRow(
+  layout: WidgetLayoutState,
+  row: number,
+): GridRowRemoval | null {
+  if (layout.rowCount <= MIN_GRID_ROWS || row < 1 || row > layout.rowCount) {
+    return null;
+  }
+
+  const placements = clonePlacements(layout.placements);
+  const visibility = { ...layout.visibility };
+  const shrunk: Widget[] = [];
+  const removed: Widget[] = [];
+
+  for (const widget of WIDGET_IDS) {
+    const placement = placements[widget];
+    const coversRow = placement.row <= row && row < placement.row + placement.rowSpan;
+
+    if (placement.row > row) {
+      placements[widget] = { ...placement, row: placement.row - 1 };
+    } else if (coversRow && placement.rowSpan > MIN_WIDGET_SIZE[widget].rowSpan) {
+      placements[widget] = { ...placement, rowSpan: placement.rowSpan - 1 };
+      if (visibility[widget]) shrunk.push(widget);
+    } else if (coversRow && visibility[widget]) {
+      visibility[widget] = false;
+      removed.push(widget);
+    }
+  }
+
+  return {
+    layout: {
+      rowCount: layout.rowCount - 1,
+      visibility,
+      placements: normalizePlacements(placements, layout.rowCount - 1),
+    },
+    shrunk,
+    removed,
+  };
+}
+
+/**
+ * The bottom-most row that can be deleted without hiding any widget,
+ * preferring empty rows over rows where a tall widget would shrink.
+ */
+export function findRemovableRow(layout: WidgetLayoutState): number | null {
+  const rows = Array.from({ length: layout.rowCount }, (_, index) => layout.rowCount - index);
+  const removals = rows.map((row) => ({ row, removal: removeGridRow(layout, row) }));
+  const empty = removals.find(
+    ({ removal }) => removal && removal.removed.length === 0 && removal.shrunk.length === 0,
+  );
+  const shrinkOnly = removals.find(({ removal }) => removal && removal.removed.length === 0);
+  return (empty ?? shrinkOnly)?.row ?? null;
+}
+
+export interface WidgetDropWithNewRows {
+  readonly target: WidgetPlacement;
+  readonly patch: WidgetPlacementPatch;
+  readonly rowCount: number;
+}
+
+/**
+ * Places `widget` at the bottom of the grid, adding as few rows as possible.
+ * Tries each size in order, at `column` first and then the other columns.
+ */
+export function resolveWidgetDropWithNewRows(
+  layout: WidgetLayoutState,
+  widget: Widget,
+  sizes: ReadonlyArray<Pick<WidgetPlacement, "columnSpan" | "rowSpan">>,
+  column: number,
+): WidgetDropWithNewRows | null {
+  for (const size of sizes) {
+    const maxColumn = WIDGET_GRID_COLUMNS - size.columnSpan + 1;
+    const columns = [
+      Math.min(Math.max(column, 1), maxColumn),
+      ...Array.from({ length: maxColumn }, (_, index) => index + 1),
+    ];
+
+    for (let rowCount = layout.rowCount + 1; rowCount <= MAX_GRID_ROWS; rowCount += 1) {
+      const row = Math.max(1, rowCount - size.rowSpan + 1);
+
+      for (const candidateColumn of columns) {
+        const target: WidgetPlacement = {
+          column: candidateColumn as WidgetGridColumn,
+          row,
+          columnSpan: size.columnSpan,
+          rowSpan: size.rowSpan,
+        };
+        const patch = resolveWidgetDrop({ ...layout, rowCount }, widget, target);
+        if (patch) {
+          return { target, patch, rowCount };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
 function sortWidgetsByPlacement(placements: WidgetPlacements): Widget[] {
   return [...WIDGET_IDS].sort((left, right) => {
     const leftPlacement = placements[left];
@@ -800,66 +928,48 @@ export function useWidgetVisibility() {
   );
 
   // Applies several placements atomically and shows every placed widget.
-  const placeWidgets = useCallback((patch: WidgetPlacementPatch) => {
-    const currentLayout = readLayout();
-    const nextPlacements = { ...currentLayout.placements };
-    const nextVisibility = { ...currentLayout.visibility };
-
-    for (const widget of Object.keys(patch) as Widget[]) {
-      nextPlacements[widget] = normalizePlacementForWidget(
-        widget,
-        patch[widget],
-        currentLayout.placements[widget],
+  // Pass `rowCount` to grow the grid in the same update.
+  const placeWidgets = useCallback(
+    (patch: WidgetPlacementPatch, options?: { rowCount?: number }) => {
+      const currentLayout = readLayout();
+      const rowCount = Math.max(
         currentLayout.rowCount,
+        clampRowCount(options?.rowCount ?? currentLayout.rowCount),
       );
-      nextVisibility[widget] = true;
-    }
+      const nextPlacements = { ...currentLayout.placements };
+      const nextVisibility = { ...currentLayout.visibility };
 
-    if (!isLayoutValid(nextPlacements, nextVisibility, currentLayout.rowCount)) {
-      return;
-    }
-
-    writeLayout({
-      ...currentLayout,
-      visibility: nextVisibility,
-      placements: nextPlacements,
-    });
-  }, []);
-
-  const addRow = useCallback(() => {
-    const currentLayout = readLayout();
-    if (currentLayout.rowCount >= MAX_GRID_ROWS) return;
-    writeLayout({ ...currentLayout, rowCount: currentLayout.rowCount + 1 });
-  }, []);
-
-  const removeRow = useCallback(() => {
-    const currentLayout = readLayout();
-    if (currentLayout.rowCount <= MIN_GRID_ROWS) return;
-    const newRowCount = currentLayout.rowCount - 1;
-    // Push any widgets that now exceed the grid back to the last valid row
-    const nextPlacements = { ...currentLayout.placements };
-    for (const widget of WIDGET_IDS) {
-      if (!currentLayout.visibility[widget]) continue;
-      const p = nextPlacements[widget];
-      const maxRow = newRowCount - p.rowSpan + 1;
-      if (p.row > maxRow) {
-        nextPlacements[widget] = { ...p, row: Math.max(1, maxRow) };
-      }
-      // Clamp rowSpan so the widget fits within the new row count
-      const maxSpan = newRowCount - nextPlacements[widget].row + 1;
-      if (nextPlacements[widget].rowSpan > maxSpan) {
-        nextPlacements[widget] = {
-          ...nextPlacements[widget],
-          rowSpan: Math.max(1, maxSpan),
-        };
+      for (const widget of Object.keys(patch) as Widget[]) {
+        nextPlacements[widget] = normalizePlacementForWidget(
+          widget,
+          patch[widget],
+          currentLayout.placements[widget],
+          rowCount,
+        );
+        nextVisibility[widget] = true;
       }
 
-    }
-    writeLayout({
-      ...currentLayout,
-      rowCount: newRowCount,
-      placements: nextPlacements,
-    });
+      if (!isLayoutValid(nextPlacements, nextVisibility, rowCount)) {
+        return;
+      }
+
+      writeLayout({
+        rowCount,
+        visibility: nextVisibility,
+        placements: nextPlacements,
+      });
+    },
+    [],
+  );
+
+  const insertRow = useCallback((row: number) => {
+    const nextLayout = insertGridRow(readLayout(), row);
+    if (nextLayout) writeLayout(nextLayout);
+  }, []);
+
+  const deleteRow = useCallback((row: number) => {
+    const removal = removeGridRow(readLayout(), row);
+    if (removal) writeLayout(removal.layout);
   }, []);
 
   return {
@@ -871,8 +981,8 @@ export function useWidgetVisibility() {
     moveWidget,
     setWidgetPlacement,
     placeWidgets,
-    addRow,
-    removeRow,
+    insertRow,
+    deleteRow,
   };
 }
 

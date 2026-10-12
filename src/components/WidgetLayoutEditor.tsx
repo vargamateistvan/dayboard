@@ -7,14 +7,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { GripVertical, X } from "lucide-react";
+import { GripVertical, Plus, Trash2, X } from "lucide-react";
 import {
   WIDGET_GRID_COLUMNS,
   MIN_GRID_ROWS,
   MAX_GRID_ROWS,
   MIN_WIDGET_SIZE,
   canPlaceWidget,
+  findRemovableRow,
+  removeGridRow,
   resolveWidgetDrop,
+  resolveWidgetDropWithNewRows,
   type Widget,
   type WidgetColumnSpan,
   type WidgetGridColumn,
@@ -30,10 +33,10 @@ interface WidgetLayoutEditorProps {
   readonly visibility: Record<Widget, boolean>;
   readonly placements: Record<Widget, WidgetPlacement>;
   readonly rowCount: number;
-  readonly onPlaceWidgets: (patch: WidgetPlacementPatch) => void;
+  readonly onPlaceWidgets: (patch: WidgetPlacementPatch, options?: { rowCount?: number }) => void;
   readonly onToggleWidget: (widget: Widget, visible?: boolean) => void;
-  readonly onAddRow: () => void;
-  readonly onRemoveRow: () => void;
+  readonly onInsertRow: (row: number) => void;
+  readonly onDeleteRow: (row: number) => void;
 }
 
 const WIDGET_CHIP_GROUPS: ReadonlyArray<{
@@ -91,8 +94,18 @@ interface DragState {
   readonly y: number;
   readonly target: WidgetPlacement | null;
   readonly patch: WidgetPlacementPatch | null;
+  /** Set when the drop adds rows below the grid. */
+  readonly newRowCount: number | null;
   readonly overPalette: boolean;
+  readonly overNewRow: boolean;
 }
+
+interface RowPreview {
+  readonly kind: "insert" | "delete";
+  readonly row: number;
+}
+
+type DropResult = Pick<DragState, "target" | "patch" | "newRowCount" | "overPalette" | "overNewRow">;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), Math.max(min, max));
@@ -112,6 +125,10 @@ function describePlacement(widget: Widget, placement: WidgetPlacement) {
   return `${getWidgetLabel(widget)}: column ${placement.column}, row ${placement.row}, ${placement.columnSpan} by ${placement.rowSpan}`;
 }
 
+function listLabels(widgets: readonly Widget[]) {
+  return widgets.map(getWidgetLabel).join(", ");
+}
+
 export function WidgetLayoutEditor({
   order,
   visibility,
@@ -119,14 +136,16 @@ export function WidgetLayoutEditor({
   rowCount,
   onPlaceWidgets,
   onToggleWidget,
-  onAddRow,
-  onRemoveRow,
+  onInsertRow,
+  onDeleteRow,
 }: WidgetLayoutEditorProps) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const [resizingWidget, setResizingWidget] = useState<Widget | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [rowPreview, setRowPreview] = useState<RowPreview | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const paletteRef = useRef<HTMLDivElement | null>(null);
+  const newRowZoneRef = useRef<HTMLDivElement | null>(null);
   const endSessionRef = useRef<(() => void) | null>(null);
   const suppressClickRef = useRef(false);
   const keyboardHintId = useId();
@@ -179,18 +198,33 @@ export function WidgetLayoutEditor({
     grabOffset: { column: number; row: number },
     x: number,
     y: number,
-  ): Pick<DragState, "target" | "patch" | "overPalette"> => {
-    const overPalette = isPointInside(paletteRef.current?.getBoundingClientRect(), x, y);
+  ): DropResult => {
+    const empty = { target: null, patch: null, newRowCount: null, overPalette: false, overNewRow: false };
     const metrics = getGridMetrics();
-    if (!metrics || !isPointInside(metrics.rect, x, y)) {
-      return { target: null, patch: null, overPalette };
-    }
-
     const layout = getLayout();
     const current = layout.placements[widget];
     const sizes = source === "grid"
       ? [current]
       : uniqueSizes([current, MIN_WIDGET_SIZE[widget]]);
+
+    if (isPointInside(paletteRef.current?.getBoundingClientRect(), x, y)) {
+      return { ...empty, overPalette: true };
+    }
+
+    if (isPointInside(newRowZoneRef.current?.getBoundingClientRect(), x, y)) {
+      const column = metrics
+        ? Math.floor((x - metrics.rect.left) / metrics.cellWidth) + 1
+        : 1;
+      const drop = resolveWidgetDropWithNewRows(layout, widget, sizes, column);
+      return drop
+        ? { ...empty, overNewRow: true, target: drop.target, patch: drop.patch, newRowCount: drop.rowCount }
+        : { ...empty, overNewRow: true };
+    }
+
+    if (!metrics || !isPointInside(metrics.rect, x, y)) {
+      return empty;
+    }
+
     const pointerColumn = Math.floor((x - metrics.rect.left) / metrics.cellWidth) + 1;
     const pointerRow = Math.floor((y - metrics.rect.top) / metrics.cellHeight) + 1;
     let fallback: WidgetPlacement | null = null;
@@ -207,11 +241,11 @@ export function WidgetLayoutEditor({
         rowSpan: size.rowSpan,
       };
       const patch = resolveWidgetDrop(layout, widget, target);
-      if (patch) return { target, patch, overPalette };
+      if (patch) return { ...empty, target, patch };
       fallback ??= target;
     }
 
-    return { target: fallback, patch: null, overPalette };
+    return { ...empty, target: fallback };
   };
 
   const startSession = (
@@ -329,13 +363,15 @@ export function WidgetLayoutEditor({
         const result = evaluateDrop(widget, source, grabOffset, x, y);
         const { onPlaceWidgets: place, onToggleWidget: toggle } = latestRef.current;
         if (result.patch && result.target) {
-          place(result.patch);
+          place(result.patch, result.newRowCount ? { rowCount: result.newRowCount } : undefined);
           const swappedWith = (Object.keys(result.patch) as Widget[]).find((w) => w !== widget);
-          setAnnouncement(
-            swappedWith
-              ? `Swapped ${getWidgetLabel(widget)} with ${getWidgetLabel(swappedWith)}`
-              : `Moved ${describePlacement(widget, result.target)}`,
-          );
+          let message = `Moved ${describePlacement(widget, result.target)}`;
+          if (swappedWith) {
+            message = `Swapped ${getWidgetLabel(widget)} with ${getWidgetLabel(swappedWith)}`;
+          } else if (result.newRowCount) {
+            message = `Added a row and placed ${describePlacement(widget, result.target)}`;
+          }
+          setAnnouncement(message);
         } else if (source === "grid" && result.overPalette) {
           toggle(widget, false);
           setAnnouncement(`Removed ${getWidgetLabel(widget)} from dashboard`);
@@ -485,20 +521,64 @@ export function WidgetLayoutEditor({
       }
     }
 
-    if (rowCount < MAX_GRID_ROWS) {
-      onAddRow();
-      const candidate = {
-        column: 1 as WidgetGridColumn,
-        row: rowCount + 1,
-        ...MIN_WIDGET_SIZE[widget],
-      };
-      onPlaceWidgets({ [widget]: candidate });
-      setAnnouncement(`Added a row and placed ${describePlacement(widget, candidate)}`);
+    const drop = resolveWidgetDropWithNewRows(layout, widget, sizes, 1);
+    if (drop) {
+      onPlaceWidgets(drop.patch, { rowCount: drop.rowCount });
+      setAnnouncement(`Added a row and placed ${describePlacement(widget, drop.target)}`);
       return;
     }
 
     setAnnouncement(`No room for ${getWidgetLabel(widget)}. Remove a widget first.`);
   };
+
+  const layoutNow: WidgetLayoutState = { placements, visibility, rowCount };
+  const removableRow = findRemovableRow(layoutNow);
+  const rowRemovals = Array.from({ length: rowCount }, (_, index) => removeGridRow(layoutNow, index + 1));
+  const deletePreview = rowPreview?.kind === "delete" ? rowRemovals[rowPreview.row - 1] : null;
+
+  const handleInsertRow = (row: number) => {
+    onInsertRow(row);
+    setRowPreview(null);
+    setAnnouncement(row > rowCount ? `Added row ${row}` : `Inserted a row above row ${row}`);
+  };
+
+  const handleDeleteRow = (row: number) => {
+    const removal = rowRemovals[row - 1];
+    if (!removal) return;
+    onDeleteRow(row);
+    setRowPreview(null);
+    setAnnouncement(
+      removal.removed.length > 0
+        ? `Deleted row ${row} and removed ${listLabels(removal.removed)} from dashboard`
+        : `Deleted row ${row}`,
+    );
+  };
+
+  const describeRowDeletion = (row: number) => {
+    const removal = rowRemovals[row - 1];
+    if (!removal) return `The grid needs at least ${MIN_GRID_ROWS} rows`;
+    const parts = [`Delete row ${row}`];
+    if (removal.shrunk.length > 0) parts.push(`shrinks ${listLabels(removal.shrunk)}`);
+    if (removal.removed.length > 0) parts.push(`removes ${listLabels(removal.removed)}`);
+    return parts.join(" — ");
+  };
+
+  const previewRowHandlers = (preview: RowPreview | null) =>
+    preview
+      ? {
+          onMouseEnter: () => setRowPreview(preview),
+          onMouseLeave: () => setRowPreview(null),
+          onFocus: () => setRowPreview(preview),
+          onBlur: () => setRowPreview(null),
+        }
+      : {};
+
+  let removeRowTitle = `The grid needs at least ${MIN_GRID_ROWS} rows`;
+  if (rowCount > MIN_GRID_ROWS) {
+    removeRowTitle = removableRow === null
+      ? "Every row has a widget that would be removed — use a row's delete button instead"
+      : describeRowDeletion(removableRow);
+  }
 
   const handlePaletteWidgetClick = (widget: Widget) => {
     if (suppressClickRef.current) return;
@@ -514,12 +594,20 @@ export function WidgetLayoutEditor({
     ? (Object.keys(drag.patch) as Widget[]).find((w) => w !== drag.widget) ?? null
     : null;
   const isRemovingByDrop = drag?.source === "grid" && drag.overPalette;
+  const showNewRowZone = !!drag && rowCount < MAX_GRID_ROWS;
 
   let previewClass = styles.dropPreviewInvalid;
   let previewText = "No room here";
   if (drag?.patch) {
     previewClass = swapPartner ? styles.dropPreviewSwap : styles.dropPreviewValid;
     previewText = swapPartner ? `Swap with ${getWidgetLabel(swapPartner)}` : "Drop here";
+  }
+
+  let newRowZoneText = "No room in a new row";
+  if (drag?.patch && drag.overNewRow) {
+    newRowZoneText = `Release to add a row for ${getWidgetLabel(drag.widget)}`;
+  } else if (!drag?.overNewRow) {
+    newRowZoneText = "Drop here to add a row";
   }
 
   let paletteHint = "Click to add or remove • drag a hidden widget onto the grid to place it";
@@ -587,124 +675,201 @@ export function WidgetLayoutEditor({
 
       {/* Grid with row controls */}
       <div className={styles.layoutGridWrapper}>
-        <div
-          ref={gridRef}
-          className={[
-            styles.layoutGrid,
-            drag ? styles.layoutGridDragging : "",
-            resizingWidget ? styles.layoutGridResizing : "",
-          ].join(" ")}
-          style={{ gridTemplateRows: `repeat(${rowCount}, minmax(4.5rem, 1fr))` }}
-        >
-          {/* Background cells */}
-          {Array.from({ length: rowCount * WIDGET_GRID_COLUMNS }, (_, i) => {
-            const col = (i % WIDGET_GRID_COLUMNS) + 1;
-            const row = Math.floor(i / WIDGET_GRID_COLUMNS) + 1;
-            return (
-              <div
-                key={`${row}-${col}`}
-                className={styles.layoutCell}
-                style={{ gridColumn: col, gridRow: row }}
-              />
-            );
-          })}
-
-          {/* Placed widgets */}
-          {visibleWidgets.map((widget) => {
-            const p = placements[widget];
-            const label = getWidgetLabel(widget);
-            return (
-              <div
-                key={widget}
-                data-testid={`layout-widget-${widget}`}
-                role="group"
-                aria-roledescription="draggable widget"
-                aria-label={`${label}, column ${p.column}, row ${p.row}, ${p.columnSpan} by ${p.rowSpan}`}
-                aria-describedby={keyboardHintId}
-                tabIndex={0}
-                className={[
-                  styles.layoutWidget,
-                  resizingWidget === widget ? styles.layoutWidgetResizing : "",
-                  drag?.widget === widget ? styles.layoutWidgetDragging : "",
-                  swapPartner === widget ? styles.layoutWidgetSwapTarget : "",
-                ].join(" ")}
-                style={{
-                  gridColumn: `${p.column} / span ${p.columnSpan}`,
-                  gridRow: `${p.row} / span ${p.rowSpan}`,
-                }}
-                onPointerDown={handleDragPointerDown(widget, "grid")}
-                onKeyDown={handleWidgetKeyDown(widget)}
-                onContextMenu={(e) => e.preventDefault()}
-              >
-                <div className={styles.layoutWidgetInner}>
-                  <GripVertical size={14} className={styles.layoutWidgetGrip} />
-                  <span className={styles.layoutWidgetLabel}>{label}</span>
-                  <span className={styles.layoutWidgetSize}>{p.columnSpan}&times;{p.rowSpan}</span>
+        <div className={styles.layoutGridArea}>
+          {/* Row gutter: insert a row above, or delete a specific row */}
+          <div
+            className={styles.rowGutter}
+            style={{ gridTemplateRows: `repeat(${rowCount}, minmax(4.5rem, 1fr))` }}
+          >
+            {Array.from({ length: rowCount }, (_, index) => {
+              const row = index + 1;
+              const canDelete = rowRemovals[index] !== null;
+              const deleteLabel = describeRowDeletion(row);
+              return (
+                <div
+                  key={row}
+                  className={[
+                    styles.rowGutterCell,
+                    rowPreview?.row === row ? styles.rowGutterCellActive : "",
+                  ].join(" ")}
+                >
                   <button
-                    className={styles.layoutWidgetRemove}
-                    onClick={() => {
-                      onToggleWidget(widget, false);
-                      setAnnouncement(`Removed ${label} from dashboard`);
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    aria-label={`Remove ${label} from dashboard`}
-                    title={`Remove ${label}`}
                     type="button"
+                    className={styles.rowGutterBtn}
+                    onClick={() => handleInsertRow(row)}
+                    disabled={rowCount >= MAX_GRID_ROWS}
+                    aria-label={`Insert a row above row ${row}`}
+                    title={rowCount >= MAX_GRID_ROWS ? `The grid has at most ${MAX_GRID_ROWS} rows` : `Insert a row above row ${row}`}
+                    {...previewRowHandlers({ kind: "insert", row })}
                   >
-                    <X size={12} />
+                    <Plus size={12} />
+                  </button>
+                  <span className={styles.rowGutterNumber} aria-hidden="true">{row}</span>
+                  <button
+                    type="button"
+                    className={[styles.rowGutterBtn, styles.rowGutterBtnDanger].join(" ")}
+                    onClick={() => handleDeleteRow(row)}
+                    disabled={!canDelete}
+                    aria-label={deleteLabel}
+                    title={deleteLabel}
+                    {...previewRowHandlers(canDelete ? { kind: "delete", row } : null)}
+                  >
+                    <Trash2 size={12} />
                   </button>
                 </div>
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className={styles.layoutWidgetResizeHandle}
-                  onPointerDown={handleResizePointerDown(widget)}
-                  title="Drag to resize"
-                  aria-label={`Resize ${label}`}
+              );
+            })}
+          </div>
+
+          <div
+            ref={gridRef}
+            className={[
+              styles.layoutGrid,
+              drag ? styles.layoutGridDragging : "",
+              resizingWidget ? styles.layoutGridResizing : "",
+            ].join(" ")}
+            style={{ gridTemplateRows: `repeat(${rowCount}, minmax(4.5rem, 1fr))` }}
+          >
+            {/* Background cells */}
+            {Array.from({ length: rowCount * WIDGET_GRID_COLUMNS }, (_, i) => {
+              const col = (i % WIDGET_GRID_COLUMNS) + 1;
+              const row = Math.floor(i / WIDGET_GRID_COLUMNS) + 1;
+              return (
+                <div
+                  key={`${row}-${col}`}
+                  className={[
+                    styles.layoutCell,
+                    rowPreview?.kind === "delete" && rowPreview.row === row ? styles.layoutCellDeletePreview : "",
+                  ].join(" ")}
+                  style={{ gridColumn: col, gridRow: row }}
                 />
+              );
+            })}
+
+            {/* Placed widgets */}
+            {visibleWidgets.map((widget) => {
+              const p = placements[widget];
+              const label = getWidgetLabel(widget);
+              return (
+                <div
+                  key={widget}
+                  data-testid={`layout-widget-${widget}`}
+                  role="group"
+                  aria-roledescription="draggable widget"
+                  aria-label={`${label}, column ${p.column}, row ${p.row}, ${p.columnSpan} by ${p.rowSpan}`}
+                  aria-describedby={keyboardHintId}
+                  tabIndex={0}
+                  className={[
+                    styles.layoutWidget,
+                    resizingWidget === widget ? styles.layoutWidgetResizing : "",
+                    drag?.widget === widget ? styles.layoutWidgetDragging : "",
+                    swapPartner === widget ? styles.layoutWidgetSwapTarget : "",
+                    deletePreview?.shrunk.includes(widget) ? styles.layoutWidgetShrinking : "",
+                    deletePreview?.removed.includes(widget) ? styles.layoutWidgetDoomed : "",
+                  ].join(" ")}
+                  style={{
+                    gridColumn: `${p.column} / span ${p.columnSpan}`,
+                    gridRow: `${p.row} / span ${p.rowSpan}`,
+                  }}
+                  onPointerDown={handleDragPointerDown(widget, "grid")}
+                  onKeyDown={handleWidgetKeyDown(widget)}
+                  onContextMenu={(e) => e.preventDefault()}
+                >
+                  <div className={styles.layoutWidgetInner}>
+                    <GripVertical size={14} className={styles.layoutWidgetGrip} />
+                    <span className={styles.layoutWidgetLabel}>{label}</span>
+                    <span className={styles.layoutWidgetSize}>{p.columnSpan}&times;{p.rowSpan}</span>
+                    <button
+                      className={styles.layoutWidgetRemove}
+                      onClick={() => {
+                        onToggleWidget(widget, false);
+                        setAnnouncement(`Removed ${label} from dashboard`);
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      aria-label={`Remove ${label} from dashboard`}
+                      title={`Remove ${label}`}
+                      type="button"
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className={styles.layoutWidgetResizeHandle}
+                    onPointerDown={handleResizePointerDown(widget)}
+                    title="Drag to resize"
+                    aria-label={`Resize ${label}`}
+                  />
+                </div>
+              );
+            })}
+
+            {/* Where an inserted row will appear */}
+            {rowPreview?.kind === "insert" && (
+              <div
+                className={styles.rowInsertMarker}
+                style={{ gridColumn: "1 / -1", gridRow: rowPreview.row }}
+                aria-hidden="true"
+              />
+            )}
+
+            {/* Footprint preview of where the dragged widget will land */}
+            {drag?.target && !drag.overNewRow && (
+              <div
+                className={[styles.dropPreview, previewClass].join(" ")}
+                style={{
+                  gridColumn: `${drag.target.column} / span ${drag.target.columnSpan}`,
+                  gridRow: `${drag.target.row} / span ${drag.target.rowSpan}`,
+                }}
+                aria-hidden="true"
+              >
+                <span className={styles.dropPreviewLabel}>{previewText}</span>
               </div>
-            );
-          })}
+            )}
+          </div>
+        </div>
 
-          {/* Footprint preview of where the dragged widget will land */}
-          {drag?.target && (
-            <div
-              className={[styles.dropPreview, previewClass].join(" ")}
-              style={{
-                gridColumn: `${drag.target.column} / span ${drag.target.columnSpan}`,
-                gridRow: `${drag.target.row} / span ${drag.target.rowSpan}`,
+        {showNewRowZone ? (
+          <div
+            ref={newRowZoneRef}
+            className={[
+              styles.newRowZone,
+              drag.overNewRow ? (drag.patch ? styles.newRowZoneActive : styles.newRowZoneInvalid) : "",
+            ].join(" ")}
+            aria-hidden="true"
+          >
+            <Plus size={14} />
+            <span>{newRowZoneText}</span>
+          </div>
+        ) : (
+          <div className={styles.layoutRowControls}>
+            <button
+              className={styles.layoutRowBtn}
+              onClick={() => {
+                if (removableRow !== null) handleDeleteRow(removableRow);
               }}
-              aria-hidden="true"
+              disabled={removableRow === null}
+              aria-label="Remove row"
+              title={removeRowTitle}
+              type="button"
+              {...previewRowHandlers(removableRow === null ? null : { kind: "delete", row: removableRow })}
             >
-              <span className={styles.dropPreviewLabel}>{previewText}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Row controls */}
-        <div className={styles.layoutRowControls}>
-          <button
-            className={styles.layoutRowBtn}
-            onClick={onRemoveRow}
-            disabled={rowCount <= MIN_GRID_ROWS}
-            aria-label="Remove row"
-            title="Remove a row"
-            type="button"
-          >
-            −
-          </button>
-          <span className={styles.layoutRowLabel}>{rowCount} rows</span>
-          <button
-            className={styles.layoutRowBtn}
-            onClick={onAddRow}
-            disabled={rowCount >= MAX_GRID_ROWS}
-            aria-label="Add row"
-            title="Add a row"
-            type="button"
-          >
-            +
-          </button>
-        </div>
+              −
+            </button>
+            <span className={styles.layoutRowLabel}>{rowCount} of {MAX_GRID_ROWS} rows</span>
+            <button
+              className={styles.layoutRowBtn}
+              onClick={() => handleInsertRow(rowCount + 1)}
+              disabled={rowCount >= MAX_GRID_ROWS}
+              aria-label="Add row"
+              title={rowCount >= MAX_GRID_ROWS ? `The grid has at most ${MAX_GRID_ROWS} rows` : "Add a row at the bottom"}
+              type="button"
+            >
+              +
+            </button>
+          </div>
+        )}
       </div>
 
       <p id={keyboardHintId} className={styles.layoutEditorHint}>
