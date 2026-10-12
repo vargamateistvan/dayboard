@@ -1,4 +1,4 @@
-import { usePomodoroStats } from '../lib/usePomodoroStats'
+import { fromLocalDayKey, usePomodoroStats } from '../lib/usePomodoroStats'
 import { Calendar } from 'lucide-react'
 import styles from './PomodoroStats.module.css'
 
@@ -42,7 +42,7 @@ export function PomodoroStats() {
                 className={styles.bar}
                 style={{ height: `${(day.minutes / maxMinutesInWeek) * 100 || 5}%` }}
               />
-              <div className={styles.dayLabel}>{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}</div>
+              <div className={styles.dayLabel}>{fromLocalDayKey(day.date).toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2)}</div>
             </div>
           ))}
         </div>

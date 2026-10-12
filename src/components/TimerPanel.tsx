@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import { useTimer } from "../lib/useTimer";
 import { useSettings } from "../lib/useSettings";
 import { usePomodoroStats } from "../lib/usePomodoroStats";
@@ -191,12 +191,8 @@ function Countdown({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificati
               Pause
             </button>
           )}
-          {(state === "paused" || state === "done") && (
-            <button
-              className={styles.btnPrimary}
-              onClick={resume}
-              disabled={state === "done"}
-            >
+          {state === "paused" && (
+            <button className={styles.btnPrimary} onClick={resume}>
               <Play size={14} />
               Resume
             </button>
@@ -218,6 +214,13 @@ function Countdown({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificati
 // ---------- Pomodoro ----------
 type PomodoroPhase = "work" | "break";
 
+// Matches the settings validator's 1-120 minute range.
+const MAX_POMODORO_MINUTES = 120;
+
+function clampPomodoroMinutes(value: string): number {
+  return Math.min(MAX_POMODORO_MINUTES, Math.max(1, parseInt(value) || 1));
+}
+
 function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotification">) {
   const { settings, updateSettings } = useSettings();
   const { recordSession } = usePomodoroStats();
@@ -229,6 +232,22 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
   const [editingSettings, setEditingSettings] = useState(false);
   const [workInput, setWorkInput] = useState(settings.pomodoroWorkMinutes);
   const [breakInput, setBreakInput] = useState(settings.pomodoroBreakMinutes);
+  const workInputId = useId();
+  const breakInputId = useId();
+  // Pending switch to the next phase when auto-cycle is on. Kept in a ref so
+  // Reset, turning auto-cycle off or unmounting can cancel it.
+  const autoCycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelAutoCycle = () => {
+    if (autoCycleTimeoutRef.current === null) return false;
+    clearTimeout(autoCycleTimeoutRef.current);
+    autoCycleTimeoutRef.current = null;
+    return true;
+  };
+
+  useEffect(() => () => {
+    cancelAutoCycle();
+  }, []);
 
   const workMs = settings.pomodoroWorkMinutes * 60_000;
   const breakMs = settings.pomodoroBreakMinutes * 60_000;
@@ -247,10 +266,14 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
           ? "Time for a break!"
           : "Ready to work?",
     });
-    recordSession(phase === "work" ? settings.pomodoroWorkMinutes : 0);
+    if (phase === "work") {
+      recordSession(settings.pomodoroWorkMinutes);
+    }
 
     if (autoCycle) {
-      setTimeout(() => {
+      cancelAutoCycle();
+      autoCycleTimeoutRef.current = setTimeout(() => {
+        autoCycleTimeoutRef.current = null;
         startNext();
       }, 1000);
     } else {
@@ -284,6 +307,7 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
   };
 
   const handleReset = () => {
+    cancelAutoCycle();
     reset();
     setWaitingNext(false);
     setPhase("work");
@@ -330,7 +354,13 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
             <input
               type="checkbox"
               checked={autoCycle}
-              onChange={(e) => setAutoCycle(e.target.checked)}
+              onChange={(e) => {
+                setAutoCycle(e.target.checked);
+                // A phase just ended: wait for the user instead of auto-starting.
+                if (!e.target.checked && cancelAutoCycle()) {
+                  setWaitingNext(true);
+                }
+              }}
               className={styles.toggleCheckboxInput}
             />
             <span
@@ -351,7 +381,11 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
           {state === "idle" && !waitingNext && !editingSettings && (
             <button
               className={styles.btnGhost}
-              onClick={() => setEditingSettings(true)}
+              onClick={() => {
+                setWorkInput(settings.pomodoroWorkMinutes);
+                setBreakInput(settings.pomodoroBreakMinutes);
+                setEditingSettings(true);
+              }}
               title="Edit settings"
             >
               <Settings size={14} />
@@ -404,30 +438,28 @@ function Pomodoro({ onAddNotification }: Pick<TimerPanelProps, "onAddNotificatio
       {editingSettings && state === "idle" && !waitingNext && (
         <div className={styles.settingsEditorInline}>
           <div className={styles.settingsRowInline}>
-            <label className={styles.settingsLabel}>Work</label>
+            <label className={styles.settingsLabel} htmlFor={workInputId}>Work</label>
             <input
+              id={workInputId}
               className={styles.settingsInput}
               type="number"
               min={1}
-              max={60}
+              max={MAX_POMODORO_MINUTES}
               value={workInput}
-              onChange={(e) =>
-                setWorkInput(Math.max(1, parseInt(e.target.value) || 1))
-              }
+              onChange={(e) => setWorkInput(clampPomodoroMinutes(e.target.value))}
             />
             <span className={styles.settingsUnit}>min</span>
           </div>
           <div className={styles.settingsRowInline}>
-            <label className={styles.settingsLabel}>Break</label>
+            <label className={styles.settingsLabel} htmlFor={breakInputId}>Break</label>
             <input
+              id={breakInputId}
               className={styles.settingsInput}
               type="number"
               min={1}
-              max={30}
+              max={MAX_POMODORO_MINUTES}
               value={breakInput}
-              onChange={(e) =>
-                setBreakInput(Math.max(1, parseInt(e.target.value) || 1))
-              }
+              onChange={(e) => setBreakInput(clampPomodoroMinutes(e.target.value))}
             />
             <span className={styles.settingsUnit}>min</span>
           </div>
@@ -462,6 +494,7 @@ interface TimerPanelProps {
 
 export function TimerPanel({ isFullscreen = false, onAddNotification }: TimerPanelProps) {
   const [mode, setMode] = useState<Mode>(() => loadStoredMode());
+  const panelId = useId();
 
   const handleModeChange = (nextMode: Mode) => {
     setMode(nextMode);
@@ -480,6 +513,7 @@ export function TimerPanel({ isFullscreen = false, onAddNotification }: TimerPan
             key={t.id}
             role="tab"
             aria-selected={mode === t.id}
+            aria-controls={`${panelId}-${t.id}`}
             className={[styles.tab, mode === t.id ? styles.activeTab : ""].join(
               " ",
             )}
@@ -490,10 +524,16 @@ export function TimerPanel({ isFullscreen = false, onAddNotification }: TimerPan
           </button>
         ))}
       </div>
-      <div className={styles.content}>
-        {mode === "stopwatch" && <Stopwatch />}
-        {mode === "countdown" && <Countdown onAddNotification={onAddNotification} />}
-        {mode === "pomodoro" && <Pomodoro onAddNotification={onAddNotification} />}
+      {/* Every mode stays mounted so a running timer keeps going (and still
+          notifies) while another tab is shown. */}
+      <div className={styles.content} id={`${panelId}-stopwatch`} role="tabpanel" hidden={mode !== "stopwatch"}>
+        <Stopwatch />
+      </div>
+      <div className={styles.content} id={`${panelId}-countdown`} role="tabpanel" hidden={mode !== "countdown"}>
+        <Countdown onAddNotification={onAddNotification} />
+      </div>
+      <div className={styles.content} id={`${panelId}-pomodoro`} role="tabpanel" hidden={mode !== "pomodoro"}>
+        <Pomodoro onAddNotification={onAddNotification} />
       </div>
     </div>
   );

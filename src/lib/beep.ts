@@ -3,13 +3,26 @@
  * @param type  'done' — three short ascending tones (countdown/pomodoro complete)
  *              'tick' — single soft blip (last 3 seconds)
  */
+// One context for the whole app: browsers limit how many can exist, and
+// closing one right after scheduling a tone cuts the tone off.
+let sharedContext: AudioContext | null = null
+
+function getAudioContext(): AudioContext {
+  if (!sharedContext || sharedContext.state === 'closed') {
+    sharedContext = new AudioContext()
+  }
+  if (sharedContext.state === 'suspended') {
+    void sharedContext.resume()
+  }
+  return sharedContext
+}
+
 export function beep(type: 'done' | 'tick' = 'done'): void {
   try {
-    const ctx = new AudioContext()
+    const ctx = getAudioContext()
 
     if (type === 'tick') {
       playTone(ctx, 880, 0.08, 0, 0.06)
-      ctx.close()
       return
     }
 
@@ -18,8 +31,6 @@ export function beep(type: 'done' | 'tick' = 'done'): void {
     notes.forEach((freq, i) => {
       playTone(ctx, freq, 0.18, i * 0.18, 0.15)
     })
-    // Close context after last tone fades
-    setTimeout(() => ctx.close(), 800)
   } catch {
     // Silently ignore if AudioContext is unavailable
   }

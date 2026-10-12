@@ -6,6 +6,7 @@ import { QuoteWidget } from '../QuoteWidget'
 import { PomodoroStats } from '../PomodoroStats'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
+import { toLocalDayKey } from '../../lib/usePomodoroStats'
 
 // Clock digits render in separate spans, so match on the element's full text.
 function getByTimeText(time: string): HTMLElement {
@@ -181,10 +182,10 @@ describe('PomodoroStats', () => {
   })
 
   it('shows today and weekly totals from stored sessions', () => {
-    const todayKey = new Date().toISOString().split('T')[0]
+    const todayKey = toLocalDayKey(new Date())
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayKey = yesterday.toISOString().split('T')[0]
+    const yesterdayKey = toLocalDayKey(yesterday)
 
     localStorage.setItem(
       STORAGE_KEY,

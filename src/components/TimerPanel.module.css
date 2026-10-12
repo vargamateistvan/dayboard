@@ -47,6 +47,10 @@
   min-height: 0;
 }
 
+.content[hidden] {
+  display: none;
+}
+
 /* Timer body */
 .timerBody {
   display: flex;
