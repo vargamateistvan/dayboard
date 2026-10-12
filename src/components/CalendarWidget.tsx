@@ -96,8 +96,45 @@ function endOfDay(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
 }
 
+// End times are exclusive, as in iCal: an event ending at midnight is not on the next day.
 function isEventWithinRange(event: CalendarEvent, range: CalendarRange): boolean {
-  return event.start <= range.end && event.end >= range.start
+  if (event.start > range.end) return false
+  return event.end > range.start || (event.end.getTime() === event.start.getTime() && event.start >= range.start)
+}
+
+/** Same day of month in another month, clamped (Jan 31 + 1 month = Feb 28). */
+function addMonthsClamped(date: Date, months: number): Date {
+  const target = new Date(date.getFullYear(), date.getMonth() + months, 1)
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
+  target.setDate(Math.min(date.getDate(), lastDay))
+  return target
+}
+
+const FEED_REFRESH_MS = 15 * 60_000
+const REMINDER_LEAD_MS = 15 * 60_000
+const SENT_REMINDERS_STORAGE_KEY = 'dayboard:calendar-reminders-sent'
+
+// Reminders already sent this session, so a reload does not repeat them.
+function readSentReminders(): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(sessionStorage.getItem(SENT_REMINDERS_STORAGE_KEY) ?? '[]')
+    return new Set(Array.isArray(parsed) ? parsed.filter((key): key is string => typeof key === 'string') : [])
+  } catch {
+    return new Set()
+  }
+}
+
+function writeSentReminders(keys: Set<string>) {
+  try {
+    sessionStorage.setItem(SENT_REMINDERS_STORAGE_KEY, JSON.stringify([...keys].slice(-200)))
+  } catch {
+    // Without sessionStorage, reminders are only de-duplicated in memory.
+  }
+}
+
+// The same meeting in two calendars gets one reminder.
+function getReminderKey(event: CalendarEvent): string {
+  return `${event.title}|${event.start.getTime()}`
 }
 
 function getTodayRange(date: Date): CalendarRange {
@@ -152,8 +189,10 @@ function getMinutesSinceStartOfDay(date: Date): number {
   return date.getHours() * 60 + date.getMinutes()
 }
 
+// Includes the feed and UID so the same meeting in two calendars, or two
+// "Busy" blocks at the same time, get distinct React keys.
 function getEventKey(event: CalendarEvent): string {
-  return `${event.title}-${event.start.getTime()}-${event.end.getTime()}-${event.allDay ? 'all-day' : 'timed'}`
+  return `${event.calendarId ?? ''}|${event.uid ?? event.title}|${event.start.getTime()}-${event.end.getTime()}-${event.allDay ? 'all-day' : 'timed'}`
 }
 
 function getFloatingTooltipStyle(
@@ -489,7 +528,8 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
   const [error, setError] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
   const [now, setNow] = useState<Date>(() => new Date())
-  const notificationKeysRef = useRef<Set<string>>(new Set())
+  const sentRemindersRef = useRef<Set<string> | null>(null)
+  const lastSeenDayKeyRef = useRef(getDayKey(new Date()))
   const [activeTooltip, setActiveTooltip] = useState<{
     event: CalendarEvent
     anchorElement: HTMLElement
@@ -508,6 +548,13 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
     [settings.globalCalendarFeeds, settings.calendarFeeds],
   )
   const hasCalendarFeeds = mergedCalendarFeeds.length > 0
+  // Fetching depends on the URLs only; colors are applied when parsing, so a
+  // color change does not refetch every feed.
+  const feedUrlsKey = mergedCalendarFeeds.map((feed) => feed.url).join('\n')
+  const feedColorsByUrl = useMemo(
+    () => new Map(mergedCalendarFeeds.map((feed) => [feed.url, feed.color || DEFAULT_CALENDAR_COLOR])),
+    [mergedCalendarFeeds],
+  )
   const weekdayLabels = WEEKDAY_LABELS_BY_START[settings.calendarWeekStartsOn]
 
   useEffect(() => {
@@ -516,6 +563,16 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
     const intervalId = window.setInterval(tick, 60000)
     return () => window.clearInterval(intervalId)
   }, [])
+
+  // At midnight, a view that was showing today moves on to the new day.
+  useEffect(() => {
+    const todayKey = getDayKey(now)
+    const previousDayKey = lastSeenDayKeyRef.current
+    if (todayKey === previousDayKey) return
+
+    lastSeenDayKeyRef.current = todayKey
+    setSelectedDate((current) => (getDayKey(current) === previousDayKey ? new Date(now) : current))
+  }, [now])
   const monthGridRange = useMemo(
     () => getMonthGridRange(selectedDate, settings.calendarWeekStartsOn),
     [selectedDate, settings.calendarWeekStartsOn],
@@ -592,7 +649,8 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
   }, [activeMonthTooltip])
 
   useEffect(() => {
-    if (mergedCalendarFeeds.length === 0) {
+    const urls = feedUrlsKey ? feedUrlsKey.split('\n') : []
+    if (urls.length === 0) {
       setFetchedFeeds([])
       setEvents([])
       setError(null)
@@ -603,40 +661,94 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
     }
 
     let cancelled = false
-    setLoading(true)
-    setError(null)
 
-    fetchCalendarFeeds(mergedCalendarFeeds)
-      .then((nextFetchedFeeds) => {
-        if (cancelled) return
-        setFetchedFeeds(nextFetchedFeeds)
-        setLoading(false)
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        setError((err as Error).message ?? 'Could not load calendar.')
-        setLoading(false)
-      })
+    // Refreshes keep the current events on screen, and a failed refresh keeps
+    // them too instead of replacing them with an error.
+    const load = (isRefresh: boolean) => {
+      if (!isRefresh) {
+        setLoading(true)
+        setError(null)
+      }
+
+      fetchCalendarFeeds(urls.map((url) => ({ url, color: DEFAULT_CALENDAR_COLOR })))
+        .then((nextFetchedFeeds) => {
+          if (cancelled) return
+          setFetchedFeeds(nextFetchedFeeds)
+          setError(null)
+          setLoading(false)
+        })
+        .catch((err: unknown) => {
+          if (cancelled || isRefresh) return
+          setError((err as Error).message ?? 'Could not load calendar.')
+          setLoading(false)
+        })
+    }
+
+    load(false)
+    const refreshId = window.setInterval(() => load(true), FEED_REFRESH_MS)
 
     return () => {
       cancelled = true
+      window.clearInterval(refreshId)
     }
-  }, [mergedCalendarFeeds])
+  }, [feedUrlsKey])
+
+  const currentFetchedFeeds = useMemo(
+    () => fetchedFeeds.filter(({ feed }) => feedColorsByUrl.has(feed.url)),
+    [fetchedFeeds, feedColorsByUrl],
+  )
 
   useEffect(() => {
-    if (fetchedFeeds.length === 0) {
+    if (currentFetchedFeeds.length === 0) {
       setEvents([])
       return
     }
 
-    const nextEvents = fetchedFeeds
+    const nextEvents = currentFetchedFeeds
       .flatMap(({ feed, text }) => parseCalendarFeed(text, monthGridRange).map((event) => ({
         ...event,
-        calendarColor: feed.color || DEFAULT_CALENDAR_COLOR,
+        calendarColor: feedColorsByUrl.get(feed.url) ?? DEFAULT_CALENDAR_COLOR,
+        calendarId: feed.url,
       })))
       .sort((a, b) => a.start.getTime() - b.start.getTime())
     setEvents(nextEvents)
-  }, [fetchedFeeds, monthGridRange])
+  }, [currentFetchedFeeds, feedColorsByUrl, monthGridRange])
+
+  // Reminders come from their own parse of the next 15 minutes, so they keep
+  // working whichever day or month is on screen.
+  const nowMinute = Math.floor(now.getTime() / 60_000)
+  const reminderCandidates = useMemo(() => {
+    const start = new Date(nowMinute * 60_000)
+    const range = { start, end: new Date(start.getTime() + REMINDER_LEAD_MS + 60_000) }
+    return currentFetchedFeeds.flatMap(({ text }) => parseCalendarFeed(text, range))
+  }, [currentFetchedFeeds, nowMinute])
+
+  useEffect(() => {
+    if (!onAddNotification) return
+
+    sentRemindersRef.current ??= readSentReminders()
+    const sent = sentRemindersRef.current
+    let changed = false
+
+    for (const event of reminderCandidates) {
+      if (event.allDay) continue
+      const msUntilStart = event.start.getTime() - now.getTime()
+      if (msUntilStart < 0 || msUntilStart > REMINDER_LEAD_MS) continue
+
+      const key = getReminderKey(event)
+      if (sent.has(key)) continue
+
+      sent.add(key)
+      changed = true
+      onAddNotification({
+        type: 'event',
+        title: 'Upcoming event',
+        body: `${event.title} starts ${formatTime(event.start)}`,
+      })
+    }
+
+    if (changed) writeSentReminders(sent)
+  }, [now, onAddNotification, reminderCandidates])
 
   const todaysEvents = events.filter((event) => isEventWithinRange(event, selectedRange))
   const visibleEvents = todaysEvents.filter((event) => {
@@ -650,37 +762,6 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
 
     return true
   })
-
-  useEffect(() => {
-    if (!onAddNotification || !isToday) {
-      return
-    }
-
-    const upcomingEvent = visibleEvents.find((event) => {
-      if (event.allDay || event.end <= now) {
-        return false
-      }
-
-      const minutesUntilStart = event.start.getTime() - now.getTime()
-      return minutesUntilStart >= 0 && minutesUntilStart <= 15 * 60 * 1000
-    })
-
-    if (!upcomingEvent) {
-      return
-    }
-
-    const eventKey = getEventKey(upcomingEvent)
-    if (notificationKeysRef.current.has(eventKey)) {
-      return
-    }
-
-    notificationKeysRef.current.add(eventKey)
-    onAddNotification({
-      type: 'event',
-      title: 'Upcoming event',
-      body: `${upcomingEvent.title} starts ${formatTime(upcomingEvent.start)}`,
-    })
-  }, [isToday, now, onAddNotification, visibleEvents])
 
   const currentEvents = new Set(
     isToday
@@ -952,7 +1033,7 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
       if (isWeeklyPreview) {
         nextDate.setDate(currentDate.getDate() - WEEK_DAY_COUNT)
       } else {
-        nextDate.setMonth(currentDate.getMonth() - 1)
+        return addMonthsClamped(currentDate, -1)
       }
       return nextDate
     })
@@ -965,7 +1046,7 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
       if (isWeeklyPreview) {
         nextDate.setDate(currentDate.getDate() + WEEK_DAY_COUNT)
       } else {
-        nextDate.setMonth(currentDate.getMonth() + 1)
+        return addMonthsClamped(currentDate, 1)
       }
       return nextDate
     })

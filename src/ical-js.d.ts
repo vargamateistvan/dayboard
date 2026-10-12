@@ -2,8 +2,25 @@ declare module 'ical.js' {
   export class Time {
     static fromJSDate(date: Date, useUTC?: boolean): Time
     isDate: boolean
+    year: number
+    month: number
+    day: number
+    hour: number
+    minute: number
+    second: number
+    /** TZID kept when the feed has no VTIMEZONE for it. */
+    timezone?: string
     toJSDate(): Date
     toString(): string
+    convertToZone(zone: unknown): Time
+  }
+
+  export const TimezoneService: {
+    has(tzid: string): boolean
+  }
+
+  export const Timezone: {
+    utcTimezone: unknown
   }
 
   export class Component {
@@ -26,6 +43,7 @@ declare module 'ical.js' {
     iterator(startTime?: Time): RecurExpansion
     getOccurrenceDetails(time: Time): OccurrenceDetails
     relateException(event: Event): void
+    exceptions: Record<string, Event>
     component: Component
   }
 
@@ -52,6 +70,8 @@ declare module 'ical.js' {
     Time: typeof Time
     Component: typeof Component
     Event: typeof Event
+    TimezoneService: typeof TimezoneService
+    Timezone: typeof Timezone
     parse: typeof parse
   }
 

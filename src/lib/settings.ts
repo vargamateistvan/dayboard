@@ -1988,5 +1988,13 @@ export function mergeCalendarFeeds(
   globalFeeds: CalendarFeed[] = [],
   presetFeeds: CalendarFeed[] = [],
 ): CalendarFeed[] {
-  return [...globalFeeds, ...presetFeeds].filter(feed => feed.url.trim().length > 0)
+  // A URL set both globally and in the preset is fetched and shown once; the
+  // global entry (and its color) wins.
+  const seen = new Set<string>()
+  return [...globalFeeds, ...presetFeeds].filter((feed) => {
+    const url = feed.url.trim()
+    if (!url || seen.has(url)) return false
+    seen.add(url)
+    return true
+  })
 }
