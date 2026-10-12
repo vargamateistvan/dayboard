@@ -15,7 +15,7 @@ describe('getCalendarFeedRequestUrls', () => {
     ])
   })
 
-  it('falls back to a mirror for public Google Calendar feeds away from localhost', () => {
+  it('requests public Google Calendar feeds directly away from localhost', () => {
     expect(
       getCalendarFeedRequestUrls(
         'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
@@ -23,7 +23,6 @@ describe('getCalendarFeedRequestUrls', () => {
       ),
     ).toEqual([
       'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
-      'https://r.jina.ai/https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
     ])
   })
 
