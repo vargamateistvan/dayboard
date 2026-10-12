@@ -7,6 +7,11 @@ import { PomodoroStats } from '../PomodoroStats'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 
+// Clock digits render in separate spans, so match on the element's full text.
+function getByTimeText(time: string): HTMLElement {
+  return screen.getByText((_, element) => element?.textContent === time && element.childElementCount > 0)
+}
+
 function renderClockWidget(rowCount?: number) {
   return render(
     <SettingsProvider>
@@ -34,7 +39,7 @@ describe('ClockWidget', () => {
     renderClockWidget()
 
     expect(
-      screen.getByText(
+      getByTimeText(
         now.toLocaleTimeString(undefined, {
           hour: '2-digit',
           minute: '2-digit',
@@ -62,21 +67,21 @@ describe('ClockWidget', () => {
      second: '2-digit',
     })
 
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('22rem')
+    expect(getByTimeText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('22rem')
 
     rerender(
       <SettingsProvider>
         <ClockWidget rowCount={3} />
       </SettingsProvider>,
     )
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('16rem')
+    expect(getByTimeText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('16rem')
 
     rerender(
       <SettingsProvider>
         <ClockWidget rowCount={4} />
       </SettingsProvider>,
     )
-    expect(screen.getByText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('11rem')
+    expect(getByTimeText(currentTime).parentElement?.style.getPropertyValue('--clock-time-size-auto')).toBe('11rem')
   })
 
   it('applies manual clock font-size settings when configured', () => {
@@ -93,7 +98,7 @@ describe('ClockWidget', () => {
       minute: '2-digit',
       second: '2-digit',
     })
-    const timeElement = screen.getByText(currentTime)
+    const timeElement = getByTimeText(currentTime)
     const widgetElement = timeElement.parentElement
 
     expect(widgetElement?.style.getPropertyValue('--clock-time-size-override')).toBe('19.5rem')
@@ -113,7 +118,7 @@ describe('ClockWidget', () => {
       minute: '2-digit',
       second: '2-digit',
     })
-    const timeElement = screen.getByText(currentTime)
+    const timeElement = getByTimeText(currentTime)
     const widgetElement = timeElement.parentElement
 
     expect(widgetElement?.style.getPropertyValue('--clock-time-stretch')).toBe('1.4')
