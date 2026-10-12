@@ -53,7 +53,10 @@ export interface WidgetLayoutState {
 const STORAGE_KEY = "dayboard_widget_layout";
 const LEGACY_VISIBILITY_KEY = "dayboard_widget_visibility";
 const CHANGE_EVENT = "dayboard:widget-layout-change";
-const GRID_VERSION = `${WIDGET_GRID_COLUMNS}x${DEFAULT_GRID_ROWS}`;
+// Version of the stored placement format. Layouts saved with another version
+// get default placements. Bump it only when the format changes: it used to be
+// derived from DEFAULT_GRID_ROWS, so changing that default reset every layout.
+const GRID_VERSION = "2x3";
 
 const DEFAULT_VISIBILITY: WidgetVisibility = {
   clock: true,
@@ -578,6 +581,48 @@ function findAvailablePlacement(
   return null;
 }
 
+/**
+ * Makes a layout valid. Visible widgets are kept in grid order; one that falls
+ * off the grid or overlaps a widget placed before it moves to the first free
+ * spot, adding rows when needed, and is hidden only when the grid is full.
+ * A valid layout is returned unchanged.
+ */
+function repairLayout(layout: WidgetLayoutState): WidgetLayoutState {
+  if (isLayoutValid(layout.placements, layout.visibility, layout.rowCount)) {
+    return layout;
+  }
+
+  const placements = clonePlacements(layout.placements);
+  const kept = Object.fromEntries(
+    WIDGET_IDS.map((widget) => [widget, false]),
+  ) as WidgetVisibility;
+  let rowCount = layout.rowCount;
+
+  const visibleInGridOrder = sortWidgetsByPlacement(layout.placements).filter(
+    (widget) => layout.visibility[widget],
+  );
+
+  for (const widget of visibleInGridOrder) {
+    if (canPlaceWidget(placements, kept, widget, placements[widget], rowCount)) {
+      kept[widget] = true;
+      continue;
+    }
+
+    let spot = findAvailablePlacement(widget, { rowCount, visibility: kept, placements });
+    while (!spot && rowCount < MAX_GRID_ROWS) {
+      rowCount += 1;
+      spot = findAvailablePlacement(widget, { rowCount, visibility: kept, placements });
+    }
+
+    if (spot) {
+      placements[widget] = spot;
+      kept[widget] = true;
+    }
+  }
+
+  return { rowCount, visibility: kept, placements };
+}
+
 function normalizeLayout(value: unknown): WidgetLayoutState {
   if (!value || typeof value !== "object") {
     return cloneDefaultLayout();
@@ -591,13 +636,13 @@ function normalizeLayout(value: unknown): WidgetLayoutState {
 
   const rowCount = clampRowCount(candidate.rowCount);
 
-  return {
+  return repairLayout({
     rowCount,
     visibility: normalizeVisibility(
       "visibility" in candidate ? candidate.visibility : candidate,
     ),
     placements: normalizePlacements(candidate.placements, rowCount),
-  };
+  });
 }
 
 export function normalizeWidgetLayoutState(value: unknown): WidgetLayoutState {
@@ -635,7 +680,9 @@ function migrateLegacyLayout(value: {
   const nextPlacements = clonePlacements(DEFAULT_PLACEMENTS);
   const occupied = new Set<string>();
 
-  uniqueOrder.forEach((widget) => {
+  // Hidden widgets keep their defaults; letting them claim cells first would
+  // push visible widgets out of the grid.
+  uniqueOrder.filter((widget) => visibility[widget]).forEach((widget) => {
     const preferredColumnSpan =
       columnSpans[widget] === 2 ? 2 : DEFAULT_PLACEMENTS[widget].columnSpan;
     const candidates: Array<Pick<WidgetPlacement, "columnSpan" | "rowSpan">> = [
@@ -674,11 +721,11 @@ function migrateLegacyLayout(value: {
     }
   });
 
-  return {
+  return repairLayout({
     rowCount,
     visibility,
     placements: nextPlacements,
-  };
+  });
 }
 
 function readRawLayout(): string | null {
@@ -719,20 +766,20 @@ function parseStoredLayout(raw: string | null): WidgetLayoutState {
     };
 
     if (prefix === "legacy") {
-      return {
+      return repairLayout({
         rowCount: DEFAULT_GRID_ROWS,
         visibility: normalizeVisibility(parsed),
         placements: clonePlacements(DEFAULT_PLACEMENTS),
-      };
+      });
     }
 
     // Reset placements to defaults when the column count changed (modern format only)
     if ("placements" in parsed && parsed.gridVersion !== GRID_VERSION) {
-      return {
+      return repairLayout({
         rowCount: DEFAULT_GRID_ROWS,
         visibility: normalizeVisibility(parsed.visibility ?? parsed),
         placements: clonePlacements(DEFAULT_PLACEMENTS),
-      };
+      });
     }
 
     if (
