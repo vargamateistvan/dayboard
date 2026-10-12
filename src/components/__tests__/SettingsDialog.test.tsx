@@ -102,6 +102,7 @@ describe('SettingsDialog', () => {
   it('persists the calendar extra info preview mode', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Weekly' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -114,6 +115,7 @@ describe('SettingsDialog', () => {
   it('persists the calendar week start setting', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Sunday' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -126,6 +128,7 @@ describe('SettingsDialog', () => {
   it('shows the past events toggle as pressed only when past events are visible', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
 
     const toggle = screen.getByRole('button', { name: /Show past events/i })
     expect(toggle).toHaveAttribute('aria-pressed', 'true')
@@ -175,9 +178,11 @@ describe('SettingsDialog', () => {
   it('persists weather display and refresh settings', () => {
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Show past events' }))
     fireEvent.click(screen.getByRole('button', { name: 'Show all-day events' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Weather' }))
     fireEvent.click(screen.getByRole('button', { name: 'Show extra weather details' }))
     fireEvent.change(screen.getByLabelText('Refresh every (min)'), { target: { value: '15' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -202,6 +207,7 @@ describe('SettingsDialog', () => {
 
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Flights' }))
 
     fireEvent.click(screen.getByRole('button', { name: 'Show Google Maps under radar' }))
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
@@ -258,6 +264,7 @@ describe('SettingsDialog', () => {
 
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Sports' }))
 
     fireEvent.change(screen.getByLabelText('Refresh every (minutes)'), { target: { value: '20' } })
     const premierLeagueButtons = screen.getAllByRole('button', { name: 'Premier League' })
@@ -297,6 +304,7 @@ describe('SettingsDialog', () => {
 
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Sports' }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove Arsenal' }))
 
     const saved = JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')
@@ -324,6 +332,7 @@ describe('SettingsDialog', () => {
 
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Sports' }))
     fireEvent.change(screen.getByPlaceholderText('e.g. Arsenal, Real Madrid, Lakers'), {
       target: { value: 'ars' },
     })
@@ -356,6 +365,7 @@ describe('SettingsDialog', () => {
     )
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'World Clock' }))
 
     fireEvent.change(screen.getByPlaceholderText('New York'), {
       target: { value: 'Budapest' },
@@ -416,6 +426,41 @@ describe('SettingsDialog', () => {
     expect(screen.queryByText('Pomodoro Intervals')).not.toBeInTheDocument()
   })
 
+  it('lists only on-layout widgets in the widget picker and shows one at a time', () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify({
+        visibility: {
+          clock: true,
+          weather: true,
+          calendar: false,
+          timer: false,
+          spotify: false,
+          appleMusic: false,
+          applePodcast: false,
+          stocks: false,
+          currencies: false,
+        },
+      }),
+    )
+
+    renderSettingsDialog()
+    fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+
+    const picker = screen.getByRole('tablist', { name: 'Widget to configure' })
+    const chips = within(picker).getAllByRole('tab')
+    expect(chips.map((chip) => chip.textContent)).toEqual(['Clock', 'Weather'])
+    expect(chips[0]).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('Time font size (rem)')).toBeInTheDocument()
+    expect(screen.queryByText('Weather Display')).not.toBeInTheDocument()
+
+    fireEvent.keyDown(chips[0], { key: 'ArrowRight' })
+
+    expect(chips[1]).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Weather Display')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Time font size (rem)')).not.toBeInTheDocument()
+  })
+
   it('shows only the matching music settings for widgets on the layout', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,
@@ -453,6 +498,7 @@ describe('SettingsDialog', () => {
 
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Music' }))
 
     expect(screen.getByText('Music Embeds')).toBeInTheDocument()
     expect(screen.getByText('Apple Music saved links')).toBeInTheDocument()

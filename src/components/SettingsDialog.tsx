@@ -99,6 +99,16 @@ import {
   EyeOff,
   Bell,
   MonitorCheck,
+  Calendar,
+  CloudSun,
+  Plane,
+  Telescope,
+  Clock,
+  Earth,
+  TrendingUp,
+  Trophy,
+  Music,
+  Timer,
 } from "lucide-react";
 import { MediaBrandIcon } from "./MediaBrandIcon";
 import styles from "./SettingsDialog.module.css";
@@ -328,6 +338,36 @@ const SETTINGS_TABS: ReadonlyArray<{ id: SettingsTabId; label: string; descripti
     description: "Save named setups and schedule automatic switching.",
   },
 ] as const;
+
+type WidgetSettingsId =
+  | "calendar"
+  | "weather"
+  | "flights"
+  | "astronomy"
+  | "clock"
+  | "timezoneClock"
+  | "finance"
+  | "sports"
+  | "music"
+  | "timer";
+
+const WIDGET_SETTINGS_TABS: ReadonlyArray<{
+  id: WidgetSettingsId;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}> = [
+  { id: "clock", label: "Clock", description: "Font sizes and stretch for the main clock.", icon: <Clock size={14} /> },
+  { id: "calendar", label: "Calendar", description: "Calendar sources and how events are displayed.", icon: <Calendar size={14} /> },
+  { id: "weather", label: "Weather", description: "Units, details, and refresh interval.", icon: <CloudSun size={14} /> },
+  { id: "flights", label: "Flights", description: "Radar range, scan interval, and location.", icon: <Plane size={14} /> },
+  { id: "astronomy", label: "Astronomy", description: "Location and refresh interval.", icon: <Telescope size={14} /> },
+  { id: "timezoneClock", label: "World Clock", description: "The second city shown next to your local time.", icon: <Earth size={14} /> },
+  { id: "finance", label: "Finance", description: "Stock symbols, currency pairs, and refresh interval.", icon: <TrendingUp size={14} /> },
+  { id: "sports", label: "Sports", description: "Leagues, favorite teams, and refresh interval.", icon: <Trophy size={14} /> },
+  { id: "music", label: "Music", description: "Accounts and saved links for media players.", icon: <Music size={14} /> },
+  { id: "timer", label: "Pomodoro", description: "Work and break interval lengths.", icon: <Timer size={14} /> },
+];
 
 const DEFAULT_PRESET_SCHEDULE: SettingsPresetSchedule = {
   enabled: true,
@@ -718,6 +758,7 @@ function PresetCard({
 export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const { settings, updateSettings } = useSettings();
   const [activeTab, setActiveTab] = useState<SettingsTabId>("appearance");
+  const [selectedWidgetSettingsId, setSelectedWidgetSettingsId] = useState<WidgetSettingsId | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionStatus>(
     () => getNotificationPermission(),
   );
@@ -977,6 +1018,25 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isAppleMusicOnLayout = visibility.appleMusic;
   const isApplePodcastOnLayout = visibility.applePodcast;
   const isTimerOnLayout = visibility.timer;
+  const widgetSettingsAvailability: Record<WidgetSettingsId, boolean> = {
+    calendar: isCalendarOnLayout,
+    weather: isWeatherOnLayout,
+    flights: isFlightsOnLayout,
+    astronomy: isAstronomyOnLayout,
+    clock: isClockOnLayout,
+    timezoneClock: isTimezoneClockOnLayout,
+    finance: isFinanceOnLayout,
+    sports: isSportsOnLayout,
+    music: isMusicOnLayout,
+    timer: isTimerOnLayout,
+  };
+  const availableWidgetSettingsTabs = WIDGET_SETTINGS_TABS.filter(
+    (tab) => widgetSettingsAvailability[tab.id],
+  );
+  const activeWidgetSettingsTab =
+    availableWidgetSettingsTabs.find((tab) => tab.id === selectedWidgetSettingsId) ??
+    availableWidgetSettingsTabs[0];
+  const activeWidgetSettings = activeWidgetSettingsTab?.id ?? null;
   const activePresetName = presets.find((preset) => isPresetScheduledNow(preset.schedule))?.name ?? null;
   const sportsFavoriteTeamsByLeague = useMemo(() => {
     const grouped = new Map<string, SportsFavoriteTeam[]>()
@@ -1184,7 +1244,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   }, [sportsTeamQuery]);
 
   useEffect(() => {
-    if (!isSportsOnLayout || activeTab !== "widgets") {
+    if (activeTab !== "widgets" || activeWidgetSettings !== "sports") {
       setSportsTeamSearchResults([]);
       setSportsTeamSearchLoading(false);
       setSportsTeamSearchError(null);
@@ -1222,7 +1282,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, debouncedSportsTeamQuery, isSportsOnLayout, sportsEnabledLeagues]);
+  }, [activeTab, activeWidgetSettings, debouncedSportsTeamQuery, sportsEnabledLeagues]);
 
   const toggleSportsLeague = (leagueId: SportsLeagueId) => {
     setSportsEnabledLeagues((previous) => {
@@ -1478,6 +1538,31 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     } else if (event.key === "End") {
       event.preventDefault();
       setActiveTab(SETTINGS_TABS[SETTINGS_TABS.length - 1].id);
+    }
+  };
+
+  const handleWidgetSettingsTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    tabId: WidgetSettingsId,
+  ) => {
+    const ids = availableWidgetSettingsTabs.map((tab) => tab.id);
+    const index = ids.indexOf(tabId);
+    let nextId: WidgetSettingsId | undefined;
+
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      nextId = ids[(index + 1) % ids.length];
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      nextId = ids[(index - 1 + ids.length) % ids.length];
+    } else if (event.key === "Home") {
+      nextId = ids[0];
+    } else if (event.key === "End") {
+      nextId = ids[ids.length - 1];
+    }
+
+    if (nextId) {
+      event.preventDefault();
+      setSelectedWidgetSettingsId(nextId);
+      document.getElementById(`widget-settings-tab-${nextId}`)?.focus();
     }
   };
 
@@ -1983,24 +2068,48 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
 
             {activeTab === "widgets" && (
               <>
-                {!isCalendarOnLayout &&
-                  !isWeatherOnLayout &&
-                  !isAstronomyOnLayout &&
-                  !isFlightsOnLayout &&
-                  !isTimezoneClockOnLayout &&
-                  !isFinanceOnLayout &&
-                  !isSportsOnLayout &&
-                  !isMusicOnLayout &&
-                  !isTimerOnLayout && (
-                    <section className={styles.section}>
-                      <h3 className={styles.sectionTitle}>Widget Settings</h3>
-                      <p className={styles.emptyState}>
-                        Add widgets to the layout to unlock their widget-specific settings here.
-                      </p>
-                    </section>
-                  )}
+                {activeWidgetSettingsTab ? (
+                  <div className={styles.widgetSettingsNav}>
+                    <div
+                      className={styles.widgetPicker}
+                      role="tablist"
+                      aria-label="Widget to configure"
+                    >
+                      {availableWidgetSettingsTabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          id={`widget-settings-tab-${tab.id}`}
+                          className={[
+                            styles.widgetPickerChip,
+                            activeWidgetSettings === tab.id ? styles.widgetPickerChipActive : "",
+                          ].join(" ")}
+                          onClick={() => setSelectedWidgetSettingsId(tab.id)}
+                          onKeyDown={(event) => handleWidgetSettingsTabKeyDown(event, tab.id)}
+                          role="tab"
+                          aria-selected={activeWidgetSettings === tab.id}
+                          tabIndex={activeWidgetSettings === tab.id ? 0 : -1}
+                          type="button"
+                        >
+                          {tab.icon}
+                          <span>{tab.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.widgetSettingsHeader}>
+                      <h3 className={styles.widgetSettingsTitle}>{activeWidgetSettingsTab.label}</h3>
+                      <p className={styles.hint}>{activeWidgetSettingsTab.description}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>Widget Settings</h3>
+                    <p className={styles.emptyState}>
+                      Add widgets to the layout to unlock their widget-specific settings here.
+                    </p>
+                  </section>
+                )}
 
-                {isCalendarOnLayout && (
+                {activeWidgetSettings === "calendar" && (
                   <>
                     <section className={styles.section}>
                       <div className={styles.sectionHeader}>
@@ -2306,7 +2415,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </>
                 )}
 
-                {isWeatherOnLayout && (
+                {activeWidgetSettings === "weather" && (
                   <>
                     <section className={styles.section}>
                       <h3 className={styles.sectionTitle}>Weather Display</h3>
@@ -2370,7 +2479,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </>
                 )}
 
-                {isFlightsOnLayout && (
+                {activeWidgetSettings === "flights" && (
                   <>
                     <section className={styles.section}>
                       <h3 className={styles.sectionTitle}>Flights Radar</h3>
@@ -2537,7 +2646,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </>
                 )}
 
-                {isAstronomyOnLayout && (
+                {activeWidgetSettings === "astronomy" && (
                   <>
                     <section className={styles.section}>
                       <h3 className={styles.sectionTitle}>Astronomy Location</h3>
@@ -2610,7 +2719,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </>
                 )}
 
-                {isClockOnLayout && (
+                {activeWidgetSettings === "clock" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Clock</h3>
                     <div className={styles.intervalRow}>
@@ -2675,7 +2784,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </section>
                 )}
 
-                {isTimezoneClockOnLayout && (
+                {activeWidgetSettings === "timezoneClock" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Timezone Clock</h3>
                     <div className={styles.calendarList}>
@@ -2718,7 +2827,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </section>
                 )}
 
-                {isFinanceOnLayout && (
+                {activeWidgetSettings === "finance" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Finance Widgets</h3>
 
@@ -2849,7 +2958,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </section>
                 )}
 
-                {isSportsOnLayout && (
+                {activeWidgetSettings === "sports" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Sports Scores</h3>
 
@@ -3016,7 +3125,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </section>
                 )}
 
-                {isMusicOnLayout && (
+                {activeWidgetSettings === "music" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Music Embeds</h3>
                     {isSpotifyOnLayout && (
@@ -3141,7 +3250,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                   </section>
                 )}
 
-                {isTimerOnLayout && (
+                {activeWidgetSettings === "timer" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Pomodoro Intervals</h3>
                     <div className={styles.intervalRow}>
