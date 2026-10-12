@@ -236,7 +236,8 @@ export const DEFAULT_SETTINGS: Settings = {
   astronomyManualLongitude: '',
   flightsRadiusKm: 50,
   flightsRadarRadiusKm: 25,
-  flightsRefreshSeconds: 2,
+  // OpenSky's anonymous quota cannot sustain faster polling.
+  flightsRefreshSeconds: 30,
   flightsShowLabels: true,
   flightsShowGoogleMap: false,
   flightsShowOnlyAirborne: true,
@@ -539,12 +540,14 @@ function normalizeFlightsRadarRadiusKm(value: unknown): number {
   return Math.min(250, Math.max(5, Math.round(value)))
 }
 
+export const MIN_FLIGHTS_REFRESH_SECONDS = 10
+
 function normalizeFlightsRefreshSeconds(value: unknown): number {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     return DEFAULT_SETTINGS.flightsRefreshSeconds
   }
 
-  return Math.min(3_600, Math.max(2, Math.round(value)))
+  return Math.min(3_600, Math.max(MIN_FLIGHTS_REFRESH_SECONDS, Math.round(value)))
 }
 
 function normalizeFlightsShowLabels(value: unknown): boolean {

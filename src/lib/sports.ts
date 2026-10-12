@@ -32,6 +32,13 @@ interface SportsDbEvent {
 
 export type SportsTeamSearchResult = SportsFavoriteTeam
 
+/** FT/AET/PEN are final results; the rest are shown as they are, without a win or loss. */
+export type SportsGameStatus = 'FT' | 'AET' | 'PEN' | 'LIVE' | 'SUSP' | 'PST' | 'ABD'
+
+export function isFinalStatus(status: SportsGameStatus): boolean {
+  return status === 'FT' || status === 'AET' || status === 'PEN'
+}
+
 export interface SportsLastGame {
   teamId: string
   teamName: string
@@ -43,7 +50,7 @@ export interface SportsLastGame {
   playedAt: string
   leagueName: string
   result: 'W' | 'L' | 'D'
-  status: 'FT' | 'AET' | 'PEN'
+  status: SportsGameStatus
 }
 
 export interface SportsLeagueScore {
@@ -57,7 +64,7 @@ export interface SportsLeagueScore {
   homeScore: number
   awayScore: number
   playedAt: string
-  status: 'FT' | 'AET' | 'PEN'
+  status: SportsGameStatus
 }
 
 const SPORTS_DB_BASE_URL = 'https://www.thesportsdb.com/api/v1/json/3'
@@ -138,6 +145,17 @@ async function withSportsApiConcurrencyLimit<T>(work: () => Promise<T>): Promise
   })
 }
 
+const MAX_RETRY_DELAY_MS = 10_000
+
+// Honour Retry-After when the free API rate-limits; otherwise back off exponentially.
+function getRetryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = Number(response.headers?.get?.('retry-after'))
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return Math.min(retryAfter * 1000, MAX_RETRY_DELAY_MS)
+  }
+  return Math.min(1_000 * 2 ** attempt, MAX_RETRY_DELAY_MS)
+}
+
 async function fetchSportsDbJson<T>(url: string, errorMessage: string): Promise<T> {
   let attempt = 0
   while (attempt <= SPORTS_API_RETRY_COUNT_FOR_429) {
@@ -147,7 +165,7 @@ async function fetchSportsDbJson<T>(url: string, errorMessage: string): Promise<
     }
 
     if (response.status === 429 && attempt < SPORTS_API_RETRY_COUNT_FOR_429) {
-      await delay(500 * (attempt + 1))
+      await delay(getRetryDelayMs(response, attempt))
       attempt += 1
       continue
     }
@@ -260,11 +278,17 @@ function resolveLeagueForTeam(team: SportsDbTeam): typeof SPORTS_LEAGUE_OPTIONS[
   }) ?? null
 }
 
-function toEventTimestamp(event: SportsDbEvent): string {
-  if (typeof event.strTimestamp === 'string' && event.strTimestamp.length > 0) {
-    return event.strTimestamp
+/**
+ * TheSportsDB timestamps are UTC but carry no zone ("2026-10-10T11:30:00"),
+ * which `new Date()` would read as local time. Date-only events stay a plain
+ * calendar date so they show on that day in every time zone.
+ */
+export function toEventTimestamp(event: Pick<SportsDbEvent, 'strTimestamp' | 'dateEvent'>): string {
+  const timestamp = typeof event.strTimestamp === 'string' ? event.strTimestamp.trim() : ''
+  if (timestamp.length > 0) {
+    return /(?:Z|[+-]\d{2}:?\d{2})$/i.test(timestamp) ? timestamp : `${timestamp}Z`
   }
-  return `${event.dateEvent ?? ''}T00:00:00Z`
+  return event.dateEvent ?? ''
 }
 
 export async function searchSportsTeams(
@@ -361,18 +385,19 @@ export async function searchSportsTeams(
   return results.slice(0, 100)
 }
 
-function parseEventStatus(rawStatus: unknown): 'FT' | 'AET' | 'PEN' {
+export function parseEventStatus(rawStatus: unknown): SportsGameStatus {
   if (typeof rawStatus !== 'string') {
     return 'FT'
   }
 
-  const normalized = rawStatus.toLowerCase()
-  if (normalized.includes('pen')) {
-    return 'PEN'
-  }
-  if (normalized.includes('extra')) {
-    return 'AET'
-  }
+  const normalized = rawStatus.trim().toLowerCase()
+  // Checked before "pen" so "suspended" is not read as penalties.
+  if (normalized.includes('susp') || normalized.includes('interrupt')) return 'SUSP'
+  if (normalized.includes('postp') || normalized === 'pst') return 'PST'
+  if (normalized.includes('aband') || normalized.includes('cancel') || normalized === 'abd') return 'ABD'
+  if (/\bpen\b|penalt|^ap$/.test(normalized)) return 'PEN'
+  if (normalized.includes('extra') || normalized === 'aet') return 'AET'
+  if (/^(1h|2h|ht|et|bt|p|q[1-4]|ot|live|in progress)$/.test(normalized)) return 'LIVE'
   return 'FT'
 }
 
@@ -515,67 +540,62 @@ export async function fetchRecentLeagueScores(
     (league) => followedSet.has(league.id) && Boolean(league.providerLeagueId),
   )
 
-  const request = (async () => {
-    const allScores: SportsLeagueScore[] = []
-    for (const league of leagues) {
-      const providerLeagueId = league.providerLeagueId
-      if (!providerLeagueId) {
-        continue
-      }
+  const loadLeague = async (league: (typeof leagues)[number]): Promise<SportsLeagueScore[]> => {
+    const providerLeagueId = league.providerLeagueId
+    if (!providerLeagueId) return []
 
-      const data = await fetchSportsDbJson<{ events?: SportsDbEvent[] | null }>(
-        `${SPORTS_DB_BASE_URL}/eventspastleague.php?id=${encodeURIComponent(providerLeagueId)}`,
-        'Could not load league scores.',
-      )
-      const events = Array.isArray(data.events) ? data.events : []
-      let leagueCount = 0
-      for (const event of events) {
-        if (leagueCount >= gamesPerLeague) {
-          break
-        }
+    const data = await fetchSportsDbJson<{ events?: SportsDbEvent[] | null }>(
+      `${SPORTS_DB_BASE_URL}/eventspastleague.php?id=${encodeURIComponent(providerLeagueId)}`,
+      'Could not load league scores.',
+    )
+    const events = (Array.isArray(data.events) ? data.events : [])
+      .filter((event) => parseScore(event.intHomeScore) !== null && parseScore(event.intAwayScore) !== null)
+      .slice(0, gamesPerLeague)
 
-        const homeScore = parseScore(event.intHomeScore)
-        const awayScore = parseScore(event.intAwayScore)
-        if (homeScore === null || awayScore === null) {
-          continue
-        }
-
-        const homeTeamId = event.idHomeTeam
-        const awayTeamId = event.idAwayTeam
-        const homeBadgePromise = homeTeamId ? fetchTeamBadgeUrl(homeTeamId) : Promise.resolve(undefined)
-        const awayBadgePromise = awayTeamId ? fetchTeamBadgeUrl(awayTeamId) : Promise.resolve(undefined)
+    // Badges for all games load in parallel (the request queue limits concurrency).
+    return Promise.all(
+      events.map(async (event) => {
         const [homeBadgeResult, awayBadgeResult] = await Promise.allSettled([
-          homeBadgePromise,
-          awayBadgePromise,
+          event.idHomeTeam ? fetchTeamBadgeUrl(event.idHomeTeam) : Promise.resolve(undefined),
+          event.idAwayTeam ? fetchTeamBadgeUrl(event.idAwayTeam) : Promise.resolve(undefined),
         ])
 
-        const homeTeamBadgeUrl = homeBadgeResult.status === 'fulfilled' ? homeBadgeResult.value : undefined
-        const awayTeamBadgeUrl = awayBadgeResult.status === 'fulfilled' ? awayBadgeResult.value : undefined
-
-        allScores.push({
+        return {
           id: event.idEvent ?? `${league.id}:${event.dateEvent ?? 'unknown'}:${event.strHomeTeam ?? 'home'}:${event.strAwayTeam ?? 'away'}`,
           leagueId: league.id,
           leagueName: league.label,
           homeTeamName: event.strHomeTeam?.trim() || 'Home',
-          homeTeamBadgeUrl,
+          homeTeamBadgeUrl: homeBadgeResult.status === 'fulfilled' ? homeBadgeResult.value : undefined,
           awayTeamName: event.strAwayTeam?.trim() || 'Away',
-          awayTeamBadgeUrl,
-          homeScore,
-          awayScore,
+          awayTeamBadgeUrl: awayBadgeResult.status === 'fulfilled' ? awayBadgeResult.value : undefined,
+          homeScore: parseScore(event.intHomeScore) ?? 0,
+          awayScore: parseScore(event.intAwayScore) ?? 0,
           playedAt: toEventTimestamp(event),
           status: parseEventStatus(event.strStatus),
-        })
-        leagueCount += 1
-      }
+        }
+      }),
+    )
+  }
+
+  const request = (async () => {
+    // One failing league must not hide the others.
+    const results = await Promise.allSettled(leagues.map(loadLeague))
+    const failures = results.filter((result) => result.status === 'rejected')
+    if (leagues.length > 0 && failures.length === leagues.length) {
+      throw (failures[0] as PromiseRejectedResult).reason
     }
 
+    const allScores = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
     const sortedScores = allScores.sort((left, right) => {
       if (left.leagueName !== right.leagueName) {
         return left.leagueName.localeCompare(right.leagueName)
       }
       return right.playedAt.localeCompare(left.playedAt)
     })
-    setCacheValue(leagueScoresCache, cacheKey, sortedScores, LEAGUE_SCORES_CACHE_TTL_MS)
+    // Partial results are not cached, so the next refresh retries the failed leagues.
+    if (failures.length === 0) {
+      setCacheValue(leagueScoresCache, cacheKey, sortedScores, LEAGUE_SCORES_CACHE_TTL_MS)
+    }
     return sortedScores
   })()
 

@@ -285,7 +285,7 @@ describe('settings persistence', () => {
     expect(loaded.weatherShowExtraDetails).toBe(DEFAULT_SETTINGS.weatherShowExtraDetails)
     expect(loaded.flightsRadiusKm).toBe(5)
     expect(loaded.flightsRadarRadiusKm).toBe(250)
-    expect(loaded.flightsRefreshSeconds).toBe(2)
+    expect(loaded.flightsRefreshSeconds).toBe(10)
     expect(loaded.flightsShowLabels).toBe(DEFAULT_SETTINGS.flightsShowLabels)
     expect(loaded.flightsShowGoogleMap).toBe(DEFAULT_SETTINGS.flightsShowGoogleMap)
     expect(loaded.flightsShowOnlyAirborne).toBe(DEFAULT_SETTINGS.flightsShowOnlyAirborne)

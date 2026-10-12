@@ -41,13 +41,24 @@ interface AirplanesLiveAircraft {
 }
 
 const flightResponseCache = new Map<string, CachedFlightPayload>()
-const inFlightRequests = new Map<string, Promise<NearbyFlight[]>>()
-const rateLimitedUntil = new Map<string, number>()
+const inFlightRequests = new Map<string, Promise<FlightSnapshot>>()
+// No new request before this time: set by a 429 (Retry-After) or, briefly, by any failure.
+const retryNotBefore = new Map<string, number>()
+const lastErrorByKey = new Map<string, Error>()
 
 export function resetFlightRequestCache(): void {
   flightResponseCache.clear()
   inFlightRequests.clear()
-  rateLimitedUntil.clear()
+  retryNotBefore.clear()
+  lastErrorByKey.clear()
+}
+
+export interface FlightSnapshot {
+  flights: NearbyFlight[]
+  /** When these flights were actually fetched. */
+  fetchedAtMs: number
+  /** True when the latest request failed or was skipped and cached flights were served. */
+  stale: boolean
 }
 
 export interface NearbyFlight {
@@ -264,10 +275,12 @@ function parseAirplanesLiveFlight(
 }
 
 function buildOpenSkyFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): URL {
-  const latitudeDelta = Math.min(2, Math.max(0.15, radiusKm / 111))
+  // Wide enough to cover the radius in every direction; a degree of longitude
+  // shrinks with latitude, so the east-west span grows toward the poles.
+  const latitudeDelta = Math.min(10, Math.max(0.15, radiusKm / 111))
   const longitudeDelta = Math.min(
-    2,
-    Math.max(0.15, radiusKm / (111 * Math.cos(toRadians(latitude)))),
+    20,
+    Math.max(0.15, radiusKm / (111 * Math.max(0.05, Math.cos(toRadians(latitude))))),
   )
 
   const requestUrl = new URL('https://opensky-network.org/api/states/all')
@@ -341,7 +354,8 @@ async function readFlightPayload(response: Response): Promise<{ time?: unknown; 
             throw new Error('Flight data payload was malformed.')
           }
 
-          return { states: [] }
+          // An error page from the proxy, not an empty sky.
+          throw new Error('Flight data is temporarily unavailable.')
         }
       }
     }
@@ -399,7 +413,16 @@ function parseRetryAfterMilliseconds(rawValue: string | null): number {
   )
 }
 
-export async function fetchNearbyFlights({
+export async function fetchNearbyFlights(request: {
+  latitude: number
+  longitude: number
+  radiusKm: number
+  onlyAirborne: boolean
+}): Promise<NearbyFlight[]> {
+  return (await fetchNearbyFlightSnapshot(request)).flights
+}
+
+export async function fetchNearbyFlightSnapshot({
   latitude,
   longitude,
   radiusKm,
@@ -409,22 +432,23 @@ export async function fetchNearbyFlights({
   longitude: number
   radiusKm: number
   onlyAirborne: boolean
-}): Promise<NearbyFlight[]> {
+}): Promise<FlightSnapshot> {
   const requestArgs = { latitude, longitude, radiusKm, onlyAirborne }
   const requestKey = buildRequestKey(requestArgs)
   const nowMs = Date.now()
   const cachedPayload = flightResponseCache.get(requestKey)
   const cachedAgeMs = cachedPayload === undefined ? Infinity : nowMs - cachedPayload.fetchedAtMs
-  const blockedUntilMs = rateLimitedUntil.get(requestKey) ?? 0
 
-  if (cachedPayload !== undefined) {
-    if (cachedAgeMs < MIN_FETCH_INTERVAL_MS) {
-      return cachedPayload.flights
-    }
+  if (cachedPayload !== undefined && cachedAgeMs < MIN_FETCH_INTERVAL_MS) {
+    return { flights: cachedPayload.flights, fetchedAtMs: cachedPayload.fetchedAtMs, stale: false }
+  }
 
-    if (blockedUntilMs > nowMs) {
-      return cachedPayload.flights
+  // Backoff applies whether or not anything is cached.
+  if ((retryNotBefore.get(requestKey) ?? 0) > nowMs) {
+    if (cachedPayload !== undefined) {
+      return { flights: cachedPayload.flights, fetchedAtMs: cachedPayload.fetchedAtMs, stale: true }
     }
+    throw lastErrorByKey.get(requestKey) ?? new Error('Flight data is temporarily rate-limited. Please try again soon.')
   }
 
   const existingRequest = inFlightRequests.get(requestKey)
@@ -432,15 +456,12 @@ export async function fetchNearbyFlights({
     return existingRequest
   }
 
-  const requestPromise = (async () => {
+  const requestPromise = (async (): Promise<FlightSnapshot> => {
     try {
       const response = await fetch(buildFlightRequestUrl(latitude, longitude, radiusKm))
       if (response.status === 429) {
         const backoffMs = parseRetryAfterMilliseconds(response.headers.get('retry-after'))
-        rateLimitedUntil.set(requestKey, Date.now() + backoffMs)
-        if (cachedPayload !== undefined) {
-          return cachedPayload.flights
-        }
+        retryNotBefore.set(requestKey, Date.now() + backoffMs)
         throw new Error('Flight data is temporarily rate-limited. Please try again soon.')
       }
 
@@ -472,14 +493,22 @@ export async function fetchNearbyFlights({
         .filter((flight) => !onlyAirborne || !flight.onGround)
         .sort((left, right) => left.distanceKm - right.distanceKm)
 
-      flightResponseCache.set(requestKey, { flights: filteredFlights, fetchedAtMs: Date.now() })
-      rateLimitedUntil.delete(requestKey)
-      return filteredFlights
+      const fetchedAtMs = Date.now()
+      flightResponseCache.set(requestKey, { flights: filteredFlights, fetchedAtMs })
+      retryNotBefore.delete(requestKey)
+      lastErrorByKey.delete(requestKey)
+      return { flights: filteredFlights, fetchedAtMs, stale: false }
     } catch (error: unknown) {
+      const failure = error instanceof Error ? error : new Error('Could not load nearby flights.')
+      lastErrorByKey.set(requestKey, failure)
+      // Any failure waits at least the minimum interval before the next request.
+      const notBefore = Math.max(retryNotBefore.get(requestKey) ?? 0, Date.now() + MIN_FETCH_INTERVAL_MS)
+      retryNotBefore.set(requestKey, notBefore)
+
       if (cachedPayload !== undefined) {
-        return cachedPayload.flights
+        return { flights: cachedPayload.flights, fetchedAtMs: cachedPayload.fetchedAtMs, stale: true }
       }
-      throw error
+      throw failure
     } finally {
       inFlightRequests.delete(requestKey)
     }

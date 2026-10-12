@@ -38,6 +38,7 @@ import {
   isPresetScheduledNow,
   listPresets,
   normalizeGoogleFontUrl,
+  MIN_FLIGHTS_REFRESH_SECONDS,
   parseRefreshMinutes,
   renamePreset,
   savePreset,
@@ -2482,12 +2483,18 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           <input
                             className={styles.numberInput}
                             type="number"
-                            min={2}
+                            min={MIN_FLIGHTS_REFRESH_SECONDS}
                             max={3600}
                             value={flightsRefreshSeconds}
                             onChange={(e) =>
                               setFlightsRefreshSeconds(
-                                Math.min(3600, Math.max(2, Number.parseInt(e.target.value, 10) || 2)),
+                                Math.min(
+                                  3600,
+                                  Math.max(
+                                    MIN_FLIGHTS_REFRESH_SECONDS,
+                                    Number.parseInt(e.target.value, 10) || MIN_FLIGHTS_REFRESH_SECONDS,
+                                  ),
+                                ),
                               )
                             }
                           />

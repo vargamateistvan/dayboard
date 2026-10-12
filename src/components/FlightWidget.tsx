@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LocateFixed, MapPin, Plane, RefreshCw } from 'lucide-react'
 import { useSettings } from '../lib/useSettings'
-import { fetchNearbyFlights, type NearbyFlight } from '../lib/flights'
+import { fetchNearbyFlightSnapshot, type FlightSnapshot, type NearbyFlight } from '../lib/flights'
+import { usePolledResource } from '../lib/usePolledResource'
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import styles from './FlightWidget.module.css'
 
@@ -41,6 +42,34 @@ function getManualCoordinates(latitude: string, longitude: string): Coordinates 
   }
 
   return { latitude: parsedLatitude, longitude: parsedLongitude }
+}
+
+interface FlightLoadResult {
+  snapshot: FlightSnapshot
+  coordinates: Coordinates
+  locationSource: string
+}
+
+function getDeviceCoordinates(maximumAgeMs: number): Promise<Coordinates> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is unavailable. Add manual coordinates in settings to use the flights widget.'))
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => resolve({ latitude: coords.latitude, longitude: coords.longitude }),
+      (positionError) =>
+        reject(
+          new Error(
+            positionError.code === positionError.PERMISSION_DENIED
+              ? 'Location access was denied. Add manual coordinates or allow location access to see nearby flights.'
+              : 'Location is temporarily unavailable. Add manual coordinates to see nearby flights.',
+          ),
+        ),
+      { enableHighAccuracy: false, maximumAge: maximumAgeMs, timeout: 10_000 },
+    )
+  })
 }
 
 function buildGoogleMapsEmbedUrl(coordinates: Coordinates): string {
@@ -164,6 +193,9 @@ function RadarPlot({
     { x: 9, y: 51.5, label: 'W' },
   ]
   const hasSelectedFlight = selectedFlightIcao !== null
+  // Aircraft beyond the radar range stay in the list but are not drawn: pinning
+  // them to the outer ring would show them at the wrong distance.
+  const flightsInRange = flights.filter((flight) => flight.distanceKm <= maxRadiusKm)
 
   return (
     <div
@@ -252,8 +284,8 @@ function RadarPlot({
           {maxRadiusKm} km
         </text>
 
-        {flights.map((flight, index) => {
-          const ratio = Math.min(1, flight.distanceKm / maxRadiusKm)
+        {flightsInRange.map((flight, index) => {
+          const ratio = flight.distanceKm / maxRadiusKm
           const angle = (flight.bearingDegrees * Math.PI) / 180
           const x = 50 + Math.sin(angle) * ratio * 42
           const y = 50 - Math.cos(angle) * ratio * 42
@@ -307,145 +339,69 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
   const { settings } = useSettings()
   const widgetRootRef = useRef<HTMLDivElement | null>(null)
   const rowsRef = useRef<HTMLDivElement | null>(null)
-  const [flights, setFlights] = useState<NearbyFlight[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null)
   const [now, setNow] = useState(() => Date.now())
-  const [locationSource, setLocationSource] = useState('Device location')
-  const [activeCoordinates, setActiveCoordinates] = useState<Coordinates | null>(null)
-  const [hasInitialized, setHasInitialized] = useState(false)
   const [selectedFlightIcao, setSelectedFlightIcao] = useState<string | null>(null)
+  const {
+    flightsManualLatitude: manualLatitude,
+    flightsManualLongitude: manualLongitude,
+    flightsRadiusKm: radiusKm,
+    flightsRefreshSeconds: refreshSeconds,
+    flightsShowOnlyAirborne: onlyAirborne,
+    flightsUseDeviceLocation: useDeviceLocation,
+  } = settings
 
-  const load = useCallback(() => {
-    const manualCoordinates = getManualCoordinates(
-      settings.flightsManualLatitude,
-      settings.flightsManualLongitude,
-    )
+  const fetcher = useCallback(async (): Promise<FlightLoadResult> => {
+    const manualCoordinates = getManualCoordinates(manualLatitude, manualLongitude)
+    let coordinates: Coordinates
+    let locationSource: string
 
-    const requestFlights = async (
-      coordinates: Coordinates,
-      sourceLabel: string,
-    ) => {
-      try {
-        const nearbyFlights = await fetchNearbyFlights({
-          latitude: coordinates.latitude,
-          longitude: coordinates.longitude,
-          radiusKm: settings.flightsRadiusKm,
-          onlyAirborne: settings.flightsShowOnlyAirborne,
-        })
-
-        setFlights(nearbyFlights)
-        setLocationSource(sourceLabel)
-        setActiveCoordinates(coordinates)
-        setLastRefreshedAt(Date.now())
-        setNow(Date.now())
-        setError(null)
-        setHasInitialized(true)
-      } catch (loadError: unknown) {
-        setError(
-          loadError instanceof Error
-            ? loadError.message
-            : 'Could not load nearby flights.',
-        )
-        setHasInitialized(true)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    // Only show loading state on initial load, not on refresh
-    if (!hasInitialized) {
-      setLoading(true)
-    }
-    setError(null)
-
-    if (!settings.flightsUseDeviceLocation) {
+    if (!useDeviceLocation) {
       if (!manualCoordinates) {
-        setFlights([])
-        setActiveCoordinates(null)
-        setLoading(false)
-        setError('Add valid manual coordinates in settings to load nearby flights.')
-        setHasInitialized(true)
-        return
+        throw new Error('Add valid manual coordinates in settings to load nearby flights.')
       }
-
-      void requestFlights(manualCoordinates, 'Manual coordinates')
-      return
+      coordinates = manualCoordinates
+      locationSource = 'Manual coordinates'
+    } else {
+      try {
+        coordinates = await getDeviceCoordinates(refreshSeconds * 1000)
+        locationSource = 'Device location'
+      } catch (locationError) {
+        if (!manualCoordinates) throw locationError
+        coordinates = manualCoordinates
+        locationSource = 'Manual coordinates'
+      }
     }
 
-    if (!navigator.geolocation) {
-      if (manualCoordinates) {
-        void requestFlights(manualCoordinates, 'Manual coordinates')
-        return
-      }
+    const snapshot = await fetchNearbyFlightSnapshot({ ...coordinates, radiusKm, onlyAirborne })
+    return { snapshot, coordinates, locationSource }
+  }, [manualLatitude, manualLongitude, onlyAirborne, radiusKm, refreshSeconds, useDeviceLocation])
 
-      setFlights([])
-      setActiveCoordinates(null)
-      setLoading(false)
-      setError('Geolocation is unavailable. Add manual coordinates in settings to use the flights widget.')
-      setHasInitialized(true)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        void requestFlights(
-          {
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-          },
-          'Device location',
-        )
-      },
-      (positionError) => {
-        if (manualCoordinates) {
-          void requestFlights(manualCoordinates, 'Manual coordinates')
-          return
-        }
-
-        const fallbackMessage =
-          positionError.code === positionError.PERMISSION_DENIED
-            ? 'Location access was denied. Add manual coordinates or allow location access to see nearby flights.'
-            : 'Location is temporarily unavailable. Add manual coordinates to see nearby flights.'
-
-        setFlights([])
-        setActiveCoordinates(null)
-        setLoading(false)
-        setError(fallbackMessage)
-        setHasInitialized(true)
-      },
-      {
-        enableHighAccuracy: false,
-        maximumAge: settings.flightsRefreshSeconds * 1000,
-        timeout: 10_000,
-      },
-    )
-  }, [
-    settings.flightsManualLatitude,
-    settings.flightsManualLongitude,
-    settings.flightsRadiusKm,
-    settings.flightsRefreshSeconds,
-    settings.flightsShowOnlyAirborne,
-    settings.flightsUseDeviceLocation,
-    hasInitialized,
-  ])
-
-  useEffect(() => {
-    load()
-    const intervalId = window.setInterval(load, settings.flightsRefreshSeconds * 1000)
-    return () => window.clearInterval(intervalId)
-  }, [load, settings.flightsRefreshSeconds])
+  const { data, error, loading, refresh: load } = usePolledResource(fetcher, {
+    intervalMs: refreshSeconds * 1000,
+    key: [useDeviceLocation, manualLatitude, manualLongitude, radiusKm, onlyAirborne].join('|'),
+  })
+  const flights = useMemo(() => data?.snapshot.flights ?? [], [data])
+  const lastRefreshedAt = data?.snapshot.fetchedAtMs ?? null
+  const isStale = Boolean(data && (data.snapshot.stale || error))
+  const locationSource = data?.locationSource ?? 'Device location'
+  const activeCoordinates = data?.coordinates ?? null
 
   useEffect(() => {
     const intervalId = window.setInterval(() => setNow(Date.now()), 60_000)
     return () => window.clearInterval(intervalId)
   }, [])
 
+  // A selection only applies while that aircraft is still in range.
+  const effectiveSelectedIcao = flights.some((flight) => flight.icao24 === selectedFlightIcao)
+    ? selectedFlightIcao
+    : null
+  const toggleSelectedFlight = (icao24: string) =>
+    setSelectedFlightIcao((current) => (current === icao24 && effectiveSelectedIcao === icao24 ? null : icao24))
+
   const nearestFlight = flights[0] ?? null
   const selectedFlight = useMemo(
-    () => flights.find((flight) => flight.icao24 === selectedFlightIcao) ?? null,
-    [flights, selectedFlightIcao],
+    () => flights.find((flight) => flight.icao24 === effectiveSelectedIcao) ?? null,
+    [flights, effectiveSelectedIcao],
   )
   const highestFlight = useMemo(
     () =>
@@ -631,7 +587,13 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
         </div>
         {!loading ? (
           <div className={styles.refreshGroup}>
-            {lastRefreshLabel ? <span className={styles.refreshHint}>{lastRefreshLabel}</span> : null}
+            {isStale ? (
+              <span className={styles.refreshHint} role="status">
+                Couldn&apos;t refresh{lastRefreshLabel ? ` · ${lastRefreshLabel.toLowerCase()}` : ''}
+              </span>
+            ) : lastRefreshLabel ? (
+              <span className={styles.refreshHint}>{lastRefreshLabel}</span>
+            ) : null}
             <button
               className={styles.refresh}
               onClick={load}
@@ -651,9 +613,9 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
         </div>
       ) : null}
 
-      {!loading && error ? <div className={styles.error}>{error}</div> : null}
+      {!loading && error && !data ? <div className={styles.error}>{error}</div> : null}
 
-      {!loading && !error ? (
+      {data ? (
         <div className={styles.body}>
           <div className={styles.summaryBar}>
             <span className={styles.summaryMetric}>
@@ -688,8 +650,8 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                     showGoogleMap={settings.flightsShowGoogleMap}
                     googleMapsEmbedUrl={googleMapsEmbedUrl}
                     isFullscreen={isFullscreen}
-                    selectedFlightIcao={selectedFlightIcao}
-                    onSelectFlight={(flight) => setSelectedFlightIcao(flight.icao24)}
+                    selectedFlightIcao={effectiveSelectedIcao}
+                    onSelectFlight={(flight) => toggleSelectedFlight(flight.icao24)}
                   />
                   <div className={styles.radarCaption}>
                   Centered on {locationSource.toLowerCase()} · outer ring {settings.flightsRadarRadiusKm} km
@@ -744,7 +706,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                   {flights
                     .slice(0, isFullscreen ? 12 : 5)
                     .map((flight) => {
-                      const isSelected = selectedFlightIcao === flight.icao24
+                      const isSelected = effectiveSelectedIcao === flight.icao24
 
                       return (
                       <div key={flight.icao24} role="listitem">
@@ -753,7 +715,7 @@ export function FlightWidget({ isFullscreen = false }: FlightWidgetProps) {
                           type="button"
                           aria-pressed={isSelected}
                           aria-label={`Select ${getFlightName(flight)} from list`}
-                          onClick={() => setSelectedFlightIcao(flight.icao24)}
+                          onClick={() => toggleSelectedFlight(flight.icao24)}
                         >
                           <div className={styles.rowHeader}>
                             <span className={styles.flightName}>{getFlightName(flight)}</span>

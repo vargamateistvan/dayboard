@@ -144,6 +144,10 @@ describe('StockWidget', () => {
   })
 
   it('renders the selected stock quote', async () => {
+    // Real Yahoo chart shape: no marketState; daily bars with timestamps and
+    // the current trading period. Today's session ended, so the market is closed.
+    const todayOpen = Math.floor(Date.now() / 1000) - 10 * 3600
+    const day = 86_400
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -157,9 +161,14 @@ describe('StockWidget', () => {
                 exchangeName: 'NMS',
                 currency: 'USD',
                 regularMarketPrice: 313.33,
-                chartPreviousClose: 312.41,
-                marketState: 'CLOSED',
+                chartPreviousClose: 290.0,
+                regularMarketTime: todayOpen + 6.5 * 3600,
+                gmtoffset: -14_400,
+                currentTradingPeriod: {
+                  regular: { start: todayOpen, end: todayOpen + 6.5 * 3600, gmtoffset: -14_400 },
+                },
               },
+              timestamp: [todayOpen - 3 * day, todayOpen - 2 * day, todayOpen - day, todayOpen],
               indicators: {
                 quote: [{ close: [310.0, 311.5, 312.41, 313.33] }],
               },
@@ -174,7 +183,7 @@ describe('StockWidget', () => {
 
     expect(await screen.findByText('AAPL')).toBeInTheDocument()
     expect(screen.getByText(/\$313\.33/)).toBeInTheDocument()
-    // change = 313.33 - 312.41 = 0.92
+    // Day change from the previous close: 313.33 - 312.41 = 0.92 (not from chartPreviousClose).
     expect(screen.getByText(/\+0\.92/)).toBeInTheDocument()
     expect(screen.getByText(/○ Closed/)).toBeInTheDocument()
   })
