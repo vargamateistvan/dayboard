@@ -9,8 +9,9 @@ import {
 
 const LOCAL_PROXY_PATH = '/api/calendar'
 const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
-const JINA_MIRROR_PREFIX = 'https://r.jina.ai/http://'
 const MISSING_CALENDAR_LINK_ERROR = 'Calendar link is missing. Add one in settings.'
+const GOOGLE_ICAL_BLOCKED_ERROR =
+  "Google doesn't let browsers load iCal links directly. Connect Google Calendar in settings instead."
 
 function isLocalHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1'
@@ -20,11 +21,7 @@ function buildLocalProxyUrl(calendarUrl: string): string {
   return `${LOCAL_PROXY_PATH}?url=${encodeURIComponent(calendarUrl)}`
 }
 
-function buildJinaMirrorUrl(calendarUrl: string): string {
-  return `${JINA_MIRROR_PREFIX}${calendarUrl.replace(/^https?:\/\//, '')}`
-}
-
-function shouldPreferMirror(calendarUrl: string): boolean {
+function isGoogleCalendarUrl(calendarUrl: string): boolean {
   try {
     return new URL(calendarUrl).hostname === GOOGLE_CALENDAR_HOST
   } catch {
@@ -39,14 +36,11 @@ export function getCalendarFeedRequestUrls(
   const calendarUrl = normalizeCalendarUrl(rawCalendarUrl)
   if (!calendarUrl) return []
 
-  const mirrorUrl = buildJinaMirrorUrl(calendarUrl)
-  const requestUrls = isLocalHostname(hostname)
+  // Feed URLs often embed a secret key, so they are only ever sent to the
+  // calendar host itself or to the local dev proxy, never to third-party mirrors.
+  return isLocalHostname(hostname)
     ? [buildLocalProxyUrl(calendarUrl), calendarUrl]
-    : shouldPreferMirror(calendarUrl)
-      ? [mirrorUrl, calendarUrl]
-      : [calendarUrl, mirrorUrl]
-
-  return [...new Set(requestUrls)]
+    : [calendarUrl]
 }
 
 function toError(error: unknown): Error {
@@ -105,6 +99,10 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
     } catch (error: unknown) {
       lastError = toError(error)
     }
+  }
+
+  if (isGoogleCalendarUrl(normalizeCalendarUrl(rawCalendarUrl))) {
+    throw new Error(GOOGLE_ICAL_BLOCKED_ERROR)
   }
 
   throw lastError ?? new Error('Could not load calendar.')

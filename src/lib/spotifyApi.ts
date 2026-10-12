@@ -1,4 +1,5 @@
 import { getValidSpotifyAuth, type SpotifyAuthSession } from './spotifyAuth'
+import { addSpotifyForbiddenPath, readSpotifyForbiddenPaths } from './spotifyForbiddenPaths'
 
 export interface SpotifyProfile {
   id: string
@@ -246,67 +247,6 @@ async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T
   return response.json() as Promise<T>
 }
 
-const forbiddenOptionalPathsByCacheKey = new Map<string, Set<string>>()
-const FORBIDDEN_OPTIONAL_PATHS_STORAGE_KEY = 'dayboard_spotify_forbidden_optional_paths_v1'
-
-type ForbiddenOptionalPathStore = Record<string, string[]>
-
-function readForbiddenOptionalPathStore(): ForbiddenOptionalPathStore {
-  if (typeof window === 'undefined') {
-    return {}
-  }
-
-  const raw = window.localStorage.getItem(FORBIDDEN_OPTIONAL_PATHS_STORAGE_KEY)
-  if (!raw) {
-    return {}
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown
-    if (!parsed || typeof parsed !== 'object') {
-      return {}
-    }
-    return Object.fromEntries(
-      Object.entries(parsed).filter(
-        (entry): entry is [string, string[]] =>
-          Array.isArray(entry[1]) && entry[1].every((path) => typeof path === 'string'),
-      ),
-    )
-  } catch {
-    return {}
-  }
-}
-
-function writeForbiddenOptionalPathStore(store: ForbiddenOptionalPathStore) {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.localStorage.setItem(FORBIDDEN_OPTIONAL_PATHS_STORAGE_KEY, JSON.stringify(store))
-}
-
-function persistForbiddenOptionalPath(cacheKey: string, path: string) {
-  const store = readForbiddenOptionalPathStore()
-  const existingPaths = new Set(store[cacheKey] ?? [])
-  if (existingPaths.has(path)) {
-    return
-  }
-  existingPaths.add(path)
-  store[cacheKey] = Array.from(existingPaths)
-  writeForbiddenOptionalPathStore(store)
-}
-
-function getForbiddenPathSet(cacheKey: string): Set<string> {
-  const existing = forbiddenOptionalPathsByCacheKey.get(cacheKey)
-  if (existing) {
-    return existing
-  }
-
-  const store = readForbiddenOptionalPathStore()
-  const created = new Set<string>(store[cacheKey] ?? [])
-  forbiddenOptionalPathsByCacheKey.set(cacheKey, created)
-  return created
-}
-
 function filterNonNullItems<T>(items: Array<T | null | undefined> | undefined): T[] {
   return (items ?? []).filter((item): item is T => item !== null && item !== undefined)
 }
@@ -316,12 +256,9 @@ async function fetchSpotifyOptionalJson<T>(
   path: string,
   options?: {
     skipKnownForbiddenPath?: boolean
-    cacheKey?: string
   },
 ): Promise<T | null> {
-  const cacheKey = options?.cacheKey
-  const forbiddenPathSet = cacheKey ? getForbiddenPathSet(cacheKey) : null
-  if (options?.skipKnownForbiddenPath && forbiddenPathSet?.has(path)) {
+  if (options?.skipKnownForbiddenPath && readSpotifyForbiddenPaths().has(path)) {
     return null
   }
 
@@ -332,9 +269,8 @@ async function fetchSpotifyOptionalJson<T>(
   })
 
   if (response.status === 403) {
-    if (options?.skipKnownForbiddenPath && forbiddenPathSet && cacheKey) {
-      forbiddenPathSet.add(path)
-      persistForbiddenOptionalPath(cacheKey, path)
+    if (options?.skipKnownForbiddenPath) {
+      addSpotifyForbiddenPath(path)
     }
     return null
   }
@@ -373,27 +309,27 @@ export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Pro
       fetchSpotifyOptionalJson<{ items?: SpotifyTopArtistItem[] }>(
         validAuth.accessToken,
         '/me/top/artists?limit=5',
-        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifyTopTrackItem[] }>(
         validAuth.accessToken,
         '/me/top/tracks?limit=5',
-        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifySavedAlbumItem[] }>(
         validAuth.accessToken,
         '/me/albums?limit=5',
-        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifySavedShowItem[] }>(
         validAuth.accessToken,
         '/me/shows?limit=5',
-        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+        { skipKnownForbiddenPath: true },
       ),
       fetchSpotifyOptionalJson<{ items?: SpotifySearchPlaylistItem[] }>(
         validAuth.accessToken,
         '/me/playlists?limit=5',
-        { skipKnownForbiddenPath: true, cacheKey: validAuth.refreshToken },
+        { skipKnownForbiddenPath: true },
       ),
     ]),
   ])

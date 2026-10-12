@@ -1,3 +1,4 @@
+import { safeHttpUrlOr } from '../lib/urlSafety'
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Bookmark, Search, Trash2 } from 'lucide-react'
 import { MediaBrandIcon } from './MediaBrandIcon'
@@ -258,7 +259,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   const groups = searchGroups ?? []
   const hasSearchResults = groups.some((group) => group.items.length > 0)
   const showAppleMusicEmbedNotice = config.brand === 'apple-music'
-  const openAppleMusicUrl = activeUrl.trim() || 'https://music.apple.com/'
+  const openAppleMusicUrl = safeHttpUrlOr(activeUrl, 'https://music.apple.com/')
   const searchResultTotal = groups.reduce((sum, group) => sum + group.items.length, 0)
   const listAnimationSignature = `${activeTab}:${searchResultTotal}:${savedLinks.length}:${activeUrl}`
 

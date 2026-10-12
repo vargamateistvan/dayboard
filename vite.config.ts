@@ -38,10 +38,12 @@ async function handleCalendarProxy(req: IncomingMessage, res: ServerResponse): P
     const response = await fetch(remoteUrl)
     res.statusCode = response.status
 
-    const contentType = response.headers.get('content-type')
-    if (contentType) {
-      res.setHeader('Content-Type', contentType)
-    }
+    // Never pass the upstream Content-Type through: this response is served
+    // from the app's own origin, so an upstream HTML page could otherwise run
+    // scripts with access to the app's localStorage. The app reads it as text.
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
+    res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'")
 
     const cacheControl = response.headers.get('cache-control')
     if (cacheControl) {

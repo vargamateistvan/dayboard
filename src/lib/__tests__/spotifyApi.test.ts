@@ -134,7 +134,7 @@ describe('fetchSpotifyAccountSnapshot', () => {
     vi.unstubAllGlobals()
   })
 
-  it('skips repeated forbidden library requests for the same token', async () => {
+  it('skips repeated forbidden library requests for the same sign-in', async () => {
     vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
       accessToken: 'token-with-limited-scopes',
       refreshToken: 'refresh',

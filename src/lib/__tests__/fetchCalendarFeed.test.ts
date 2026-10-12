@@ -15,27 +15,20 @@ describe('getCalendarFeedRequestUrls', () => {
     ])
   })
 
-  it('prefers the mirror for Google Calendar feeds away from localhost', () => {
+  it('never routes Google Calendar feeds through a third-party mirror', () => {
     expect(
       getCalendarFeedRequestUrls(
         'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
         'dayboard.app',
       ),
     ).toEqual([
-    'https://r.jina.ai/http://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
-    'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
+      'https://calendar.google.com/calendar/ical/mateistvanvarga%40gmail.com/public/basic.ics',
     ])
   })
 
-  it('tries the original URL before the mirror for non-Google feeds away from localhost', () => {
-    expect(
-    getCalendarFeedRequestUrls(
+  it('only requests the original URL for other feeds away from localhost', () => {
+    expect(getCalendarFeedRequestUrls('https://example.com/calendar.ics', 'dayboard.app')).toEqual([
       'https://example.com/calendar.ics',
-      'dayboard.app',
-    ),
-    ).toEqual([
-    'https://example.com/calendar.ics',
-    'https://r.jina.ai/http://example.com/calendar.ics',
     ])
   })
 })
@@ -54,7 +47,7 @@ describe('fetchCalendarFeed', () => {
     await expect(fetchCalendarFeed('https://example.com/calendar.ics')).resolves.toBe('BEGIN:VCALENDAR')
   })
 
-  it('extracts the ICS payload from mirrored responses', async () => {
+  it('extracts the ICS payload when the response wraps it in other text', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -91,6 +84,14 @@ describe('fetchCalendarFeed', () => {
 
     await expect(fetchCalendarFeed('https://example.com/calendar.ics')).rejects.toThrow('proxy unavailable')
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('suggests connecting Google Calendar when a Google iCal link cannot be fetched', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+
+    await expect(
+      fetchCalendarFeed('https://calendar.google.com/calendar/ical/someone%40gmail.com/private-abc/basic.ics'),
+    ).rejects.toThrow(/connect google calendar in settings/i)
   })
 
   it('throws a specific error when the calendar link is missing', async () => {

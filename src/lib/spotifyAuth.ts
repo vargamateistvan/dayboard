@@ -1,3 +1,6 @@
+import { clearSpotifyForbiddenPaths } from './spotifyForbiddenPaths'
+
+
 export interface SpotifyAuthSession {
   accessToken: string
   refreshToken: string
@@ -150,6 +153,7 @@ export function getStoredSpotifyAuth(): SpotifyAuthSession | null {
 
 export function clearStoredSpotifyAuth() {
   localStorage.removeItem(AUTH_STORAGE_KEY)
+  clearSpotifyForbiddenPaths()
   window.dispatchEvent(new Event(AUTH_CHANGED_EVENT))
 }
 
@@ -245,6 +249,8 @@ export async function completeSpotifyLoginFromUrl(): Promise<SpotifyAuthSession 
 
   try {
     const auth = await exchangeAuthCode(code, verifier)
+    // A new sign-in may grant different scopes than the previous one.
+    clearSpotifyForbiddenPaths()
     persistAuth(auth)
     return auth
   } finally {

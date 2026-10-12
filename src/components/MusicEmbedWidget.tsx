@@ -1,3 +1,4 @@
+import { safeHttpUrlOr } from '../lib/urlSafety'
 import { normalizeAppleMusicEmbedUrl, normalizeSpotifyEmbedUrl } from '../lib/musicEmbeds'
 import styles from './MusicEmbedWidget.module.css'
 
@@ -62,9 +63,10 @@ export function MusicEmbedWidget({
     provider === 'spotify'
       ? 'https://accounts.spotify.com/login'
       : 'https://music.apple.com/login'
-  const openPlayerUrl =
-    resolvedShareUrl ||
-    (provider === 'spotify' ? 'https://open.spotify.com/' : 'https://music.apple.com/')
+  const openPlayerUrl = safeHttpUrlOr(
+    resolvedShareUrl,
+    provider === 'spotify' ? 'https://open.spotify.com/' : 'https://music.apple.com/',
+  )
 
   return (
     <div className={styles.widget}>

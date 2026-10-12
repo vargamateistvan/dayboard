@@ -63,7 +63,7 @@ import {
 import { searchSportsTeams, type SportsTeamSearchResult } from "../lib/sports";
 import {
   buildGoogleCalendarFeedUrl,
-  clearStoredGoogleAuth,
+  disconnectGoogle,
   fetchGoogleCalendarList,
   getStoredGoogleAuth,
   parseGoogleCalendarFeedUrl,
@@ -799,7 +799,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   }
 
   function handleDisconnectGoogle() {
-    clearStoredGoogleAuth()
+    disconnectGoogle()
     setGoogleAuth(null)
     // Remove all Google Calendar feeds
     setGlobalCalendarFeeds((prev) => prev.filter((feed) => parseGoogleCalendarFeedUrl(feed.url) === null))

@@ -26,6 +26,7 @@ declare global {
             scope: string
             callback: (response: { access_token?: string; expires_in?: number; error?: string }) => void
           }): GisTokenClient
+          revoke?(accessToken: string, done: () => void): void
         }
       }
     }
@@ -74,6 +75,20 @@ export function getStoredGoogleAuth(): GoogleAuthSession | null {
 
 export function clearStoredGoogleAuth() {
   localStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY)
+}
+
+// Revokes the grant with Google (so the token stops working right away, not
+// only when it expires) and forgets it locally.
+export function disconnectGoogle() {
+  const auth = readStoredAuth()
+  if (auth) {
+    try {
+      window.google?.accounts?.oauth2?.revoke?.(auth.accessToken, () => {})
+    } catch {
+      // Revocation is best effort; the local token is cleared regardless.
+    }
+  }
+  clearStoredGoogleAuth()
 }
 
 function waitForGis(): Promise<typeof window.google> {

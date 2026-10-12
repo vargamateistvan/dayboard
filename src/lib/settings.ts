@@ -1,5 +1,6 @@
 import { createSavedMediaLink, normalizeSavedMediaLinks, type SavedMediaLink } from './mediaLinks'
 import { readStorage, writeStorage } from './storage'
+import { isSafeHttpUrl } from './urlSafety'
 import {
   loadWidgetLayoutState,
   normalizeWidgetLayoutState,
@@ -9,6 +10,9 @@ import {
 
 export type ColorScheme = 'light' | 'dark' | 'system'
 export type Theme = 'default' | 'retro' | 'futuristic' | 'nature' | 'ocean' | 'sunset' | 'custom'
+
+const COLOR_SCHEMES: readonly ColorScheme[] = ['light', 'dark', 'system']
+const THEME_IDS: readonly Theme[] = ['default', 'retro', 'futuristic', 'nature', 'ocean', 'sunset', 'custom']
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 export type WeatherUnitSystem = 'metric' | 'imperial'
 export type CalendarWeekStartsOn = 'sunday' | 'monday'
@@ -576,7 +580,7 @@ function normalizeWorldClockTimeZone(value: unknown): string {
 }
 
 function normalizeEmbedUrl(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : ''
+  return isSafeHttpUrl(value) ? value.trim() : ''
 }
 
 function normalizeTickerSymbol(value: unknown, fallback: string): string {
@@ -802,8 +806,27 @@ function normalizeCalendarWeekStartsOn(value: unknown): CalendarWeekStartsOn {
   return value === 'sunday' || value === 'monday' ? (value as CalendarWeekStartsOn) : DEFAULT_SETTINGS.calendarWeekStartsOn
 }
 
+// Custom colors are written into CSS custom properties. Allow only what a
+// color or linear-gradient needs, so a shared preset cannot inject url(),
+// image-set() or extra declarations that load third-party resources.
+const SAFE_CSS_COLOR_PATTERN = /^[#a-z0-9.,%()\s-]+$/i
+const UNSAFE_CSS_TOKEN_PATTERN = /url|image|expression|element|var\(/i
+
+function normalizeCssColor(value: unknown, fallback: string): string {
+  const color = normalizeNonEmptyString(value, fallback)
+  return SAFE_CSS_COLOR_PATTERN.test(color) && !UNSAFE_CSS_TOKEN_PATTERN.test(color) ? color : fallback
+}
+
 function normalizeCustomBackground(value: unknown): string {
-  return normalizeNonEmptyString(value, DEFAULT_CUSTOM_COLORS.background)
+  return normalizeCssColor(value, DEFAULT_CUSTOM_COLORS.background)
+}
+
+function normalizeTheme(value: unknown): Theme {
+  return THEME_IDS.includes(value as Theme) ? (value as Theme) : DEFAULT_SETTINGS.theme
+}
+
+function normalizeColorScheme(value: unknown): ColorScheme {
+  return COLOR_SCHEMES.includes(value as ColorScheme) ? (value as ColorScheme) : DEFAULT_SETTINGS.colorScheme
 }
 
 function normalizePomodoroWorkMinutes(value: unknown): number {
@@ -837,11 +860,11 @@ function normalizeCustomColors(value: unknown): CustomColors {
 
   const obj = value as Record<string, unknown>
   return {
-    primary: normalizeNonEmptyString(obj.primary, DEFAULT_CUSTOM_COLORS.primary),
-    primaryHover: normalizeNonEmptyString(obj.primaryHover, DEFAULT_CUSTOM_COLORS.primaryHover),
+    primary: normalizeCssColor(obj.primary, DEFAULT_CUSTOM_COLORS.primary),
+    primaryHover: normalizeCssColor(obj.primaryHover, DEFAULT_CUSTOM_COLORS.primaryHover),
     background: normalizeCustomBackground(obj.background),
-    fontColor: normalizeNonEmptyString(obj.fontColor, DEFAULT_CUSTOM_COLORS.fontColor),
-    secondaryFontColor: normalizeNonEmptyString(obj.secondaryFontColor, DEFAULT_CUSTOM_COLORS.secondaryFontColor),
+    fontColor: normalizeCssColor(obj.fontColor, DEFAULT_CUSTOM_COLORS.fontColor),
+    secondaryFontColor: normalizeCssColor(obj.secondaryFontColor, DEFAULT_CUSTOM_COLORS.secondaryFontColor),
   }
 }
 
@@ -861,6 +884,8 @@ function normalizeStoredSettings(value: unknown): Settings | null {
   return {
     ...DEFAULT_SETTINGS,
     ...rest,
+    theme: normalizeTheme(rest.theme),
+    colorScheme: normalizeColorScheme(rest.colorScheme),
     fontPreset: normalizeFontPreset(rest.fontPreset),
     customGoogleFontUrl: normalizeGoogleFontUrl((rest as { customGoogleFontUrl?: unknown }).customGoogleFontUrl),
     customGoogleFontFamily: normalizeCustomGoogleFontFamily(
@@ -1509,25 +1534,31 @@ function normalizePresetSchedule(value: unknown): SettingsPresetSchedule | undef
   }
 }
 
+// Presets are keyed by user-chosen names, so the store has no prototype:
+// names like "__proto__" or "toString" are ordinary keys.
+function createPresetStore(): Record<string, SettingsPreset> {
+  return Object.create(null) as Record<string, SettingsPreset>
+}
+
 function readPresetStore(): Record<string, SettingsPreset> {
   const presetJson = readStorage(PRESET_STORAGE_KEY)
   const legacyJson = readStorage(LEGACY_PROFILE_STORAGE_KEY)
 
   if (!presetJson && !legacyJson) {
-    return {}
+    return createPresetStore()
   }
 
   let rawStore: Record<string, StoredPreset>
   try {
     const parsed: unknown = JSON.parse(presetJson ?? legacyJson ?? '{}')
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      return {}
+      return createPresetStore()
     }
     rawStore = parsed as Record<string, StoredPreset>
   } catch {
-    return {}
+    return createPresetStore()
   }
-  const presets: Record<string, SettingsPreset> = {}
+  const presets = createPresetStore()
 
   Object.entries(rawStore).forEach(([fallbackName, rawPreset]) => {
     const name = normalizeNonEmptyString(rawPreset?.name, fallbackName)

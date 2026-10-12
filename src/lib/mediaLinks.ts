@@ -1,3 +1,6 @@
+import { isSafeHttpUrl } from './urlSafety'
+
+
 export interface SavedMediaLink {
   url: string
   title: string
@@ -98,14 +101,13 @@ function normalizeTitle(title: unknown, url: string): string {
 function normalizeEntry(value: unknown): SavedMediaLink | null {
   if (typeof value === 'string') {
     const url = value.trim()
-    return url ? { url, title: getFallbackTitle(url) } : null
+    return isSafeHttpUrl(url) ? { url, title: getFallbackTitle(url) } : null
   }
 
   if (!value || typeof value !== 'object') return null
   const candidate = value as { url?: unknown; title?: unknown }
-  if (typeof candidate.url !== 'string') return null
+  if (!isSafeHttpUrl(candidate.url)) return null
   const url = candidate.url.trim()
-  if (!url) return null
   return { url, title: normalizeTitle(candidate.title, url) }
 }
 
