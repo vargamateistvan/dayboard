@@ -114,9 +114,15 @@ export function InfoDialog({ onClose }: InfoDialogProps) {
             <h3 className={styles.sectionTitle}>How it works</h3>
             <ul className={styles.list}>
               <li>Use the settings button to control widget visibility, layout, themes, and preferences.</li>
-              <li>Click the fullscreen button on any widget to focus on just that panel.</li>
-              <li>Calendar widgets can use iCal feeds and will trigger upcoming event notifications.</li>
-              <li>Focus mode hides distracting widgets so the dashboard stays minimal.</li>
+              <li>In Settings → Layout, drag widgets from the palette onto the grid, drag a corner to resize, and add or remove rows.</li>
+              <li>Settings → Appearance lets you pick a theme, custom colors, and fonts, including any Google Font.</li>
+              <li>Settings → Widgets configures each widget: calendar feeds, weather, flights, clocks, finance, sports, music, and more.</li>
+              <li>Click the fullscreen button on any widget to focus on just that panel, or make the whole dashboard fullscreen from the header.</li>
+              <li>Calendar widgets can use iCal feeds or Google Calendar and will trigger upcoming event notifications.</li>
+              <li>The bell in the header keeps a history of notifications; choose how they are delivered in Settings → Notifications.</li>
+              <li>Save layouts and settings as presets in Settings → Presets, switch between them from the header, or schedule them to switch automatically.</li>
+              <li>Press Ctrl+K (⌘K on Mac) to toggle focus mode, which hides the weather and calendar widgets.</li>
+              <li>Your settings are saved in this browser, so they stay put between visits.</li>
             </ul>
           </section>
 
