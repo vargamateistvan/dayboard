@@ -278,6 +278,7 @@ describe('App fullscreen widgets', () => {
   })
 
   it('opens the info dialog with usage guidance and the issue tracker link', () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     render(<App />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Open app info' }))
@@ -288,6 +289,7 @@ describe('App fullscreen widgets', () => {
     expect(
       screen.getByRole('link', { name: 'github.com/vargamateistvan/dayboard/issues' }),
     ).toHaveAttribute('href', 'https://github.com/vargamateistvan/dayboard/issues')
+    vi.unstubAllGlobals()
   })
 
   it('shows a preset selector when more than one preset exists', () => {
