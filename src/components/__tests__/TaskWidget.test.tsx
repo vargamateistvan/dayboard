@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { TaskWidget } from '../TaskWidget'
 
 const STORAGE_KEY = 'dayboard_tasks'
@@ -79,5 +79,20 @@ describe('TaskWidget', () => {
 
     expect(document.querySelector('time[dateTime="2026-08-10"]')).not.toBeNull()
     expect(localStorage.getItem(STORAGE_KEY)).toContain('"dueDate":"2026-08-10"')
+  })
+
+  it('shows tasks added in another tab', () => {
+    render(<TaskWidget />)
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: STORAGE_KEY,
+          newValue: JSON.stringify([{ id: '9', text: 'From other tab', completed: false, createdAt: 1, dueDate: '' }]),
+        }),
+      )
+    })
+
+    expect(screen.getByText('From other tab')).toBeInTheDocument()
   })
 })

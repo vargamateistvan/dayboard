@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MiniKanbanWidget } from '../MiniKanbanWidget'
 
 const STORAGE_KEY = 'dayboard_kanban_cards'
@@ -86,5 +86,20 @@ describe('MiniKanbanWidget', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete "Draft roadmap"' }))
     expect(screen.queryByText('Draft roadmap')).not.toBeInTheDocument()
+  })
+
+  it('shows cards added in another tab', () => {
+    render(<MiniKanbanWidget />)
+
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: STORAGE_KEY,
+          newValue: JSON.stringify([{ id: '9', title: 'From other tab', column: 'doing', createdAt: 1, updatedAt: 1 }]),
+        }),
+      )
+    })
+
+    expect(screen.getByText('From other tab')).toBeInTheDocument()
   })
 })

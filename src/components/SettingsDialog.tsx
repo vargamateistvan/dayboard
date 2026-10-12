@@ -22,6 +22,8 @@ import {
 } from "../lib/musicEmbeds";
 import {
   type WidgetLayoutState,
+  loadWidgetLayoutState,
+  saveWidgetLayoutState,
   useWidgetVisibility,
 } from "../lib/useWidgetVisibility";
 import { WidgetLayoutEditor } from "./WidgetLayoutEditor";
@@ -727,6 +729,15 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     insertRow,
     deleteRow,
   } = useWidgetVisibility();
+  // The layout editor previews changes live on the dashboard; this snapshot
+  // lets Cancel put the layout back the way it was when the dialog opened.
+  const [layoutSnapshot, setLayoutSnapshot] = useState<WidgetLayoutState>(() => loadWidgetLayoutState());
+  const cancel = () => {
+    if (JSON.stringify(loadWidgetLayoutState()) !== JSON.stringify(layoutSnapshot)) {
+      saveWidgetLayoutState(layoutSnapshot);
+    }
+    onClose();
+  };
   const [calendarFeeds, setCalendarFeeds] = useState<CalendarFeed[]>(
     settings.calendarFeeds.length > 0
       ? settings.calendarFeeds
@@ -1425,6 +1436,8 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
     setEditingPresetName(preset.name);
+    // Applying a preset is immediate, so Cancel should not undo its layout.
+    setLayoutSnapshot(loadWidgetLayoutState());
   };
 
   const handleEditPreset = (preset: SettingsPreset) => {
@@ -1432,6 +1445,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     updateSettings(preset.settings);
     syncDraftState(preset.settings);
     setEditingPresetName(preset.name);
+    setLayoutSnapshot(loadWidgetLayoutState());
     setActiveTab("appearance");
   };
 
@@ -1517,7 +1531,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
           <h2 className={styles.title}>Settings</h2>
           <button
             className={styles.close}
-            onClick={onClose}
+            onClick={cancel}
             aria-label="Close settings"
             type="button"
           >
@@ -3359,7 +3373,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
         </div>
 
         <div className={styles.footer}>
-          <button className={styles.btnGhost} onClick={onClose} type="button">
+          <button className={styles.btnGhost} onClick={cancel} type="button">
             Cancel
           </button>
           <button className={styles.btnPrimary} onClick={save} type="button">

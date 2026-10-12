@@ -268,6 +268,12 @@ const LEGACY_DEFAULT_FLIGHTS_RADIUS_KM = 25
 const STORAGE_KEY = 'dayboard:settings'
 const PRESET_STORAGE_KEY = 'dayboard:settings-presets'
 const LEGACY_PROFILE_STORAGE_KEY = 'settings_profiles'
+
+export const SETTINGS_STORAGE_KEY = STORAGE_KEY
+
+export function isPresetStorageKey(key: string | null): boolean {
+  return key === PRESET_STORAGE_KEY || key === LEGACY_PROFILE_STORAGE_KEY
+}
 const CUSTOM_THEME_VARIABLES = [
   '--color-accent',
   '--color-accent-hover',

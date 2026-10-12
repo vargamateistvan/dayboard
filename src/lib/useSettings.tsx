@@ -3,8 +3,10 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import {
   applyTheme,
   getActiveScheduledPreset,
+  isPresetStorageKey,
   loadSettings,
   saveSettings,
+  SETTINGS_STORAGE_KEY,
   type Settings,
 } from './settings'
 import { saveWidgetLayoutState } from './useWidgetVisibility'
@@ -102,6 +104,23 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       saveWidgetLayoutState(activePreset.layout)
     }
   }, [commitSettings])
+
+  // Follow settings and presets saved in other tabs. Only reload here; saving
+  // again would bounce the change back and forth between tabs.
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === SETTINGS_STORAGE_KEY) {
+        const next = loadSettings()
+        settingsRef.current = next
+        setSettings(next)
+      } else if (isPresetStorageKey(event.key)) {
+        window.dispatchEvent(new CustomEvent('settingsPresetsChanged'))
+      }
+    }
+
+    window.addEventListener('storage', handleStorage)
+    return () => window.removeEventListener('storage', handleStorage)
+  }, [])
 
   useEffect(() => {
     syncScheduledPreset()

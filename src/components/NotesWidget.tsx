@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Trash2 } from 'lucide-react'
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
+import { useSyncedStorage } from '../lib/useSyncedStorage'
 import styles from './NotesWidget.module.css'
 
 interface Note {
@@ -13,31 +14,36 @@ interface Note {
 const STORAGE_KEY = 'dayboard_notes'
 
 const COLORS = ['yellow', 'pink', 'blue', 'green'] as const
+const NO_NOTES: Note[] = []
+
+function normalizeNote(raw: unknown): Note | null {
+  if (!raw || typeof raw !== 'object') return null
+
+  const candidate = raw as Partial<Note>
+  if (typeof candidate.id !== 'string' || !candidate.id) return null
+
+  return {
+    id: candidate.id,
+    text: typeof candidate.text === 'string' ? candidate.text : '',
+    color: COLORS.includes(candidate.color as Note['color']) ? (candidate.color as Note['color']) : 'yellow',
+    createdAt: typeof candidate.createdAt === 'number' ? candidate.createdAt : Date.now(),
+  }
+}
+
+function normalizeNotes(value: unknown): Note[] | null {
+  if (!Array.isArray(value)) return null
+  return value.map(normalizeNote).filter((note): note is Note => note !== null)
+}
 
 interface NotesWidgetProps {
   readonly isFullscreen?: boolean
 }
 
 export function NotesWidget({ isFullscreen = false }: NotesWidgetProps) {
-  const [notes, setNotes] = useState<Note[]>([])
+  const [notes, setNotes] = useSyncedStorage(STORAGE_KEY, normalizeNotes, NO_NOTES)
   const [selectedColor, setSelectedColor] = useState<Note['color']>('yellow')
   const widgetRootRef = useRef<HTMLDivElement | null>(null)
   const notesGridRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        setNotes(JSON.parse(saved))
-      } catch {
-        console.error('Failed to load notes')
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(notes))
-  }, [notes])
 
   const addNote = () => {
     const newNote: Note = {
@@ -46,19 +52,19 @@ export function NotesWidget({ isFullscreen = false }: NotesWidgetProps) {
       color: selectedColor,
       createdAt: Date.now(),
     }
-    setNotes([newNote, ...notes])
+    setNotes((prev) => [newNote, ...prev])
   }
 
   const updateNote = (id: string, text: string) => {
-    setNotes(notes.map(n => (n.id === id ? { ...n, text } : n)))
+    setNotes((prev) => prev.map(n => (n.id === id ? { ...n, text } : n)))
   }
 
   const changeColor = (id: string, color: Note['color']) => {
-    setNotes(notes.map(n => (n.id === id ? { ...n, color } : n)))
+    setNotes((prev) => prev.map(n => (n.id === id ? { ...n, color } : n)))
   }
 
   const deleteNote = (id: string) => {
-    setNotes(notes.filter(n => n.id !== id))
+    setNotes((prev) => prev.filter(n => n.id !== id))
   }
 
   const notesAnimationSignature = useMemo(

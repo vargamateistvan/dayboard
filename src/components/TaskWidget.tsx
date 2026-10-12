@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Plus, Trash2, Check } from 'lucide-react'
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
+import { useSyncedStorage } from '../lib/useSyncedStorage'
 import styles from './TaskWidget.module.css'
 
 interface Task {
@@ -49,50 +50,25 @@ function normalizeTask(raw: unknown): Task | null {
   }
 }
 
+const NO_TASKS: Task[] = []
+
+function normalizeTasks(value: unknown): Task[] | null {
+  if (!Array.isArray(value)) return null
+  return value.map(normalizeTask).filter((task): task is Task => task !== null)
+}
+
 interface TaskWidgetProps {
   readonly isFullscreen?: boolean
 }
 
 export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
-  // Initialize from localStorage to avoid hydration mismatch
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    if (typeof window === 'undefined') return []
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as unknown
-        if (!Array.isArray(parsed)) {
-          return []
-        }
-        return parsed
-          .map(normalizeTask)
-          .filter((task): task is Task => task !== null)
-      } catch {
-        console.error('Failed to load tasks from localStorage')
-        return []
-      }
-    }
-    return []
-  })
+  const [tasks, setTasks] = useSyncedStorage(STORAGE_KEY, normalizeTasks, NO_TASKS)
   const [input, setInput] = useState('')
   const [inputDate, setInputDate] = useState('')
-  const [mounted, setMounted] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingText, setEditingText] = useState('')
   const widgetRootRef = useRef<HTMLDivElement | null>(null)
   const listRef = useRef<HTMLDivElement | null>(null)
-
-  // Mark component as mounted to avoid hydration issues
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  // Save tasks to localStorage whenever they change (only after mount)
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
-    }
-  }, [tasks, mounted])
 
   const addTask = (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,17 +81,17 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
       createdAt: Date.now(),
       dueDate: inputDate,
     }
-    setTasks([newTask, ...tasks])
+    setTasks((prev) => [newTask, ...prev])
     setInput('')
     setInputDate('')
   }
 
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)))
+    setTasks((prev) => prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)))
   }
 
   const deleteTask = (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id))
+    setTasks((prev) => prev.filter(t => t.id !== id))
   }
 
   const startEditingTask = (task: Task) => {
@@ -136,7 +112,7 @@ export function TaskWidget({ isFullscreen = false }: TaskWidgetProps) {
       return
     }
 
-    setTasks(tasks.map(task => (task.id === id ? { ...task, text: nextText } : task)))
+    setTasks((prev) => prev.map(task => (task.id === id ? { ...task, text: nextText } : task)))
     setEditingTaskId(null)
     setEditingText('')
   }

@@ -4,6 +4,7 @@ import { SettingsDialog } from '../SettingsDialog'
 import { SettingsProvider } from '../../lib/useSettings'
 import { searchSportsTeams } from '../../lib/sports'
 import * as spotifyAuth from '../../lib/spotifyAuth'
+import { loadWidgetLayoutState } from '../../lib/useWidgetVisibility'
 
 vi.mock('../../lib/sports', () => ({
   searchSportsTeams: vi.fn(),
@@ -806,6 +807,47 @@ describe('SettingsDialog', () => {
           customGoogleFontFamily: 'Roboto Slab',
         },
       },
+    })
+  })
+
+  describe('layout changes', () => {
+    function renderWithClose() {
+      const onClose = vi.fn()
+      render(
+        <SettingsProvider>
+          <SettingsDialog onClose={onClose} />
+        </SettingsProvider>,
+      )
+      fireEvent.click(screen.getByRole('tab', { name: /Layout/i }))
+      return onClose
+    }
+
+    it('reverts layout edits on Cancel', () => {
+      const onClose = renderWithClose()
+      expect(loadWidgetLayoutState().visibility.clock).toBe(true)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove Clock from dashboard' }))
+      expect(loadWidgetLayoutState().visibility.clock).toBe(false)
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(loadWidgetLayoutState().visibility.clock).toBe(true)
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('reverts layout edits when closed with the X button', () => {
+      renderWithClose()
+      fireEvent.click(screen.getByRole('button', { name: 'Remove Clock from dashboard' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close settings' }))
+      expect(loadWidgetLayoutState().visibility.clock).toBe(true)
+    })
+
+    it('keeps layout edits on Save', () => {
+      renderWithClose()
+      fireEvent.click(screen.getByRole('button', { name: 'Remove Clock from dashboard' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+      expect(loadWidgetLayoutState().visibility.clock).toBe(false)
     })
   })
 })

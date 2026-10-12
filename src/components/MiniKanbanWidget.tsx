@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type FormEvent } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
+import { useSyncedStorage } from '../lib/useSyncedStorage'
 import styles from './MiniKanbanWidget.module.css'
 
 type KanbanColumn = 'todo' | 'doing' | 'done'
@@ -43,6 +44,13 @@ function normalizeCard(raw: unknown): KanbanCard | null {
   }
 }
 
+const NO_CARDS: KanbanCard[] = []
+
+function normalizeCards(value: unknown): KanbanCard[] | null {
+  if (!Array.isArray(value)) return null
+  return value.map(normalizeCard).filter((card): card is KanbanCard => card !== null)
+}
+
 function getColumnIndex(column: KanbanColumn): number {
   return COLUMNS.findIndex((entry) => entry.id === column)
 }
@@ -52,25 +60,7 @@ interface MiniKanbanWidgetProps {
 }
 
 export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps) {
-  const [cards, setCards] = useState<KanbanCard[]>(() => {
-    if (typeof window === 'undefined') {
-      return []
-    }
-
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) {
-      return []
-    }
-
-    try {
-      const parsed = JSON.parse(saved) as unknown
-      return Array.isArray(parsed) ? parsed.map(normalizeCard).filter((card): card is KanbanCard => card !== null) : []
-    } catch {
-      console.error('Failed to load kanban cards from localStorage')
-      return []
-    }
-  })
-  const [mounted, setMounted] = useState(false)
+  const [cards, setCards] = useSyncedStorage(STORAGE_KEY, normalizeCards, NO_CARDS)
   const [title, setTitle] = useState('')
   const [column, setColumn] = useState<KanbanColumn>('todo')
   const [editingCardId, setEditingCardId] = useState<string | null>(null)
@@ -80,16 +70,6 @@ export function MiniKanbanWidget({ isFullscreen = false }: MiniKanbanWidgetProps
   const widgetRootRef = useRef<HTMLDivElement | null>(null)
   const boardRef = useRef<HTMLDivElement | null>(null)
   const columnMenuRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cards))
-    }
-  }, [cards, mounted])
 
   useEffect(() => {
     if (!columnMenuOpen) {
