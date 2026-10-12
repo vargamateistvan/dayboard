@@ -16,18 +16,21 @@ import {
   Sunset,
 } from "lucide-react";
 import { useSettings } from "../lib/useSettings";
+import { usePolledResource } from "../lib/usePolledResource";
+import { getCurrentLocation, reverseGeocode, type Coordinates } from "../lib/location";
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from "../lib/anime";
 import styles from "./WeatherWidget.module.css";
 import type { WeatherUnitSystem } from "../lib/settings";
 
+// Missing values are null so they render as "—" rather than a real-looking 0.
 interface ForecastDay {
   date: string;
-  high: number;
-  low: number;
-  rainChance: number;
-  rainAmount: number;
-  windSpeed: number;
-  weatherCode: number;
+  high: number | null;
+  low: number | null;
+  rainChance: number | null;
+  rainAmount: number | null;
+  windSpeed: number | null;
+  weatherCode: number | null;
 }
 
 interface WeatherData {
@@ -48,6 +51,8 @@ interface WeatherData {
   sunrise: string | null;
   sunset: string | null;
   forecast: ForecastDay[];
+  /** Units the numbers were fetched in, so labels always match the data. */
+  unitSystem: WeatherUnitSystem;
 }
 
 type WeatherIconName =
@@ -71,16 +76,24 @@ const WMO_CODES: Record<number, { label: string; icon: WeatherIconName }> = {
   51: { label: "Light drizzle", icon: "CloudDrizzle" },
   53: { label: "Drizzle", icon: "CloudDrizzle" },
   55: { label: "Dense drizzle", icon: "CloudRain" },
+  56: { label: "Freezing drizzle", icon: "CloudDrizzle" },
+  57: { label: "Freezing drizzle", icon: "CloudDrizzle" },
   61: { label: "Slight rain", icon: "CloudRain" },
   63: { label: "Rain", icon: "CloudRain" },
   65: { label: "Heavy rain", icon: "CloudRain" },
+  66: { label: "Freezing rain", icon: "CloudRain" },
+  67: { label: "Freezing rain", icon: "CloudRain" },
   71: { label: "Slight snow", icon: "CloudSnow" },
   73: { label: "Snow", icon: "CloudSnow" },
   75: { label: "Heavy snow", icon: "CloudSnow" },
+  77: { label: "Snow grains", icon: "CloudSnow" },
   80: { label: "Rain showers", icon: "CloudRain" },
   81: { label: "Rain showers", icon: "CloudRain" },
   82: { label: "Violent showers", icon: "CloudLightning" },
+  85: { label: "Snow showers", icon: "CloudSnow" },
+  86: { label: "Snow showers", icon: "CloudSnow" },
   95: { label: "Thunderstorm", icon: "CloudLightning" },
+  96: { label: "Thunderstorm + hail", icon: "CloudLightning" },
   99: { label: "Thunderstorm + hail", icon: "CloudLightning" },
 };
 
@@ -104,7 +117,10 @@ function WeatherIcon({ name, size }: { name: WeatherIconName; size: number }) {
   return <Icon size={size} />;
 }
 
-function getWeatherInfo(code: number) {
+function getWeatherInfo(code: number | null) {
+  if (code === null) {
+    return { label: "Unknown", icon: "Thermometer" as WeatherIconName };
+  }
   return (
     WMO_CODES[code] ?? {
       label: "Unknown",
@@ -202,109 +218,73 @@ function formatForecastDate(dateStr: string): string {
   return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 }
 
-const GEOLOCATION_PERMISSION_DENIED = 1;
-
-function getLocationErrorMessage(positionError: GeolocationPositionError | null): string {
-  if (positionError?.code === GEOLOCATION_PERMISSION_DENIED) {
-    return "Location access denied. Enable location to see weather.";
-  }
-
-  return "Location is temporarily unavailable. Try again in a moment.";
+function numberAt(values: unknown, index: number, round: (value: number) => number = Math.round): number | null {
+  const value = Array.isArray(values) ? values[index] : undefined;
+  return typeof value === "number" && Number.isFinite(value) ? round(value) : null;
 }
 
-async function fetchWeather(lat: number, lon: number, unitSystem: WeatherUnitSystem): Promise<WeatherData> {
+function numberOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? Math.round(value) : null;
+}
+
+// In polar day or night Open-Meteo reports midnight for both sunrise and sunset.
+function isPolarDay(sunrise: unknown, sunset: unknown): boolean {
+  return typeof sunrise === "string" && typeof sunset === "string" && sunrise.endsWith("T00:00") && sunset.endsWith("T00:00");
+}
+
+async function fetchWeather(
+  { latitude, longitude }: Coordinates,
+  unitSystem: WeatherUnitSystem,
+  signal: AbortSignal,
+): Promise<WeatherData> {
   const isImperial = unitSystem === "imperial";
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,weather_code&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&precipitation_unit=mm&forecast_days=7`;
-  const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+  // Today plus the next seven days for the 7-day forecast.
+  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,cloud_cover,uv_index,wind_speed_10m,wind_direction_10m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset,weather_code&timezone=auto&temperature_unit=${isImperial ? "fahrenheit" : "celsius"}&wind_speed_unit=${isImperial ? "mph" : "kmh"}&precipitation_unit=mm&forecast_days=8`;
 
-  const [weatherRes, geoRes] = await Promise.all([
-    fetch(weatherUrl),
-    fetch(geoUrl),
+  const [weather, city] = await Promise.all([
+    fetch(weatherUrl, { signal }).then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }),
+    // The place name is optional: a failed lookup must not hide the weather.
+    reverseGeocode({ latitude, longitude }),
   ]);
-  const weather = await weatherRes.json();
-  const geo = await geoRes.json();
 
-  const city =
-    geo.address?.city ??
-    geo.address?.town ??
-    geo.address?.village ??
-    geo.address?.county ??
-    "Unknown location";
+  const daily = weather.daily ?? {};
+  const forecast: ForecastDay[] = (Array.isArray(daily.time) ? daily.time : []).slice(1, 8).map((date: string, offset: number) => {
+    const index = offset + 1;
+    return {
+      date,
+      high: numberAt(daily.temperature_2m_max, index),
+      low: numberAt(daily.temperature_2m_min, index),
+      rainChance: numberAt(daily.precipitation_probability_max, index),
+      rainAmount: numberAt(daily.precipitation_sum, index, (value) => Math.round(value * 10) / 10),
+      windSpeed: numberAt(daily.wind_speed_10m_max, index),
+      weatherCode: numberAt(daily.weather_code, index, (value) => value),
+    };
+  });
 
-  const forecast: ForecastDay[] = (weather.daily.time || []).slice(1, 8).map((date: string, index: number) => ({
-    date,
-    high: typeof weather.daily?.temperature_2m_max?.[index + 1] === "number"
-      ? Math.round(weather.daily.temperature_2m_max[index + 1])
-      : 0,
-    low: typeof weather.daily?.temperature_2m_min?.[index + 1] === "number"
-      ? Math.round(weather.daily.temperature_2m_min[index + 1])
-      : 0,
-    rainChance: typeof weather.daily?.precipitation_probability_max?.[index + 1] === "number"
-      ? Math.round(weather.daily.precipitation_probability_max[index + 1])
-      : 0,
-    rainAmount: typeof weather.daily?.precipitation_sum?.[index + 1] === "number"
-      ? Math.round(weather.daily.precipitation_sum[index + 1] * 10) / 10
-      : 0,
-    windSpeed: typeof weather.daily?.wind_speed_10m_max?.[index + 1] === "number"
-      ? Math.round(weather.daily.wind_speed_10m_max[index + 1])
-      : 0,
-    weatherCode: weather.daily?.weather_code?.[index + 1] ?? 0,
-  }));
+  const polar = isPolarDay(daily.sunrise?.[0], daily.sunset?.[0]);
 
   return {
     temperature: Math.round(weather.current.temperature_2m),
-    apparentTemperature:
-      typeof weather.current?.apparent_temperature === "number"
-        ? Math.round(weather.current.apparent_temperature)
-        : null,
-    humidity:
-      typeof weather.current?.relative_humidity_2m === "number"
-        ? Math.round(weather.current.relative_humidity_2m)
-        : null,
-    cloudCover:
-      typeof weather.current?.cloud_cover === "number"
-        ? Math.round(weather.current.cloud_cover)
-        : null,
-    uvIndex:
-      typeof weather.current?.uv_index === "number"
-        ? Math.round(weather.current.uv_index)
-        : null,
-    windSpeed:
-      typeof weather.current?.wind_speed_10m === "number"
-        ? Math.round(weather.current.wind_speed_10m)
-        : null,
-    windDirection:
-      typeof weather.current?.wind_direction_10m === "number"
-        ? Math.round(weather.current.wind_direction_10m)
-        : null,
+    apparentTemperature: numberOrNull(weather.current?.apparent_temperature),
+    humidity: numberOrNull(weather.current?.relative_humidity_2m),
+    cloudCover: numberOrNull(weather.current?.cloud_cover),
+    uvIndex: numberOrNull(weather.current?.uv_index),
+    windSpeed: numberOrNull(weather.current?.wind_speed_10m),
+    windDirection: numberOrNull(weather.current?.wind_direction_10m),
     timezone: typeof weather.timezone === "string" ? weather.timezone : null,
-    utcOffsetSeconds:
-      typeof weather.utc_offset_seconds === "number"
-        ? weather.utc_offset_seconds
-        : null,
-    weatherCode: weather.current.weather_code,
-    location: city,
-    todayHigh:
-      typeof weather.daily?.temperature_2m_max?.[0] === "number"
-        ? Math.round(weather.daily.temperature_2m_max[0])
-        : null,
-    todayLow:
-      typeof weather.daily?.temperature_2m_min?.[0] === "number"
-        ? Math.round(weather.daily.temperature_2m_min[0])
-        : null,
-    todayRainChance:
-      typeof weather.daily?.precipitation_probability_max?.[0] === "number"
-        ? Math.round(weather.daily.precipitation_probability_max[0])
-        : null,
-    sunrise:
-      typeof weather.daily?.sunrise?.[0] === "string"
-        ? weather.daily.sunrise[0]
-        : null,
-    sunset:
-      typeof weather.daily?.sunset?.[0] === "string"
-        ? weather.daily.sunset[0]
-        : null,
+    utcOffsetSeconds: typeof weather.utc_offset_seconds === "number" ? weather.utc_offset_seconds : null,
+    weatherCode: typeof weather.current?.weather_code === "number" ? weather.current.weather_code : -1,
+    location: city ?? "Unknown location",
+    todayHigh: numberAt(daily.temperature_2m_max, 0),
+    todayLow: numberAt(daily.temperature_2m_min, 0),
+    todayRainChance: numberAt(daily.precipitation_probability_max, 0),
+    sunrise: !polar && typeof daily.sunrise?.[0] === "string" ? daily.sunrise[0] : null,
+    sunset: !polar && typeof daily.sunset?.[0] === "string" ? daily.sunset[0] : null,
     forecast,
+    unitSystem,
   };
 }
 
@@ -316,47 +296,32 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
   const { settings } = useSettings();
   const widgetRootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [data, setData] = useState<WeatherData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const unitSystem = settings.weatherUnitSystem;
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-
-    if (!navigator.geolocation) {
-      setError("Geolocation is unavailable in this browser.");
-      setLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        try {
-          const result = await fetchWeather(coords.latitude, coords.longitude, settings.weatherUnitSystem);
-          setData(result);
-          setLastRefreshedAt(Date.now());
-          setNow(Date.now());
-        } catch {
-          setError("Could not load weather data.");
-        } finally {
-          setLoading(false);
-        }
-      },
-      (positionError) => {
-        setError(getLocationErrorMessage(positionError));
-        setLoading(false);
-      },
-    );
-  }, [settings.weatherUnitSystem]);
-
-  useEffect(() => {
-    load();
-    const id = setInterval(load, settings.weatherRefreshMinutes * 60 * 1000);
-    return () => clearInterval(id);
-  }, [load, settings.weatherRefreshMinutes]);
+  const fetcher = useCallback(
+    async (signal: AbortSignal) => {
+      // Location errors already carry a user-facing message.
+      const coordinates = await getCurrentLocation("weather");
+      try {
+        return await fetchWeather(coordinates, unitSystem, signal);
+      } catch (fetchError) {
+        if (signal.aborted) throw fetchError;
+        throw new Error("Could not load weather data.", { cause: fetchError });
+      }
+    },
+    [unitSystem],
+  );
+  const {
+    data,
+    error,
+    loading,
+    lastUpdatedAt: lastRefreshedAt,
+    refresh: load,
+  } = usePolledResource(fetcher, {
+    intervalMs: settings.weatherRefreshMinutes * 60 * 1000,
+    key: unitSystem,
+  });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60 * 1000);
@@ -370,8 +335,8 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
     [lastRefreshedAt, now],
   );
   const windDirection = data ? formatWindDirection(data.windDirection) : null;
-  const temperatureUnit = getTemperatureUnit(settings.weatherUnitSystem);
-  const windUnit = getWindUnit(settings.weatherUnitSystem);
+  const temperatureUnit = getTemperatureUnit(data?.unitSystem ?? unitSystem);
+  const windUnit = getWindUnit(data?.unitSystem ?? unitSystem);
   const sunrise = data
     ? formatTime(data.sunrise, data.timezone, data.utcOffsetSeconds)
     : null;
@@ -548,8 +513,10 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
         <span className={styles.title}>Weather</span>
         {!loading && (
           <div className={styles.refreshGroup}>
-            {lastRefreshLabel && (
-              <span className={styles.refreshHint}>{lastRefreshLabel}</span>
+            {error && data ? (
+              <span className={styles.refreshHint} role="status">Couldn&apos;t refresh</span>
+            ) : (
+              lastRefreshLabel && <span className={styles.refreshHint}>{lastRefreshLabel}</span>
             )}
             <button
               className={styles.refresh}
@@ -567,8 +534,8 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
           Loading…
         </div>
       )}
-      {!loading && error && <div className={styles.error}>{error}</div>}
-      {!loading && !error && data && info && (
+      {!loading && error && !data && <div className={styles.error}>{error}</div>}
+      {data && info && (
         <div
           ref={contentRef}
           className={`${styles.content} ${
@@ -659,7 +626,6 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
               <div className={styles.forecastTitle}>7-Day Forecast</div>
               {data.forecast.map((day) => {
                 const dayInfo = getWeatherInfo(day.weatherCode);
-                const windUnit = settings.weatherUnitSystem === "imperial" ? "mph" : "km/h";
                 return (
                   <div key={day.date} className={styles.forecastDay}>
                     <div className={styles.forecastDateLabel}>{formatForecastDate(day.date)}</div>
@@ -667,14 +633,18 @@ export function WeatherWidget({ isFullscreen = false }: WeatherWidgetProps) {
                       <WeatherIcon name={dayInfo.icon} size={28} />
                     </div>
                     <div className={styles.forecastTemps}>
-                      <span className={styles.forecastHigh}>{day.high}°</span>
-                      <span className={styles.forecastLow}>{day.low}°</span>
+                      <span className={styles.forecastHigh}>{day.high !== null ? `${day.high}°` : "—"}</span>
+                      <span className={styles.forecastLow}>{day.low !== null ? `${day.low}°` : "—"}</span>
                     </div>
                     <div className={styles.forecastInfo}>
                       <div className={styles.infoRow}>{dayInfo.label}</div>
-                      <div className={styles.infoRow}>Rain: {day.rainChance}%</div>
-                      {day.rainAmount > 0 && <div className={styles.infoRow}>Precip: {day.rainAmount}mm</div>}
-                      <div className={styles.infoRow}>Wind: {day.windSpeed}{windUnit.substring(0, 2)}</div>
+                      <div className={styles.infoRow}>Rain: {day.rainChance !== null ? `${day.rainChance}%` : "—"}</div>
+                      {day.rainAmount !== null && day.rainAmount > 0 && (
+                        <div className={styles.infoRow}>Precip: {day.rainAmount}mm</div>
+                      )}
+                      <div className={styles.infoRow}>
+                        Wind: {day.windSpeed !== null ? `${day.windSpeed} ${windUnit}` : "—"}
+                      </div>
                     </div>
                   </div>
                 );

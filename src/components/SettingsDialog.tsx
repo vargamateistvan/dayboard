@@ -38,6 +38,7 @@ import {
   isPresetScheduledNow,
   listPresets,
   normalizeGoogleFontUrl,
+  parseRefreshMinutes,
   renamePreset,
   savePreset,
   type Settings,
@@ -2355,9 +2356,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             max={180}
                             value={weatherRefreshMin}
                             onChange={(e) =>
-                              setWeatherRefreshMin(
-                                Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                              )
+                              setWeatherRefreshMin(parseRefreshMinutes(e.target.value))
                             }
                           />
                         </label>
@@ -2592,9 +2591,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                             max={180}
                             value={astronomyRefreshMin}
                             onChange={(e) =>
-                              setAstronomyRefreshMin(
-                                Math.max(1, Number.parseInt(e.target.value, 10) || 1),
-                              )
+                              setAstronomyRefreshMin(parseRefreshMinutes(e.target.value))
                             }
                           />
                         </label>
@@ -2728,7 +2725,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           max={1440}
                           value={financeRefreshMin}
                           onChange={(e) =>
-                            setFinanceRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+                            setFinanceRefreshMin(parseRefreshMinutes(e.target.value))
                           }
                         />
                       </label>
@@ -2859,7 +2856,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           max={1440}
                           value={sportsRefreshMin}
                           onChange={(e) =>
-                            setSportsRefreshMin(Math.max(1, Number.parseInt(e.target.value, 10) || 1))
+                            setSportsRefreshMin(parseRefreshMinutes(e.target.value))
                           }
                         />
                       </label>

@@ -482,8 +482,16 @@ function normalizeClockTimeStretchPercent(value: unknown): number | null {
   return Math.min(200, Math.max(50, Math.round(value)))
 }
 
+/** Refresh intervals are capped at a day; larger values overflow setInterval. */
+export const MAX_REFRESH_MINUTES = 1_440
+
+/** Parses a refresh-interval input into 1..MAX_REFRESH_MINUTES. */
+export function parseRefreshMinutes(value: string): number {
+  return Math.min(MAX_REFRESH_MINUTES, Math.max(1, Number.parseInt(value, 10) || 1))
+}
+
 function normalizeWeatherRefreshMinutes(value: unknown): number {
-  return normalizePositiveInteger(value, DEFAULT_SETTINGS.weatherRefreshMinutes)
+  return Math.min(MAX_REFRESH_MINUTES, normalizePositiveInteger(value, DEFAULT_SETTINGS.weatherRefreshMinutes))
 }
 
 function normalizeWeatherUnitSystem(value: unknown): WeatherUnitSystem {
@@ -499,7 +507,7 @@ function normalizeAstronomyRefreshMinutes(value: unknown): number {
     return DEFAULT_SETTINGS.astronomyRefreshMinutes
   }
 
-  return Math.min(1_440, Math.max(1, Math.round(value)))
+  return Math.min(MAX_REFRESH_MINUTES, Math.max(1, Math.round(value)))
 }
 
 function normalizeAstronomyUseDeviceLocation(value: unknown): boolean {
@@ -662,7 +670,7 @@ function normalizeFinanceRefreshMinutes(value: unknown): number {
     return DEFAULT_SETTINGS.financeRefreshMinutes
   }
 
-  return Math.max(1, Math.round(value))
+  return Math.min(MAX_REFRESH_MINUTES, Math.max(1, Math.round(value)))
 }
 
 function normalizeSportsSport(value: unknown): SportsSport {
@@ -766,7 +774,7 @@ function normalizeSportsRefreshMinutes(value: unknown): number {
     return DEFAULT_SETTINGS.sportsRefreshMinutes
   }
 
-  return Math.min(1_440, Math.max(1, Math.round(value)))
+  return Math.min(MAX_REFRESH_MINUTES, Math.max(1, Math.round(value)))
 }
 
 function normalizeBoolean(value: unknown, fallback: boolean): boolean {

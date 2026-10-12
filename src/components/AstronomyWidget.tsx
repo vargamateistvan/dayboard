@@ -2,10 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from "../lib/anime";
 import { useSettings } from "../lib/useSettings";
+import { usePolledResource } from "../lib/usePolledResource";
+import { getCurrentLocation, parseCoordinates, reverseGeocode, type Coordinates } from "../lib/location";
+import { getMoonPosition, getSunPosition, SUN_HORIZON_ALTITUDE, type HorizontalPosition } from "../lib/celestial";
+import { moonLitPath } from "../lib/moonShape";
 import styles from "./AstronomyWidget.module.css";
 
 interface AstronomyData {
   location: string;
+  coordinates: Coordinates;
   timezone: string | null;
   utcOffsetSeconds: number | null;
   sunrise: string | null;
@@ -79,8 +84,19 @@ function getMoonIlluminationPercent(moonPhase: number | null): number | null {
   return Math.round(((1 - Math.cos(2 * Math.PI * moonPhase)) / 2) * 100);
 }
 
-function moonPhaseShiftPx(phase: number): string {
-  return `${((phase - 0.5) * 20).toFixed(2)}px`;
+function MoonPhaseIcon({ phase, mini = false, label }: { phase: number; mini?: boolean; label?: string }) {
+  return (
+    <span
+      className={[styles.moonDisc, mini ? styles.moonDiscMini : ""].join(" ")}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
+    >
+      <svg viewBox="0 0 20 20" className={styles.moonSvg} aria-hidden="true">
+        <path d={moonLitPath(phase, 10)} className={styles.moonLit} />
+      </svg>
+    </span>
+  );
 }
 
 function formatPhaseDate(value: string): string {
@@ -181,34 +197,27 @@ interface AltitudeCurve {
   yAt: (t: number) => number;
 }
 
-function buildAltitudeCurve(
-  riseMinutes: number | null,
-  setMinutes: number | null,
-): AltitudeCurve | null {
-  if (riseMinutes === null || setMinutes === null) {
-    return null;
+function buildAltitudeCurve(altitudeAtMinute: (minute: number) => number): AltitudeCurve {
+  const samples = new Map<number, number>();
+  for (let t = 0; t <= 1440; t += 10) {
+    samples.set(t, altitudeAtMinute(t));
   }
 
-  let duration = setMinutes - riseMinutes;
-  if (duration <= 0) {
-    duration += 1440;
+  let meridian = 0;
+  let highest = -Infinity;
+  for (let t = 0; t <= 1440; t += 5) {
+    const altitude = altitudeAtMinute(t);
+    if (altitude > highest) {
+      highest = altitude;
+      meridian = t;
+    }
   }
-  const meridian = (riseMinutes + duration / 2) % 1440;
-  const halfDuration = duration / 2;
 
-  const altitudeAt = (t: number) => {
-    const arg = Math.max(
-      -Math.PI,
-      Math.min(Math.PI, (wrapMinutes(t - meridian) / halfDuration) * (Math.PI / 2)),
-    );
-    return Math.cos(arg);
-  };
+  // Normalised to -1..1 for the chart.
+  const altitudeAt = (t: number) => Math.max(-90, Math.min(90, altitudeAtMinute(t))) / 90;
   const yAt = (t: number) => chartY(altitudeAt(t));
 
-  const points: string[] = [];
-  for (let t = 0; t <= 1440; t += 10) {
-    points.push(`${chartX(t).toFixed(1)} ${yAt(t).toFixed(1)}`);
-  }
+  const points = [...samples.entries()].map(([t, altitude]) => `${chartX(t).toFixed(1)} ${chartY(altitude / 90).toFixed(1)}`);
   const linePath = `M ${points.join(" L ")}`;
   const areaPath = `${linePath} L ${CHART_RIGHT} ${CHART_H} L ${CHART_LEFT} ${CHART_H} Z`;
 
@@ -242,35 +251,6 @@ function toCompass(degrees: number): string {
   return points[index];
 }
 
-function progressBetween(start: number, end: number, value: number): number | null {
-  let span = end - start;
-  if (span <= 0) {
-    span += 1440;
-  }
-  let offset = value - start;
-  if (offset < 0) {
-    offset += 1440;
-  }
-  if (offset < 0 || offset > span) {
-    return null;
-  }
-  return offset / span;
-}
-
-function interpolateDirection(
-  variant: "sun" | "moon",
-  progress: number,
-  beforeMeridian: boolean,
-): number {
-  const riseAzimuth = variant === "sun" ? 68 : 101;
-  const setAzimuth = variant === "sun" ? 291 : 255;
-  const easing = Math.pow(progress, 1.5);
-  if (beforeMeridian) {
-    return riseAzimuth + (180 - riseAzimuth) * easing;
-  }
-  return 180 + (setAzimuth - 180) * easing;
-}
-
 interface ChartDataSnapshot {
   time: string;
   altitude: string;
@@ -281,13 +261,12 @@ interface ChartDataSnapshot {
 
 function getChartSnapshot(
   curve: AltitudeCurve | null,
+  position: HorizontalPosition | null,
   activeMinutes: number,
-  riseMinutes: number | null,
-  setMinutes: number | null,
   variant: "sun" | "moon",
 ): ChartDataSnapshot {
   const time = formatMinutes(activeMinutes) ?? "—";
-  if (!curve) {
+  if (!curve || !position) {
     return {
       time,
       altitude: "—",
@@ -297,41 +276,17 @@ function getChartSnapshot(
     };
   }
 
-  const altitudeDegrees = Math.round(curve.altitudeAt(activeMinutes) * 90);
-  const beforeMeridian = wrapMinutes(activeMinutes - curve.meridian) < 0;
-  const arrow = beforeMeridian ? "↑" : "↓";
-
-  let azimuth = variant === "sun" ? 180 : 180;
-  if (riseMinutes !== null && setMinutes !== null) {
-    const spanProgress = progressBetween(riseMinutes, setMinutes, activeMinutes);
-    if (spanProgress !== null) {
-      if (spanProgress <= 0.5) {
-        azimuth = interpolateDirection(variant, spanProgress * 2, true);
-      } else {
-        azimuth = interpolateDirection(variant, (spanProgress - 0.5) * 2, false);
-      }
-    } else {
-      azimuth = variant === "sun" ? 347 : 299;
-    }
-  }
-  const normalizedAzimuth = Math.round(normalizeDegrees(azimuth));
-  const direction = `${normalizedAzimuth}° ${toCompass(normalizedAzimuth)} ${arrow}`;
-  const isAboveHorizon = altitudeDegrees >= 0;
-  const phaseOrPosition =
-    variant === "sun"
-      ? isAboveHorizon
-        ? "Day"
-        : "Night"
-      : isAboveHorizon
-        ? "Moon in sky"
-        : "Moon under horizon";
+  const arrow = wrapMinutes(activeMinutes - curve.meridian) < 0 ? "↑" : "↓";
+  const azimuth = Math.round(normalizeDegrees(position.azimuth)) % 360;
+  const isUp = position.altitude > (variant === "sun" ? SUN_HORIZON_ALTITUDE : 0);
 
   return {
     time,
-    altitude: `${altitudeDegrees}°`,
-    direction,
-    directionDegrees: normalizedAzimuth,
-    phaseOrPosition,
+    altitude: `${Math.round(position.altitude)}°`,
+    direction: `${azimuth}° ${toCompass(azimuth)} ${arrow}`,
+    directionDegrees: azimuth,
+    phaseOrPosition:
+      variant === "sun" ? (isUp ? "Day" : "Night") : isUp ? "Moon in sky" : "Moon under horizon",
   };
 }
 
@@ -518,39 +473,23 @@ function AltitudeChart({
   );
 }
 
-const GEOLOCATION_PERMISSION_DENIED = 1;
-
-function getLocationErrorMessage(positionError: GeolocationPositionError | null): string {
-  if (positionError?.code === GEOLOCATION_PERMISSION_DENIED) {
-    return "Location access denied. Enable location to see astronomy.";
-  }
-
-  return "Location is temporarily unavailable. Try again in a moment.";
-}
-
-async function fetchAstronomy(lat: number, lon: number): Promise<AstronomyData> {
+async function fetchAstronomy(coordinates: Coordinates, signal: AbortSignal): Promise<AstronomyData> {
   const astronomyUrl =
-    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+    `https://api.open-meteo.com/v1/forecast?latitude=${coordinates.latitude}&longitude=${coordinates.longitude}` +
     "&daily=sunrise,sunset,moonrise,moonset,moon_phase&timezone=auto&forecast_days=1";
-  const geoUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
 
-  const [astronomyRes, geoRes] = await Promise.all([fetch(astronomyUrl), fetch(geoUrl)]);
-  if (!astronomyRes.ok || !geoRes.ok) {
-    throw new Error("Astronomy fetch failed");
-  }
-
-  const astronomy = await astronomyRes.json();
-  const geo = await geoRes.json();
-
-  const city =
-    geo.address?.city ??
-    geo.address?.town ??
-    geo.address?.village ??
-    geo.address?.county ??
-    "Unknown location";
+  const [astronomy, city] = await Promise.all([
+    fetch(astronomyUrl, { signal }).then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    }),
+    // The place name is optional: a failed lookup must not hide the sky.
+    reverseGeocode(coordinates),
+  ]);
 
   return {
-    location: city,
+    location: city ?? "Unknown location",
+    coordinates,
     timezone: typeof astronomy.timezone === "string" ? astronomy.timezone : null,
     utcOffsetSeconds:
       typeof astronomy.utc_offset_seconds === "number"
@@ -571,6 +510,14 @@ async function fetchAstronomy(lat: number, lon: number): Promise<AstronomyData> 
   };
 }
 
+/** Rise and set markers, or null when both are midnight (polar day or night). */
+function riseSetMinutes(rise: string | null, set: string | null): [number, number] | null {
+  const riseMinutes = minutesFromLocalIso(rise);
+  const setMinutes = minutesFromLocalIso(set);
+  if (riseMinutes === null || setMinutes === null || riseMinutes === setMinutes) return null;
+  return [riseMinutes, setMinutes];
+}
+
 interface AstronomyWidgetProps {
   readonly isFullscreen?: boolean;
 }
@@ -579,103 +526,67 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
   const { settings } = useSettings();
   const widgetRootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [data, setData] = useState<AstronomyData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [sunHoverMinutes, setSunHoverMinutes] = useState<number | null>(null);
   const [moonHoverMinutes, setMoonHoverMinutes] = useState<number | null>(null);
+  const useDeviceLocation = settings.astronomyUseDeviceLocation;
+  const manualLatitude = settings.astronomyManualLatitude;
+  const manualLongitude = settings.astronomyManualLongitude;
 
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
+  const fetcher = useCallback(
+    async (signal: AbortSignal) => {
+      let coordinates: Coordinates;
+      if (useDeviceLocation) {
+        coordinates = await getCurrentLocation("astronomy");
+      } else {
+        const manual = parseCoordinates(manualLatitude, manualLongitude);
+        if (!manual) throw new Error("Enter valid manual coordinates to load astronomy data.");
+        coordinates = manual;
+      }
 
-    const runFetch = async (latitude: number, longitude: number) => {
       try {
-        const result = await fetchAstronomy(latitude, longitude);
-        setData(result);
-        setLastRefreshedAt(Date.now());
-        setNow(Date.now());
-      } catch {
-        setError("Could not load astronomy data.");
-      } finally {
-        setLoading(false);
+        return await fetchAstronomy(coordinates, signal);
+      } catch (fetchError) {
+        if (signal.aborted) throw fetchError;
+        throw new Error("Could not load astronomy data.", { cause: fetchError });
       }
-    };
-
-    if (settings.astronomyUseDeviceLocation) {
-      if (!navigator.geolocation) {
-        setError("Geolocation is unavailable in this browser.");
-        setLoading(false);
-        return;
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        ({ coords }) => {
-          void runFetch(coords.latitude, coords.longitude);
-        },
-        (positionError) => {
-          setError(getLocationErrorMessage(positionError));
-          setLoading(false);
-        },
-      );
-      return;
-    }
-
-    const latitude = Number.parseFloat(settings.astronomyManualLatitude);
-    const longitude = Number.parseFloat(settings.astronomyManualLongitude);
-    const hasValidCoords =
-      Number.isFinite(latitude) &&
-      Number.isFinite(longitude) &&
-      latitude >= -90 &&
-      latitude <= 90 &&
-      longitude >= -180 &&
-      longitude <= 180;
-
-    if (!hasValidCoords) {
-      setError("Enter valid manual coordinates to load astronomy data.");
-      setLoading(false);
-      return;
-    }
-
-    void runFetch(latitude, longitude);
-  }, [
-    settings.astronomyManualLatitude,
-    settings.astronomyManualLongitude,
-    settings.astronomyUseDeviceLocation,
-  ]);
-
-  useEffect(() => {
-    load();
-    const id = setInterval(load, settings.astronomyRefreshMinutes * 60 * 1000);
-    return () => clearInterval(id);
-  }, [load, settings.astronomyRefreshMinutes]);
+    },
+    [useDeviceLocation, manualLatitude, manualLongitude],
+  );
+  const {
+    data,
+    error,
+    loading,
+    lastUpdatedAt: lastRefreshedAt,
+    refresh: load,
+  } = usePolledResource(fetcher, {
+    intervalMs: settings.astronomyRefreshMinutes * 60 * 1000,
+    key: useDeviceLocation ? "device" : `${manualLatitude},${manualLongitude}`,
+  });
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60 * 1000);
     return () => clearInterval(id);
   }, []);
 
+  // The API returns one day; load the new day as soon as the location's date changes.
+  const utcOffsetSeconds = data?.utcOffsetSeconds ?? null;
+  const localDayIndex =
+    utcOffsetSeconds === null ? null : Math.floor((now + utcOffsetSeconds * 1000) / 86_400_000);
+  const lastDayIndexRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (localDayIndex === null) return;
+    const previous = lastDayIndexRef.current;
+    lastDayIndexRef.current = localDayIndex;
+    if (previous !== null && previous !== localDayIndex) load();
+  }, [localDayIndex, load]);
+
   const moonPhase = getMoonPhaseInfo(data?.moonPhase ?? null);
   const moonIllumination = getMoonIlluminationPercent(data?.moonPhase ?? null);
   const phaseValue = data?.moonPhase ?? 0.5;
-  const phaseShift = moonPhaseShiftPx(phaseValue);
 
-  const sunriseMinutes = minutesFromLocalIso(data?.sunrise ?? null);
-  const sunsetMinutes = minutesFromLocalIso(data?.sunset ?? null);
-  const moonriseMinutes = minutesFromLocalIso(data?.moonrise ?? null);
-  const moonsetMinutes = minutesFromLocalIso(data?.moonset ?? null);
-
-  const sunCurve = useMemo(
-    () => buildAltitudeCurve(sunriseMinutes, sunsetMinutes),
-    [sunriseMinutes, sunsetMinutes],
-  );
-  const moonCurve = useMemo(
-    () => buildAltitudeCurve(moonriseMinutes, moonsetMinutes),
-    [moonriseMinutes, moonsetMinutes],
-  );
-  const utcOffsetSeconds = data?.utcOffsetSeconds ?? null;
+  const sunRiseSet = riseSetMinutes(data?.sunrise ?? null, data?.sunset ?? null);
+  const moonRiseSet = riseSetMinutes(data?.moonrise ?? null, data?.moonset ?? null);
 
   const nowMinutes = useMemo(() => {
     if (utcOffsetSeconds === null) {
@@ -686,22 +597,37 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
     return shifted.getUTCHours() * 60 + shifted.getUTCMinutes();
   }, [now, utcOffsetSeconds]);
 
+  // Minute t of the location's day as an instant.
+  const dayStartMs = now - nowMinutes * 60_000 - (now % 60_000);
+  const latitude = data?.coordinates.latitude ?? null;
+  const longitude = data?.coordinates.longitude ?? null;
+
+  const sunCurve = useMemo(
+    () =>
+      latitude === null || longitude === null
+        ? null
+        : buildAltitudeCurve((t) => getSunPosition(new Date(dayStartMs + t * 60_000), latitude, longitude).altitude),
+    [dayStartMs, latitude, longitude],
+  );
+  const moonCurve = useMemo(
+    () =>
+      latitude === null || longitude === null
+        ? null
+        : buildAltitudeCurve((t) => getMoonPosition(new Date(dayStartMs + t * 60_000), latitude, longitude).altitude),
+    [dayStartMs, latitude, longitude],
+  );
+
   const activeSunMinutes = sunHoverMinutes ?? nowMinutes;
   const activeMoonMinutes = moonHoverMinutes ?? nowMinutes;
-  const sunSnapshot = getChartSnapshot(
-    sunCurve,
-    activeSunMinutes,
-    sunriseMinutes,
-    sunsetMinutes,
-    "sun",
-  );
-  const moonSnapshot = getChartSnapshot(
-    moonCurve,
-    activeMoonMinutes,
-    moonriseMinutes,
-    moonsetMinutes,
-    "moon",
-  );
+  const positionAt = (
+    getPosition: typeof getSunPosition,
+    minutes: number,
+  ): HorizontalPosition | null =>
+    latitude === null || longitude === null
+      ? null
+      : getPosition(new Date(dayStartMs + minutes * 60_000), latitude, longitude);
+  const sunSnapshot = getChartSnapshot(sunCurve, positionAt(getSunPosition, activeSunMinutes), activeSunMinutes, "sun");
+  const moonSnapshot = getChartSnapshot(moonCurve, positionAt(getMoonPosition, activeMoonMinutes), activeMoonMinutes, "moon");
   const lastRefreshLabel = useMemo(
     () => (lastRefreshedAt === null ? null : formatLastRefresh(lastRefreshedAt, now)),
     [lastRefreshedAt, now],
@@ -876,7 +802,11 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
         <span className={styles.title}>Astronomy</span>
         {!loading && (
           <div className={styles.refreshGroup}>
-            {lastRefreshLabel && <span className={styles.refreshHint}>{lastRefreshLabel}</span>}
+            {error && data ? (
+              <span className={styles.refreshHint} role="status">Couldn&apos;t refresh</span>
+            ) : (
+              lastRefreshLabel && <span className={styles.refreshHint}>{lastRefreshLabel}</span>
+            )}
             <button
               className={styles.refresh}
               onClick={load}
@@ -894,9 +824,9 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
           Loading…
         </div>
       )}
-      {!loading && error && <div className={styles.error}>{error}</div>}
+      {!loading && error && !data && <div className={styles.error}>{error}</div>}
 
-      {!loading && !error && data && (
+      {data && (
         <div ref={contentRef} className={styles.content}>
           <div className={styles.location}>
             <MapPin size={isFullscreen ? 18 : 12} />
@@ -911,11 +841,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                   <AltitudeChart
                     curve={sunCurve}
                     nowMinutes={nowMinutes}
-                    markerMinutes={
-                      sunriseMinutes !== null && sunsetMinutes !== null && sunCurve
-                        ? [sunriseMinutes, sunCurve.meridian, sunsetMinutes]
-                        : []
-                    }
+                    markerMinutes={sunRiseSet && sunCurve ? [sunRiseSet[0], sunCurve.meridian, sunRiseSet[1]] : []}
                     variant="sun"
                     onHoverMinutesChange={setSunHoverMinutes}
                   />
@@ -944,27 +870,14 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
             <div className={styles.chartCard}>
               <div className={styles.moonCardHeader}>
                 <div className={styles.chartTitle}>Today's Moon</div>
-                <div
-                  className={styles.moonDisc}
-                  style={{
-                    ["--phase-shift" as string]: phaseShift,
-                    ["--moon-rotation" as string]: `${moonSnapshot.directionDegrees ?? 0}deg`,
-                  }}
-                  aria-label={`Moon phase ${moonPhase.label}`}
-                >
-                  <span className={styles.moonGlow} aria-hidden="true" />
-                </div>
+                <MoonPhaseIcon phase={phaseValue} label={`Moon phase ${moonPhase.label}`} />
               </div>
               <div className={styles.chartContent}>
                 <div className={styles.chartMain}>
                   <AltitudeChart
                     curve={moonCurve}
                     nowMinutes={nowMinutes}
-                    markerMinutes={
-                      moonriseMinutes !== null && moonsetMinutes !== null && moonCurve
-                        ? [moonriseMinutes, moonCurve.meridian, moonsetMinutes]
-                        : []
-                    }
+                    markerMinutes={moonRiseSet && moonCurve ? [moonRiseSet[0], moonCurve.meridian, moonRiseSet[1]] : []}
                     variant="moon"
                     onHoverMinutesChange={setMoonHoverMinutes}
                   />
@@ -1006,13 +919,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
               <div className={styles.phaseDates}>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span
-                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
-                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0) }}
-                      aria-hidden="true"
-                    >
-                      <span className={styles.moonGlow} aria-hidden="true" />
-                    </span>
+                    <MoonPhaseIcon phase={0} mini />
                     <span className={styles.phaseDateLabel}>New Moon</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -1021,13 +928,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 </div>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span
-                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
-                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.25) }}
-                      aria-hidden="true"
-                    >
-                      <span className={styles.moonGlow} aria-hidden="true" />
-                    </span>
+                    <MoonPhaseIcon phase={0.25} mini />
                     <span className={styles.phaseDateLabel}>First Quarter</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -1036,13 +937,7 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 </div>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span
-                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
-                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.5) }}
-                      aria-hidden="true"
-                    >
-                      <span className={styles.moonGlow} aria-hidden="true" />
-                    </span>
+                    <MoonPhaseIcon phase={0.5} mini />
                     <span className={styles.phaseDateLabel}>Full Moon</span>
                   </span>
                   <span className={styles.phaseDateValue}>
@@ -1051,14 +946,8 @@ export function AstronomyWidget({ isFullscreen = false }: AstronomyWidgetProps) 
                 </div>
                 <div className={styles.phaseDateRow}>
                   <span className={styles.phaseDateLabelWrap}>
-                    <span
-                      className={[styles.moonDisc, styles.moonDiscMini].join(" ")}
-                      style={{ ["--phase-shift" as string]: moonPhaseShiftPx(0.75) }}
-                      aria-hidden="true"
-                    >
-                      <span className={styles.moonGlow} aria-hidden="true" />
-                    </span>
-                    <span className={styles.phaseDateLabel}>Third Quarter</span>
+                    <MoonPhaseIcon phase={0.75} mini />
+                    <span className={styles.phaseDateLabel}>Last Quarter</span>
                   </span>
                   <span className={styles.phaseDateValue}>
                     {data.primaryMoonPhaseDates.thirdQuarter ?? "—"}

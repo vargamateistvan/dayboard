@@ -323,43 +323,32 @@
 }
 
 .moonDisc {
-  --phase-shift: 0px;
-  --moon-rotation: 0deg;
   position: relative;
+  display: inline-block;
   width: 1.6rem;
   height: 1.6rem;
   border-radius: 50%;
-  background: linear-gradient(145deg, #f4f7ff 0%, #dfe9ff 100%);
-  box-shadow: inset -6px -6px 12px rgba(94, 109, 158, 0.2), 0 0 18px rgba(142, 180, 255, 0.25);
+  /* Unlit part of the disc; the lit part is drawn on top as an SVG path. */
+  background: rgba(9, 13, 22, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 18px rgba(142, 180, 255, 0.25);
   overflow: hidden;
   flex-shrink: 0;
-  transform: rotate(calc(var(--moon-rotation) + 180deg));
-  transition: transform 160ms ease-out;
 }
 
 .moonDiscMini {
   width: 0.78rem;
   height: 0.78rem;
-  box-shadow: inset -2px -2px 4px rgba(94, 109, 158, 0.2), 0 0 6px rgba(142, 180, 255, 0.2);
-  transform: none;
-  transition: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 6px rgba(142, 180, 255, 0.2);
 }
 
-.moonDisc::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: rgba(9, 13, 22, 0.9);
-  transform: translateX(var(--phase-shift));
-  box-shadow: inset 7px 0 0 rgba(255, 255, 255, 0.12);
+.moonSvg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-.moonGlow {
-  position: absolute;
-  inset: 0.15rem;
-  border-radius: 50%;
-  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.2) 50%, transparent 72%);
+.moonLit {
+  fill: #eef3ff;
 }
 
 .phaseIcon {
