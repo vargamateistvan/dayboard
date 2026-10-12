@@ -1091,7 +1091,7 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
               <p>{isMissingCalendarLinkError ? error : `Could not load calendar: ${error}`}</p>
               {!isMissingCalendarLinkError && (
                 <p className={styles.hint}>
-                  Tip: Dayboard retries with a proxy when it can, but some calendar hosts still block browser access.
+                  Tip: some calendar hosts block browsers from loading their feeds. For Google calendars, connecting your Google account in settings always works.
                 </p>
               )}
             </div>

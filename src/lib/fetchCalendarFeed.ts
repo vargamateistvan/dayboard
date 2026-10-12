@@ -12,6 +12,8 @@ const GOOGLE_CALENDAR_HOST = 'calendar.google.com'
 const MISSING_CALENDAR_LINK_ERROR = 'Calendar link is missing. Add one in settings.'
 const GOOGLE_ICAL_BLOCKED_ERROR =
   "Google doesn't let browsers load iCal links directly. Connect Google Calendar in settings instead."
+const GOOGLE_ICAL_NOT_PUBLIC_ERROR =
+  "This Google calendar isn't public. Use its secret address in iCal format (Google Calendar → Settings → Integrate calendar), or connect Google Calendar in settings."
 
 function isLocalHostname(hostname: string): boolean {
   return hostname === 'localhost' || hostname === '127.0.0.1'
@@ -80,12 +82,14 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
   }
 
   let lastError: Error | null = null
+  let notFound = false
 
   for (const requestUrl of requestUrls) {
     try {
       const response = await fetch(requestUrl)
       if (!response.ok) {
         lastError = new Error(`HTTP ${response.status}`)
+        notFound ||= response.status === 403 || response.status === 404
         continue
       }
 
@@ -102,7 +106,9 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
   }
 
   if (isGoogleCalendarUrl(normalizeCalendarUrl(rawCalendarUrl))) {
-    throw new Error(GOOGLE_ICAL_BLOCKED_ERROR)
+    // Google answers 404 for the public address of a calendar that isn't
+    // public; a network/CORS failure means the browser was blocked.
+    throw new Error(notFound ? GOOGLE_ICAL_NOT_PUBLIC_ERROR : GOOGLE_ICAL_BLOCKED_ERROR)
   }
 
   throw lastError ?? new Error('Could not load calendar.')

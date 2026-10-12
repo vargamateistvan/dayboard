@@ -94,6 +94,14 @@ describe('fetchCalendarFeed', () => {
     ).rejects.toThrow(/connect google calendar in settings/i)
   })
 
+  it('explains that a Google calendar is not public when Google answers 404', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => '' }))
+
+    await expect(
+      fetchCalendarFeed('https://calendar.google.com/calendar/ical/someone%40gmail.com/public/basic.ics'),
+    ).rejects.toThrow(/isn.t public.*secret address/i)
+  })
+
   it('throws a specific error when the calendar link is missing', async () => {
     await expect(fetchCalendarFeed('   ')).rejects.toThrow('Calendar link is missing. Add one in settings.')
   })
