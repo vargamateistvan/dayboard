@@ -26,3 +26,5 @@ async function bootstrap() {
     </React.StrictMode>,
   );
 }
+
+void bootstrap();
