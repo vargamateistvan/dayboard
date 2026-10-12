@@ -34,29 +34,37 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener('change', handler)
   }, [settings])
 
-  const updateSettings = useCallback((patch: Partial<Settings>) => {
-    setSettings((prev) => {
-      const next = { ...prev, ...patch }
-      const activePreset = getActiveScheduledPreset()
+  // Latest settings, including updates not yet rendered, so consecutive
+  // updateSettings calls in one tick build on each other. Storage writes stay
+  // out of state updaters, which React may call twice.
+  const settingsRef = useRef(settings)
 
-      if (!activePreset) {
-        scheduledPresetManualOverrideRef.current = null
-      } else {
-        const activeSnapshot = JSON.stringify(activePreset.settings)
-        const nextSnapshot = JSON.stringify(next)
-
-        if (nextSnapshot === activeSnapshot) {
-          scheduledPresetManualOverrideRef.current = null
-          lastScheduledPresetRef.current = activePreset.name
-        } else {
-          scheduledPresetManualOverrideRef.current = activePreset.name
-        }
-      }
-
-      saveSettings(next)
-      return next
-    })
+  const commitSettings = useCallback((next: Settings) => {
+    settingsRef.current = next
+    setSettings(next)
+    saveSettings(next)
   }, [])
+
+  const updateSettings = useCallback((patch: Partial<Settings>) => {
+    const next = { ...settingsRef.current, ...patch }
+    const activePreset = getActiveScheduledPreset()
+
+    if (!activePreset) {
+      scheduledPresetManualOverrideRef.current = null
+    } else {
+      const activeSnapshot = JSON.stringify(activePreset.settings)
+      const nextSnapshot = JSON.stringify(next)
+
+      if (nextSnapshot === activeSnapshot) {
+        scheduledPresetManualOverrideRef.current = null
+        lastScheduledPresetRef.current = activePreset.name
+      } else {
+        scheduledPresetManualOverrideRef.current = activePreset.name
+      }
+    }
+
+    commitSettings(next)
+  }, [commitSettings])
 
   const syncScheduledPreset = useCallback(() => {
     const activePreset = getActiveScheduledPreset()
@@ -78,25 +86,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    setSettings((prev) => {
-      const prevSnapshot = JSON.stringify(prev)
-      const nextSnapshot = JSON.stringify(activePreset.settings)
+    const prevSnapshot = JSON.stringify(settingsRef.current)
+    const nextSnapshot = JSON.stringify(activePreset.settings)
 
-      if (
-        lastScheduledPresetRef.current === activePreset.name &&
-        prevSnapshot === nextSnapshot
-      ) {
-        return prev
-      }
+    if (
+      lastScheduledPresetRef.current === activePreset.name &&
+      prevSnapshot === nextSnapshot
+    ) {
+      return
+    }
 
-      lastScheduledPresetRef.current = activePreset.name
-      saveSettings(activePreset.settings)
-      if (activePreset.layout) {
-        saveWidgetLayoutState(activePreset.layout)
-      }
-      return activePreset.settings
-    })
-  }, [])
+    lastScheduledPresetRef.current = activePreset.name
+    commitSettings(activePreset.settings)
+    if (activePreset.layout) {
+      saveWidgetLayoutState(activePreset.layout)
+    }
+  }, [commitSettings])
 
   useEffect(() => {
     syncScheduledPreset()

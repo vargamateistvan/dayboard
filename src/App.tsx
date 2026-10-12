@@ -33,6 +33,9 @@ import { QuoteWidget } from './components/QuoteWidget'
 import { DeviceInfoWidget } from './components/DeviceInfoWidget'
 import { BuyMeCoffeeWidget } from './components/BuyMeCoffeeWidget'
 import { InfoDialog } from './components/InfoDialog'
+import { WidgetErrorBoundary } from './components/ErrorBoundary'
+import { StorageErrorNotice } from './components/StorageErrorNotice'
+import { readStorage, removeStorage, writeStorage } from './lib/storage'
 import { SettingsDialog } from './components/SettingsDialog'
 import { NotificationBadge } from './components/NotificationBadge'
 import { NotificationCenter } from './components/NotificationCenter'
@@ -336,7 +339,11 @@ function WidgetCell({
       >
         {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
       </button>
-      <div className={styles.widgetContentFrame}>{WIDGET_RENDERERS[widget](isFullscreen, rowCount, onAddNotification)}</div>
+      <div className={styles.widgetContentFrame}>
+        <WidgetErrorBoundary label={getWidgetLabel(widget)}>
+          {WIDGET_RENDERERS[widget](isFullscreen, rowCount, onAddNotification)}
+        </WidgetErrorBoundary>
+      </div>
     </div>
   )
 }
@@ -759,7 +766,7 @@ function usePresetSelection(
   updateSettings: ReturnType<typeof useSettings>['updateSettings'],
 ) {
   const [selectedPresetName, setSelectedPresetName] = useState(() =>
-    localStorage.getItem(ACTIVE_PRESET_STORAGE_KEY) ?? '',
+    readStorage(ACTIVE_PRESET_STORAGE_KEY) ?? '',
   )
 
   const currentPresetName = useMemo(
@@ -774,11 +781,11 @@ function usePresetSelection(
 
   useEffect(() => {
     if (visiblePresetName) {
-      localStorage.setItem(ACTIVE_PRESET_STORAGE_KEY, visiblePresetName)
+      writeStorage(ACTIVE_PRESET_STORAGE_KEY, visiblePresetName)
       return
     }
 
-    localStorage.removeItem(ACTIVE_PRESET_STORAGE_KEY)
+    removeStorage(ACTIVE_PRESET_STORAGE_KEY)
   }, [visiblePresetName])
 
   useEffect(() => {
@@ -951,6 +958,7 @@ export default function App() {
   return (
     <SettingsProvider>
       <Dashboard />
+      <StorageErrorNotice />
     </SettingsProvider>
   )
 }

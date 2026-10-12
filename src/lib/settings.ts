@@ -1,4 +1,5 @@
 import { createSavedMediaLink, normalizeSavedMediaLinks, type SavedMediaLink } from './mediaLinks'
+import { readStorage, writeStorage } from './storage'
 import {
   loadWidgetLayoutState,
   normalizeWidgetLayoutState,
@@ -973,7 +974,7 @@ export function normalizeSettings(settings: Settings): Settings {
 
 export function loadSettings(): Settings {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = readStorage(STORAGE_KEY)
     if (!raw) return { ...DEFAULT_SETTINGS }
     return normalizeStoredSettings(JSON.parse(raw)) ?? { ...DEFAULT_SETTINGS }
   } catch {
@@ -983,7 +984,7 @@ export function loadSettings(): Settings {
 
 export function saveSettings(settings: Settings): void {
   const normalizedSettings = normalizeSettings(settings)
-  localStorage.setItem(
+  writeStorage(
     STORAGE_KEY,
     JSON.stringify({
       theme: normalizedSettings.theme,
@@ -1503,14 +1504,23 @@ function normalizePresetSchedule(value: unknown): SettingsPresetSchedule | undef
 }
 
 function readPresetStore(): Record<string, SettingsPreset> {
-  const presetJson = localStorage.getItem(PRESET_STORAGE_KEY)
-  const legacyJson = localStorage.getItem(LEGACY_PROFILE_STORAGE_KEY)
+  const presetJson = readStorage(PRESET_STORAGE_KEY)
+  const legacyJson = readStorage(LEGACY_PROFILE_STORAGE_KEY)
 
   if (!presetJson && !legacyJson) {
     return {}
   }
 
-  const rawStore = JSON.parse(presetJson ?? legacyJson ?? '{}') as Record<string, StoredPreset>
+  let rawStore: Record<string, StoredPreset>
+  try {
+    const parsed: unknown = JSON.parse(presetJson ?? legacyJson ?? '{}')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return {}
+    }
+    rawStore = parsed as Record<string, StoredPreset>
+  } catch {
+    return {}
+  }
   const presets: Record<string, SettingsPreset> = {}
 
   Object.entries(rawStore).forEach(([fallbackName, rawPreset]) => {
@@ -1543,7 +1553,7 @@ function readPresetStore(): Record<string, SettingsPreset> {
 }
 
 function writePresetStore(presets: Record<string, SettingsPreset>): void {
-  localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(presets))
+  writeStorage(PRESET_STORAGE_KEY, JSON.stringify(presets))
 }
 
 function dispatchPresetChange(): void {

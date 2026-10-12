@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
+import { readStorage, writeStorage } from "./storage";
 
 export const WIDGET_IDS = [
   "clock",
@@ -681,12 +682,12 @@ function migrateLegacyLayout(value: {
 }
 
 function readRawLayout(): string | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = readStorage(STORAGE_KEY);
   if (raw !== null) {
     return `layout:${raw}`;
   }
 
-  const legacyRaw = localStorage.getItem(LEGACY_VISIBILITY_KEY);
+  const legacyRaw = readStorage(LEGACY_VISIBILITY_KEY);
   if (legacyRaw !== null) {
     return `legacy:${legacyRaw}`;
   }
@@ -769,14 +770,17 @@ function writeLayout(nextLayout: WidgetLayoutState) {
     ...normalizedLayout,
   });
 
-  cachedRaw = `layout:${raw}`;
-  cachedLayout = normalizedLayout;
+  const saved =
+    writeStorage(STORAGE_KEY, raw) &&
+    writeStorage(
+      LEGACY_VISIBILITY_KEY,
+      JSON.stringify(normalizedLayout.visibility),
+    );
 
-  localStorage.setItem(STORAGE_KEY, raw);
-  localStorage.setItem(
-    LEGACY_VISIBILITY_KEY,
-    JSON.stringify(normalizedLayout.visibility),
-  );
+  // When the write fails, key the cache to what is actually stored so the
+  // edit stays in memory for this session instead of silently reverting.
+  cachedRaw = saved ? `layout:${raw}` : readRawLayout();
+  cachedLayout = normalizedLayout;
   window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 

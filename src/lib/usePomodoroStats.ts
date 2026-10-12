@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { readJson, writeJson } from './storage'
 
 export interface PomodoroStats {
   sessionCount: number
@@ -19,31 +20,46 @@ function getTodayKey(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+function toCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0
+}
+
+function normalizeStoredStats(value: unknown): StoredStats | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+
+  const result: StoredStats = {}
+  for (const [date, day] of Object.entries(value as Record<string, unknown>)) {
+    if (!day || typeof day !== 'object') continue
+    const entry = day as Record<string, unknown>
+    result[date] = {
+      sessionCount: toCount(entry.sessionCount),
+      totalMinutes: toCount(entry.totalMinutes),
+    }
+  }
+  return result
+}
+
+function readAllStats(): StoredStats {
+  return readJson(STORAGE_KEY, normalizeStoredStats, {})
+}
+
 export function usePomodoroStats() {
   const [stats, setStats] = useState<PomodoroStats>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) {
+    const todayKey = getTodayKey()
+    const today = readAllStats()[todayKey]
+    if (!today) {
       return { sessionCount: 0, totalMinutes: 0, lastSessionDate: '' }
     }
-
-    try {
-      const allStats = JSON.parse(stored) as StoredStats
-      const todayKey = getTodayKey()
-      const today = allStats[todayKey] || { sessionCount: 0, totalMinutes: 0 }
-      return {
-        sessionCount: today.sessionCount,
-        totalMinutes: today.totalMinutes,
-        lastSessionDate: todayKey,
-      }
-    } catch {
-      return { sessionCount: 0, totalMinutes: 0, lastSessionDate: '' }
+    return {
+      sessionCount: today.sessionCount,
+      totalMinutes: today.totalMinutes,
+      lastSessionDate: todayKey,
     }
   })
 
   const recordSession = (minutes: number) => {
     const todayKey = getTodayKey()
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const allStats = stored ? JSON.parse(stored) : {}
+    const allStats = readAllStats()
 
     if (!allStats[todayKey]) {
       allStats[todayKey] = { sessionCount: 0, totalMinutes: 0 }
@@ -52,7 +68,7 @@ export function usePomodoroStats() {
     allStats[todayKey].sessionCount++
     allStats[todayKey].totalMinutes += minutes
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allStats))
+    writeJson(STORAGE_KEY, allStats)
 
     setStats({
       sessionCount: allStats[todayKey].sessionCount,
@@ -62,10 +78,9 @@ export function usePomodoroStats() {
   }
 
   const getWeeklyStats = (): { date: string; minutes: number }[] => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return []
+    const allStats = readAllStats()
+    if (Object.keys(allStats).length === 0) return []
 
-    const allStats = JSON.parse(stored) as StoredStats
     const past7Days: { date: string; minutes: number }[] = []
 
     for (let i = 6; i >= 0; i--) {
