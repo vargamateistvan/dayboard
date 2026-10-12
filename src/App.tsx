@@ -632,8 +632,9 @@ function DashboardLayout({
       if (previousCell === cellNode) {
         return
       }
+      // Lift only: scaling a cell by a fraction resamples its text and makes it blurry.
       animateCell(cellNode, {
-        scale: 1.01,
+        scale: 1,
         translateY: -2,
         duration: MOTION_DURATIONS.quick,
       })

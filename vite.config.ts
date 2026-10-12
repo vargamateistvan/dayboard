@@ -1,144 +1,169 @@
-import type { IncomingMessage, ServerResponse } from 'node:http'
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import mkcert from 'vite-plugin-mkcert'
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import mkcert from "vite-plugin-mkcert";
 
-const CALENDAR_PROXY_PATH = '/api/calendar'
-const FLIGHTS_PROXY_PATH = '/api/flights'
+const CALENDAR_PROXY_PATH = "/api/calendar";
+const FLIGHTS_PROXY_PATH = "/api/flights";
 
-async function handleCalendarProxy(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const requestUrl = new URL(req.url ?? '/', 'http://localhost')
-  const targetUrl = requestUrl.searchParams.get('url')
+async function handleCalendarProxy(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const requestUrl = new URL(req.url ?? "/", "http://localhost");
+  const targetUrl = requestUrl.searchParams.get("url");
 
   if (!targetUrl) {
-    res.statusCode = 400
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.end('Missing calendar url.')
-    return
+    res.statusCode = 400;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Missing calendar url.");
+    return;
   }
 
-  let remoteUrl: URL
+  let remoteUrl: URL;
   try {
-    remoteUrl = new URL(targetUrl)
+    remoteUrl = new URL(targetUrl);
   } catch {
-    res.statusCode = 400
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.end('Invalid calendar url.')
-    return
+    res.statusCode = 400;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Invalid calendar url.");
+    return;
   }
 
-  if (remoteUrl.protocol !== 'http:' && remoteUrl.protocol !== 'https:') {
-    res.statusCode = 400
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.end('Unsupported calendar url protocol.')
-    return
+  if (remoteUrl.protocol !== "http:" && remoteUrl.protocol !== "https:") {
+    res.statusCode = 400;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Unsupported calendar url protocol.");
+    return;
   }
 
   try {
-    const response = await fetch(remoteUrl)
-    res.statusCode = response.status
+    const response = await fetch(remoteUrl);
+    res.statusCode = response.status;
 
     // Never pass the upstream Content-Type through: this response is served
     // from the app's own origin, so an upstream HTML page could otherwise run
     // scripts with access to the app's localStorage. The app reads it as text.
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.setHeader('X-Content-Type-Options', 'nosniff')
-    res.setHeader('Content-Security-Policy', "sandbox; default-src 'none'")
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "sandbox; default-src 'none'");
 
-    const cacheControl = response.headers.get('cache-control')
+    const cacheControl = response.headers.get("cache-control");
     if (cacheControl) {
-      res.setHeader('Cache-Control', cacheControl)
+      res.setHeader("Cache-Control", cacheControl);
     }
 
-    res.end(await response.text())
+    res.end(await response.text());
   } catch (error: unknown) {
-    res.statusCode = 502
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.end(error instanceof Error ? error.message : 'Calendar proxy request failed.')
+    res.statusCode = 502;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end(
+      error instanceof Error ? error.message : "Calendar proxy request failed.",
+    );
   }
 }
 
-async function handleFlightsProxy(req: IncomingMessage, res: ServerResponse): Promise<void> {
-  const requestUrl = new URL(req.url ?? '/', 'http://localhost')
+async function handleFlightsProxy(
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> {
+  const requestUrl = new URL(req.url ?? "/", "http://localhost");
 
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    res.end()
-    return
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
+    res.end();
+    return;
   }
 
-  const remoteUrl = new URL('https://opensky-network.org')
-  remoteUrl.pathname = '/api/states/all'
-  remoteUrl.search = requestUrl.search
+  const remoteUrl = new URL("https://opensky-network.org");
+  remoteUrl.pathname = "/api/states/all";
+  remoteUrl.search = requestUrl.search;
 
   try {
-    const response = await fetch(remoteUrl)
-    res.statusCode = response.status
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    const response = await fetch(remoteUrl);
+    res.statusCode = response.status;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization",
+    );
 
-    const contentType = response.headers.get('content-type')
+    const contentType = response.headers.get("content-type");
     if (contentType) {
-      res.setHeader('Content-Type', contentType)
+      res.setHeader("Content-Type", contentType);
     }
 
-    const cacheControl = response.headers.get('cache-control')
+    const cacheControl = response.headers.get("cache-control");
     if (cacheControl) {
-      res.setHeader('Cache-Control', cacheControl)
+      res.setHeader("Cache-Control", cacheControl);
     }
 
-    res.end(await response.text())
+    res.end(await response.text());
   } catch (error: unknown) {
-    res.statusCode = 502
-    res.setHeader('Access-Control-Allow-Origin', '*')
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8')
-    res.end(error instanceof Error ? error.message : 'Flights proxy request failed.')
+    res.statusCode = 502;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end(
+      error instanceof Error ? error.message : "Flights proxy request failed.",
+    );
   }
 }
 
 function dayboardProxyPlugin() {
   return {
-    name: 'dayboard-proxy',
-    configureServer(server: { middlewares: { use: (path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) => void } }) {
+    name: "dayboard-proxy",
+    configureServer(server: {
+      middlewares: {
+        use: (
+          path: string,
+          handler: (req: IncomingMessage, res: ServerResponse) => void,
+        ) => void;
+      };
+    }) {
       server.middlewares.use(CALENDAR_PROXY_PATH, (req, res) => {
-        void handleCalendarProxy(req, res)
-      })
+        void handleCalendarProxy(req, res);
+      });
       server.middlewares.use(FLIGHTS_PROXY_PATH, (req, res) => {
-        void handleFlightsProxy(req, res)
-      })
+        void handleFlightsProxy(req, res);
+      });
     },
-    configurePreviewServer(server: { middlewares: { use: (path: string, handler: (req: IncomingMessage, res: ServerResponse) => void) => void } }) {
+    configurePreviewServer(server: {
+      middlewares: {
+        use: (
+          path: string,
+          handler: (req: IncomingMessage, res: ServerResponse) => void,
+        ) => void;
+      };
+    }) {
       server.middlewares.use(CALENDAR_PROXY_PATH, (req, res) => {
-        void handleCalendarProxy(req, res)
-      })
+        void handleCalendarProxy(req, res);
+      });
       server.middlewares.use(FLIGHTS_PROXY_PATH, (req, res) => {
-        void handleFlightsProxy(req, res)
-      })
+        void handleFlightsProxy(req, res);
+      });
     },
-  }
+  };
 }
 
 export default defineConfig({
   plugins: [react(), mkcert(), dayboardProxyPlugin()],
-  base: '/dayboard/',
+  base: "/dayboard/",
   server: {
-    https: process.env.DAYBOARD_HTTPS === 'true',
-    // OAuth redirect URIs must match exactly, and Spotify rejects "localhost":
-    // serve on the loopback IP at a fixed port instead of drifting to 5174.
-    host: '127.0.0.1',
-    port: 5173,
-    strictPort: true,
+    https: process.env.DAYBOARD_HTTPS === "true",
   },
   preview: {
-    https: process.env.DAYBOARD_HTTPS === 'true',
+    https: process.env.DAYBOARD_HTTPS === "true",
   },
   test: {
-    environment: 'jsdom',
+    environment: "jsdom",
     globals: true,
-    setupFiles: ['./src/test/setup.ts'],
+    setupFiles: ["./src/test/setup.ts"],
   },
-})
+});
