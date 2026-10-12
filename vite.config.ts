@@ -127,6 +127,11 @@ export default defineConfig({
   base: '/dayboard/',
   server: {
     https: process.env.DAYBOARD_HTTPS === 'true',
+    // OAuth redirect URIs must match exactly, and Spotify rejects "localhost":
+    // serve on the loopback IP at a fixed port instead of drifting to 5174.
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
   },
   preview: {
     https: process.env.DAYBOARD_HTTPS === 'true',

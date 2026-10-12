@@ -12,6 +12,15 @@ import '@fontsource/doto/400.css'
 import '@fontsource/space-grotesk/400.css'
 import '@fontsource/bitcount-single/400.css'
 
+// Spotify only accepts loopback-IP redirect URIs in development, and the OAuth
+// state is kept in per-origin storage, so the dev app must run on 127.0.0.1.
+const shouldMoveToLoopbackIp = import.meta.env.DEV && window.location.hostname === 'localhost'
+if (shouldMoveToLoopbackIp) {
+  const url = new URL(window.location.href)
+  url.hostname = '127.0.0.1'
+  window.location.replace(url.toString())
+}
+
 // Initialize theme from localStorage before rendering
 initializeTheme()
 
@@ -27,4 +36,6 @@ async function bootstrap() {
   )
 }
 
-void bootstrap()
+if (!shouldMoveToLoopbackIp) {
+  void bootstrap()
+}
