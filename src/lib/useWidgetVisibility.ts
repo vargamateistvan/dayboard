@@ -309,6 +309,86 @@ export function canPlaceWidget(
   });
 }
 
+export type WidgetPlacementPatch = Partial<Record<Widget, WidgetPlacement>>;
+
+function placementsOverlap(left: WidgetPlacement, right: WidgetPlacement): boolean {
+  return (
+    left.column < right.column + right.columnSpan &&
+    right.column < left.column + left.columnSpan &&
+    left.row < right.row + right.rowSpan &&
+    right.row < left.row + left.rowSpan
+  );
+}
+
+function isLayoutValid(
+  placements: WidgetPlacements,
+  visibility: WidgetVisibility,
+  rowCount: number,
+): boolean {
+  const visibleWidgets = WIDGET_IDS.filter((widget) => visibility[widget]);
+
+  return visibleWidgets.every((widget, index) => {
+    const placement = placements[widget];
+    const minimum = MIN_WIDGET_SIZE[widget];
+
+    return (
+      fitsGrid(placement, rowCount) &&
+      placement.columnSpan >= minimum.columnSpan &&
+      placement.rowSpan >= minimum.rowSpan &&
+      visibleWidgets
+        .slice(index + 1)
+        .every((other) => !placementsOverlap(placement, placements[other]))
+    );
+  });
+}
+
+/**
+ * Resolves dropping `widget` at `target`. Returns the placements to apply, or
+ * null when the drop is not possible. When the target overlaps exactly one
+ * other widget and the dragged widget is already on the grid, the two widgets
+ * swap positions.
+ */
+export function resolveWidgetDrop(
+  layout: WidgetLayoutState,
+  widget: Widget,
+  target: WidgetPlacement,
+): WidgetPlacementPatch | null {
+  const { placements, visibility, rowCount } = layout;
+  const nextVisibility = { ...visibility, [widget]: true };
+
+  if (isLayoutValid({ ...placements, [widget]: target }, nextVisibility, rowCount)) {
+    return { [widget]: target };
+  }
+
+  if (!visibility[widget]) {
+    return null;
+  }
+
+  const overlapping = WIDGET_IDS.filter(
+    (other) =>
+      other !== widget &&
+      visibility[other] &&
+      placementsOverlap(target, placements[other]),
+  );
+
+  if (overlapping.length !== 1) {
+    return null;
+  }
+
+  const [other] = overlapping;
+  const origin = placements[widget];
+  const swapped: WidgetPlacement = {
+    ...placements[other],
+    column: origin.column,
+    row: origin.row,
+  };
+  const patch = { [widget]: target, [other]: swapped };
+
+  return isLayoutValid({ ...placements, ...patch }, nextVisibility, rowCount)
+    ? patch
+    : null;
+}
+
 function sortWidgetsByPlacement(placements: WidgetPlacements): Widget[] {
   return [...WIDGET_IDS].sort((left, right) => {
     const leftPlacement = placements[left];
@@ -719,6 +799,33 @@ export function useWidgetVisibility() {
     [],
   );
 
+  // Applies several placements atomically and shows every placed widget.
+  const placeWidgets = useCallback((patch: WidgetPlacementPatch) => {
+    const currentLayout = readLayout();
+    const nextPlacements = { ...currentLayout.placements };
+    const nextVisibility = { ...currentLayout.visibility };
+
+    for (const widget of Object.keys(patch) as Widget[]) {
+      nextPlacements[widget] = normalizePlacementForWidget(
+        widget,
+        patch[widget],
+        currentLayout.placements[widget],
+        currentLayout.rowCount,
+      );
+      nextVisibility[widget] = true;
+    }
+
+    if (!isLayoutValid(nextPlacements, nextVisibility, currentLayout.rowCount)) {
+      return;
+    }
+
+    writeLayout({
+      ...currentLayout,
+      visibility: nextVisibility,
+      placements: nextPlacements,
+    });
+  }, []);
+
   const addRow = useCallback(() => {
     const currentLayout = readLayout();
     if (currentLayout.rowCount >= MAX_GRID_ROWS) return;
@@ -763,6 +870,7 @@ export function useWidgetVisibility() {
     toggleWidget,
     moveWidget,
     setWidgetPlacement,
+    placeWidgets,
     addRow,
     removeRow,
   };

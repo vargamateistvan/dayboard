@@ -50,6 +50,25 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
   value: ResizeObserverMock,
 })
 
+// jsdom does not implement PointerEvent — extend MouseEvent with pointer fields
+if (typeof globalThis.PointerEvent === 'undefined') {
+  class PointerEventMock extends MouseEvent {
+    readonly pointerId: number
+    readonly pointerType: string
+
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init)
+      this.pointerId = init.pointerId ?? 0
+      this.pointerType = init.pointerType ?? 'mouse'
+    }
+  }
+
+  Object.defineProperty(globalThis, 'PointerEvent', {
+    writable: true,
+    value: PointerEventMock,
+  })
+}
+
 // Clear localStorage after each test
 afterEach(() => {
   localStorage.clear()

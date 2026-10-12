@@ -1,0 +1,442 @@
+.layoutEditor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.layoutEditorDragging,
+.layoutEditorDragging * {
+  cursor: grabbing !important;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.layoutEditorHint {
+  margin: 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+/* ── Widget palette ────────────────────────────────── */
+
+.widgetPalette {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: -0.5rem;
+  padding: 0.5rem;
+  border: 1.5px dashed transparent;
+  border-radius: var(--radius-lg);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+/* While a placed widget is dragged, the palette doubles as a remove zone */
+.widgetPaletteDropZone {
+  border-color: var(--color-border);
+}
+
+.widgetPaletteDropActive {
+  border-color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 8%, transparent);
+}
+
+.widgetPaletteDropActive .widgetPaletteHint {
+  color: var(--color-error, #ef4444);
+  font-weight: 700;
+}
+
+.widgetPaletteLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.widgetPaletteHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.widgetPaletteGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.widgetPaletteGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.widgetPaletteGroupTitle {
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.widgetPaletteChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.widgetChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  user-select: none;
+  font: inherit;
+  line-height: 1.2;
+  text-align: left;
+  appearance: none;
+  transition: border-color var(--transition-fast), opacity var(--transition-fast), background var(--transition-fast), transform var(--transition-fast);
+}
+
+.widgetSizeLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  opacity: 0.7;
+  margin-left: 0.2rem;
+}
+
+.widgetChipVisible {
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, var(--color-surface));
+  color: var(--color-accent);
+  cursor: default;
+}
+
+.widgetChipHidden {
+  border: 1px dashed var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  cursor: grab;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.widgetChipDragging {
+  opacity: 0.4;
+}
+
+.widgetChipHidden:hover,
+.widgetChipHidden:focus-visible {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  transform: translateY(-1px);
+}
+
+.widgetChipVisible:focus-visible,
+.widgetChipVisible:hover {
+  outline: none;
+}
+
+/* ── Layout grid ──────────────────────────────────── */
+
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  position: relative;
+}
+
+.layoutGridWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.layoutRowControls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.layoutRowLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  font-weight: 600;
+  min-width: 3.5rem;
+  text-align: center;
+}
+
+.layoutRowBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  line-height: 1;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.layoutRowBtn:hover:not(:disabled) {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-accent);
+}
+
+.layoutRowBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.layoutGridResizing {
+  cursor: nwse-resize;
+}
+
+.layoutCell {
+  border: 1px dashed color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+  pointer-events: none;
+}
+
+.layoutGridDragging .layoutCell {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+}
+
+/* Footprint of where the dragged widget will land */
+.dropPreview {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.dropPreviewLabel {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.dropPreviewValid {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  color: var(--color-accent);
+}
+
+.dropPreviewSwap {
+  border-color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  color: var(--color-accent);
+}
+
+.dropPreviewInvalid {
+  border-color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent);
+  color: var(--color-error, #ef4444);
+}
+
+/* Placed widget card */
+.layoutWidget {
+  display: flex;
+  flex-direction: column;
+  border: 1.5px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+  z-index: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  transition: box-shadow var(--transition-fast), opacity var(--transition-fast), transform var(--transition-fast);
+  min-width: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.layoutWidget:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.layoutWidgetDragging {
+  opacity: 0.35;
+  box-shadow: none;
+}
+
+.layoutWidgetSwapTarget {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.layoutWidget:hover {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.12));
+}
+
+.layoutWidgetResizing {
+  cursor: nwse-resize;
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+.layoutWidgetInner {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.layoutWidgetGrip {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+}
+
+.layoutWidgetLabel {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layoutWidgetSize {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.layoutWidgetRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.layoutWidgetRemove:hover {
+  color: var(--color-error, #ef4444);
+  background: color-mix(in srgb, var(--color-error, #ef4444) 12%, transparent);
+}
+
+/* Resize handle – bottom-right corner */
+.layoutWidgetResizeHandle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  touch-action: none;
+  cursor: nwse-resize;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 40%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 55%,
+    transparent 55%,
+    transparent 65%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 65%,
+    color-mix(in srgb, var(--color-accent) 50%, transparent) 80%,
+    transparent 80%
+  );
+  border-radius: 0 0 var(--radius-md) 0;
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.layoutWidgetResizeHandle:hover {
+  opacity: 1;
+}
+
+/* Label that follows the pointer while dragging (rendered in a portal) */
+.dragGhost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.75rem 0 0 0.75rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--color-accent);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-accent);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.15));
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.dragGhostInvalid {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 700px) {
+  .layoutWidgetLabel {
+    font-size: var(--font-size-base);
+  }
+
+  .layoutEditorHint,
+  .widgetPaletteHint {
+    font-size: var(--font-size-sm);
+    line-height: 1.55;
+  }
+
+  .layoutGrid {
+    /* row height shrinks on mobile; inline style controls count */
+    min-height: 0;
+  }
+}
+
+/* Bigger touch target for the resize corner */
+@media (pointer: coarse) {
+  .layoutWidgetResizeHandle {
+    width: 1.6rem;
+    height: 1.6rem;
+    opacity: 0.9;
+  }
+}
