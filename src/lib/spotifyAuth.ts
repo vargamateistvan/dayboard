@@ -259,7 +259,17 @@ export async function completeSpotifyLoginFromUrl(): Promise<SpotifyAuthSession 
   }
 }
 
-async function refreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
+/** Spotify rejected the refresh token: the user has to connect again. */
+export class SpotifySessionExpiredError extends Error {
+  constructor() {
+    super('Spotify session expired. Please reconnect Spotify.')
+    this.name = 'SpotifySessionExpiredError'
+  }
+}
+
+let refreshInFlight: { refreshToken: string; promise: Promise<SpotifyAuthSession> } | null = null
+
+async function requestTokenRefresh(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
   const clientId = getSpotifyClientId()
   const body = new URLSearchParams({
     grant_type: 'refresh_token',
@@ -276,7 +286,14 @@ async function refreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuth
   })
 
   if (!response.ok) {
-    throw new Error('Spotify session expired. Please sign in again.')
+    // 400/401 (invalid_grant) means the refresh token is dead; retrying would
+    // fail forever, so sign out and let the user reconnect. Other errors are
+    // temporary and keep the session.
+    if (response.status === 400 || response.status === 401) {
+      clearStoredSpotifyAuth()
+      throw new SpotifySessionExpiredError()
+    }
+    throw new Error('Could not refresh the Spotify session. Try again in a moment.')
   }
 
   const data = await response.json() as {
@@ -295,11 +312,36 @@ async function refreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuth
   return refreshed
 }
 
+// Callers refreshing at the same time (account sync, search) share one request,
+// so the same refresh token is never sent twice.
+function refreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
+  if (refreshInFlight?.refreshToken === auth.refreshToken) {
+    return refreshInFlight.promise
+  }
+
+  const promise = requestTokenRefresh(auth).finally(() => {
+    if (refreshInFlight?.promise === promise) refreshInFlight = null
+  })
+  refreshInFlight = { refreshToken: auth.refreshToken, promise }
+  return promise
+}
+
 export async function getValidSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
   if (Date.now() + EXPIRY_BUFFER_MS < auth.expiresAt) {
     return auth
   }
 
+  // Another caller may have refreshed already.
+  const stored = readStoredAuth()
+  if (stored && stored.refreshToken === auth.refreshToken && Date.now() + EXPIRY_BUFFER_MS < stored.expiresAt) {
+    return stored
+  }
+
+  return refreshSpotifyAuth(stored ?? auth)
+}
+
+/** Refreshes even before the expiry time, for a token Spotify answered with 401. */
+export function forceRefreshSpotifyAuth(auth: SpotifyAuthSession): Promise<SpotifyAuthSession> {
   return refreshSpotifyAuth(auth)
 }
 

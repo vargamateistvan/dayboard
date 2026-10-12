@@ -138,6 +138,7 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   const tabRowRef = useRef<HTMLDivElement | null>(null)
   const tabIndicatorRef = useRef<HTMLSpanElement | null>(null)
   const lastActiveUrlRef = useRef<string | null>(null)
+  const searchRequestIdRef = useRef(0)
   const searchCacheRef = useRef<Map<string, { expiresAt: number; groups: AppleCatalogGroup[] }>>(
     new Map(),
   )
@@ -205,6 +206,8 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
   const runSearch = useCallback(
     (query: string) => {
       const trimmedQuery = query.trim()
+      // Each search gets an id; responses for anything but the latest are ignored.
+      const requestId = ++searchRequestIdRef.current
       if (trimmedQuery.length < SEARCH_MIN_QUERY_LENGTH) {
         setSearchGroups(null)
         setSearchError(null)
@@ -231,22 +234,26 @@ export function AppleMediaWidget({ config, isFullscreen = false }: AppleMediaWid
             expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
             groups,
           })
+          if (requestId !== searchRequestIdRef.current) return
           setSearchGroups(groups)
         })
         .catch((error: unknown) => {
+          if (requestId !== searchRequestIdRef.current) return
           setSearchGroups(null)
           setSearchError(
             error instanceof Error ? error.message : 'Failed to search the Apple catalog.',
           )
         })
         .finally(() => {
-          setSearchLoading(false)
+          if (requestId === searchRequestIdRef.current) setSearchLoading(false)
         })
     },
     [config],
   )
 
   useEffect(() => {
+    // The query changed: a search still in flight is for old text.
+    searchRequestIdRef.current += 1
     const timer = window.setTimeout(() => {
       runSearch(searchQuery)
     }, SEARCH_DEBOUNCE_MS)

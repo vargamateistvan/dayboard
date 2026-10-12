@@ -168,3 +168,25 @@ describe('searchApplePodcastCatalog', () => {
     ])
   })
 })
+
+describe('store country', () => {
+  it('searches the store for the browser locale region', async () => {
+    vi.stubGlobal('navigator', { language: 'hu-HU', languages: ['hu-HU'] })
+    const fetchMock = mockFetchResponses({})
+    vi.stubGlobal('fetch', fetchMock)
+
+    await searchAppleMusicCatalog('dreams')
+
+    expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.get('country')).toBe('HU')
+  })
+
+  it('leaves the country out when the locale has no region', async () => {
+    vi.stubGlobal('navigator', { language: 'en', languages: ['en'] })
+    const fetchMock = mockFetchResponses({})
+    vi.stubGlobal('fetch', fetchMock)
+
+    await searchAppleMusicCatalog('dreams')
+
+    expect(new URL(String(fetchMock.mock.calls[0][0])).searchParams.has('country')).toBe(false)
+  })
+})

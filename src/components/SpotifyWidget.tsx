@@ -304,6 +304,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const [embedSelection, setEmbedSelection] = useState<SpotifySelection | null>(
     null,
   );
+  const searchRequestIdRef = useRef(0);
   const rateLimitUntilRef = useRef(readPersistedRateLimitUntil());
   const searchCacheRef = useRef<
     Map<string, { expiresAt: number; results: SpotifySearchResults }>
@@ -425,6 +426,13 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           );
           return;
         }
+        // The refresh token was rejected and the session cleared: ask to reconnect.
+        if (loadError instanceof Error && loadError.name === "SpotifySessionExpiredError") {
+          setSnapshot(null);
+          setSnapshotError(null);
+          setConnectError("Spotify session expired. Please reconnect Spotify.");
+          return;
+        }
         if (message.includes("Insufficient client scope")) {
           clearStoredSpotifyAuth();
           setConnectError(
@@ -433,7 +441,7 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           setSnapshotError(null);
           return;
         }
-        setSnapshot(null);
+        // Keep the last account data on screen after a temporary failure.
         setSnapshotError(message);
       } finally {
         if (!cancelled) {
@@ -472,6 +480,8 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
   const runSearch = (query: string): boolean => {
     const auth = getStoredSpotifyAuth();
     const trimmedQuery = query.trim();
+    // Each search gets an id; responses for anything but the latest are ignored.
+    const requestId = ++searchRequestIdRef.current;
     if (!auth || trimmedQuery.length < SEARCH_MIN_QUERY_LENGTH) {
       setSearchResults(null);
       setSearchError(null);
@@ -509,9 +519,11 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
           expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
           results,
         });
+        if (requestId !== searchRequestIdRef.current) return;
         setSearchResults(results);
       })
       .catch((error: unknown) => {
+        if (requestId !== searchRequestIdRef.current) return;
         const message =
           error instanceof Error ? error.message : "Failed to search Spotify.";
         const rateLimitSeconds = parseSpotifyRateLimitSeconds(message);
@@ -523,12 +535,14 @@ export function SpotifyWidget({ isFullscreen = false }: SpotifyWidgetProps) {
         setSearchError(message);
       })
       .finally(() => {
-        setSearchLoading(false);
+        if (requestId === searchRequestIdRef.current) setSearchLoading(false);
       });
     return true;
   };
 
   useEffect(() => {
+    // The query changed: a search still in flight is for old text.
+    searchRequestIdRef.current += 1;
     const timer = window.setTimeout(() => {
       runSearch(searchQuery);
     }, SEARCH_DEBOUNCE_MS);

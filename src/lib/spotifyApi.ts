@@ -1,5 +1,6 @@
-import { getValidSpotifyAuth, type SpotifyAuthSession } from './spotifyAuth'
+import { forceRefreshSpotifyAuth, getValidSpotifyAuth, type SpotifyAuthSession } from './spotifyAuth'
 import { addSpotifyForbiddenPath, readSpotifyForbiddenPaths } from './spotifyForbiddenPaths'
+import { parseSpotifyPath } from './musicEmbeds'
 
 export interface SpotifyProfile {
   id: string
@@ -196,7 +197,6 @@ export interface SpotifySearchResults {
 
 export interface SpotifyAccountSnapshot {
   profile: SpotifyProfile
-  playback: SpotifyPlaybackState | null
   recentlyPlayed: SpotifyRecentPlayedItem[] | null
   library: SpotifyLibrarySnapshot | null
 }
@@ -219,6 +219,8 @@ async function parseSpotifyError(response: Response): Promise<string> {
   return 'Spotify request failed.'
 }
 
+class SpotifyUnauthorizedError extends Error {}
+
 async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T> {
   const response = await fetch(`https://api.spotify.com/v1${path}`, {
     headers: {
@@ -228,6 +230,10 @@ async function fetchSpotifyJson<T>(accessToken: string, path: string): Promise<T
 
   if (response.status === 204) {
     throw new Error('Spotify request returned no content.')
+  }
+
+  if (response.status === 401) {
+    throw new SpotifyUnauthorizedError('Spotify rejected the access token.')
   }
 
   if (response.status === 429) {
@@ -297,48 +303,34 @@ async function fetchSpotifyOptionalJson<T>(
 }
 
 export async function fetchSpotifyAccountSnapshot(auth: SpotifyAuthSession): Promise<SpotifyAccountSnapshot> {
-  const validAuth = await getValidSpotifyAuth(auth)
-  const [profile, playback, recentlyPlayed, library] = await Promise.all([
-    fetchSpotifyJson<SpotifyProfile>(validAuth.accessToken, '/me'),
-    fetchSpotifyOptionalJson<SpotifyPlaybackState>(validAuth.accessToken, '/me/player'),
-    fetchSpotifyOptionalJson<{ items?: SpotifyRecentPlayedItem[] }>(
-      validAuth.accessToken,
-      '/me/player/recently-played?limit=10',
-    ),
-    Promise.all([
-      fetchSpotifyOptionalJson<{ items?: SpotifyTopArtistItem[] }>(
-        validAuth.accessToken,
-        '/me/top/artists?limit=5',
-        { skipKnownForbiddenPath: true },
-      ),
-      fetchSpotifyOptionalJson<{ items?: SpotifyTopTrackItem[] }>(
-        validAuth.accessToken,
-        '/me/top/tracks?limit=5',
-        { skipKnownForbiddenPath: true },
-      ),
-      fetchSpotifyOptionalJson<{ items?: SpotifySavedAlbumItem[] }>(
-        validAuth.accessToken,
-        '/me/albums?limit=5',
-        { skipKnownForbiddenPath: true },
-      ),
-      fetchSpotifyOptionalJson<{ items?: SpotifySavedShowItem[] }>(
-        validAuth.accessToken,
-        '/me/shows?limit=5',
-        { skipKnownForbiddenPath: true },
-      ),
-      fetchSpotifyOptionalJson<{ items?: SpotifySearchPlaylistItem[] }>(
-        validAuth.accessToken,
-        '/me/playlists?limit=5',
-        { skipKnownForbiddenPath: true },
-      ),
-    ]),
-  ])
+  let validAuth = await getValidSpotifyAuth(auth)
 
-  const [topArtists, topTracks, savedAlbums, savedShows, playlists] = library
+  // A token can be revoked (or the clock off) before its expiry time: refresh once and retry.
+  let profile: SpotifyProfile
+  try {
+    profile = await fetchSpotifyJson<SpotifyProfile>(validAuth.accessToken, '/me')
+  } catch (error) {
+    if (!(error instanceof SpotifyUnauthorizedError)) throw error
+    validAuth = await forceRefreshSpotifyAuth(validAuth)
+    profile = await fetchSpotifyJson<SpotifyProfile>(validAuth.accessToken, '/me')
+  }
+
+  // Optional sections load independently: one rate-limited or failing
+  // endpoint leaves that section empty instead of failing the whole snapshot.
+  const optional = <T,>(path: string, skipKnownForbiddenPath = false) =>
+    fetchSpotifyOptionalJson<T>(validAuth.accessToken, path, { skipKnownForbiddenPath }).catch(() => null)
+
+  const [recentlyPlayed, topArtists, topTracks, savedAlbums, savedShows, playlists] = await Promise.all([
+    optional<{ items?: SpotifyRecentPlayedItem[] }>('/me/player/recently-played?limit=10'),
+    optional<{ items?: SpotifyTopArtistItem[] }>('/me/top/artists?limit=5', true),
+    optional<{ items?: SpotifyTopTrackItem[] }>('/me/top/tracks?limit=5', true),
+    optional<{ items?: SpotifySavedAlbumItem[] }>('/me/albums?limit=5', true),
+    optional<{ items?: SpotifySavedShowItem[] }>('/me/shows?limit=5', true),
+    optional<{ items?: SpotifySearchPlaylistItem[] }>('/me/playlists?limit=5', true),
+  ])
 
   return {
     profile,
-    playback,
     recentlyPlayed: filterNonNullItems(recentlyPlayed?.items),
     library: {
       topArtists: filterNonNullItems(topArtists?.items),
@@ -434,11 +426,9 @@ export function spotifyUrlToPlayRequest(value: string): SpotifyPlayRequest | nul
       if (!/(^|\.)spotify\.com$/.test(url.hostname)) {
         return null
       }
-      const segments = url.pathname.split('/').filter(Boolean)
-      const embedIndex = segments.indexOf('embed')
-      const relevant = embedIndex === -1 ? segments : segments.slice(embedIndex + 1)
-      type = relevant[0]
-      id = relevant[1]
+      const parsed = parseSpotifyPath(url)
+      type = parsed?.type
+      id = parsed?.id
     } catch {
       return null
     }

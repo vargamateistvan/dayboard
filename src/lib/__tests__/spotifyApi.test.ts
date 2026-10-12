@@ -18,7 +18,7 @@ describe('fetchSpotifyAccountSnapshot', () => {
     vi.clearAllMocks()
   })
 
-  it('loads the Spotify profile and playback state', async () => {
+  it('loads the Spotify profile, recent plays and library', async () => {
     vi.mocked(spotifyAuth.getValidSpotifyAuth).mockResolvedValue({
       accessToken: 'token',
       refreshToken: 'refresh',
@@ -33,16 +33,6 @@ describe('fetchSpotifyAccountSnapshot', () => {
           id: 'dayboard',
           display_name: 'Dayboard',
           images: [],
-        }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({
-          device: null,
-          is_playing: false,
-          progress_ms: null,
-          item: null,
         }),
       })
       .mockResolvedValueOnce({
@@ -113,12 +103,6 @@ describe('fetchSpotifyAccountSnapshot', () => {
     })
 
     expect(snapshot.profile.display_name).toBe('Dayboard')
-    expect(snapshot.playback).toEqual({
-      device: null,
-      is_playing: false,
-      progress_ms: null,
-      item: null,
-    })
     expect(snapshot.recentlyPlayed).toHaveLength(1)
     expect(snapshot.library).toEqual({
       topArtists: [],
@@ -127,10 +111,10 @@ describe('fetchSpotifyAccountSnapshot', () => {
       savedShows: [],
       playlists: [],
     })
-    expect(fetchMock).toHaveBeenCalledTimes(8)
+    // Profile, recently played and five library sections; playback state is not fetched.
+    expect(fetchMock).toHaveBeenCalledTimes(7)
     expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.spotify.com/v1/me')
-    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://api.spotify.com/v1/me/player')
-    expect(fetchMock.mock.calls[2]?.[0]).toContain('/me/player/recently-played?limit=10')
+    expect(fetchMock.mock.calls[1]?.[0]).toContain('/me/player/recently-played?limit=10')
     vi.unstubAllGlobals()
   })
 
@@ -194,7 +178,7 @@ describe('fetchSpotifyAccountSnapshot', () => {
       expiresAt: Date.now() + 60_000,
     })
 
-    expect(fetchMock).toHaveBeenCalledTimes(11)
+    expect(fetchMock).toHaveBeenCalledTimes(9)
     const requestedUrls = fetchMock.mock.calls.map((call) => String(call[0]))
     expect(requestedUrls.filter((url) => url.includes('/me/top/artists?limit=5'))).toHaveLength(1)
     expect(requestedUrls.filter((url) => url.includes('/me/top/tracks?limit=5'))).toHaveLength(1)

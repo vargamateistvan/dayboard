@@ -1,4 +1,5 @@
 import { isSafeHttpUrl } from './urlSafety'
+import { parseSpotifyPath } from './musicEmbeds'
 
 
 export interface SavedMediaLink {
@@ -28,9 +29,7 @@ function truncate(value: string, maxLength: number): string {
 }
 
 function getSpotifyTypeLabel(url: URL): string {
-  const segments = url.pathname.split('/').filter(Boolean)
-  const type = segments[0] === 'embed' ? segments[1] : segments[0]
-  switch (type) {
+  switch (parseSpotifyPath(url)?.type) {
     case 'track':
       return 'Track'
     case 'album':

@@ -63,11 +63,21 @@ function pickArtwork(result: ItunesResult): string | undefined {
   )
 }
 
+/** Two-letter region of the browser locale ("hu-HU" -> "HU"), if it has one. */
+function getStoreCountry(): string | null {
+  const locale = typeof navigator === 'undefined' ? '' : navigator.languages?.[0] ?? navigator.language ?? ''
+  const region = /^[a-z]{2,3}[-_]([a-z]{2})\b/i.exec(locale)?.[1]
+  return region ? region.toUpperCase() : null
+}
+
 async function fetchItunesResults(params: Record<string, string>): Promise<ItunesResult[]> {
   const url = new URL(ITUNES_SEARCH_ENDPOINT)
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, value)
   })
+  // Without a country the iTunes API searches the US store.
+  const country = getStoreCountry()
+  if (country) url.searchParams.set('country', country)
 
   const response = await fetch(url.toString())
   if (!response.ok) {
