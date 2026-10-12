@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSettings } from '../lib/useSettings'
+import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './TimezoneClockWidget.module.css'
 
 interface TimezoneClockWidgetProps {
@@ -40,7 +41,9 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
       <div className={styles.clockCard}>
         <div className={styles.clockHeader}>My location ({localTimeZone})</div>
-        <div className={styles.time}>{formatTime(now)}</div>
+        <div className={styles.time}>
+          <FixedWidthDigits text={formatTime(now)} />
+        </div>
         <div className={styles.date}>{formatDate(now)}</div>
       </div>
 
@@ -48,7 +51,9 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
         <div className={styles.clockHeader}>
           {settings.worldClockCity} ({settings.worldClockTimeZone})
         </div>
-        <div className={styles.time}>{formatTime(now, settings.worldClockTimeZone)}</div>
+        <div className={styles.time}>
+          <FixedWidthDigits text={formatTime(now, settings.worldClockTimeZone)} />
+        </div>
         <div className={styles.date}>{formatDate(now, settings.worldClockTimeZone)}</div>
       </div>
     </div>

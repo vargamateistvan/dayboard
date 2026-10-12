@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { useSettings } from '../lib/useSettings'
+import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './ClockWidget.module.css'
 
 interface ClockWidgetProps {
@@ -68,7 +69,9 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} style={style}>
-      <div className={styles.time}>{time}</div>
+      <div className={styles.time}>
+        <FixedWidthDigits text={time} />
+      </div>
       <div className={styles.date}>{date}</div>
     </div>
   )
