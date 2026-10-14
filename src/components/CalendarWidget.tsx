@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { fetchCalendarFeeds, type FetchedCalendarFeed } from '../lib/fetchCalendarFeed'
+import { googleSessionNeedsReconnect, parseGoogleCalendarFeedUrl, startGoogleLogin } from '../lib/googleAuth'
 import { isMotionEnabled, loadAnimeJs, MOTION_DURATIONS, MOTION_STAGGERS } from '../lib/anime'
 import {
   parseCalendarFeed,
@@ -526,6 +527,9 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
   const [fetchedFeeds, setFetchedFeeds] = useState<FetchedCalendarFeed[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [googleReconnectNeeded, setGoogleReconnectNeeded] = useState(false)
+  const [reconnectingGoogle, setReconnectingGoogle] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date())
   const [now, setNow] = useState<Date>(() => new Date())
   const sentRemindersRef = useRef<Set<string> | null>(null)
@@ -654,6 +658,7 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
       setFetchedFeeds([])
       setEvents([])
       setError(null)
+      setGoogleReconnectNeeded(false)
       setLoading(false)
       setActiveTooltip(null)
       setActiveMonthTooltip(null)
@@ -661,6 +666,12 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
     }
 
     let cancelled = false
+    const hasGoogleFeed = urls.some((url) => parseGoogleCalendarFeedUrl(url) !== null)
+    // Checked after every load, refreshes included: a failed silent token
+    // refresh leaves the stored token expired.
+    const updateGoogleReconnectNeeded = () => {
+      setGoogleReconnectNeeded(hasGoogleFeed && googleSessionNeedsReconnect())
+    }
 
     // Refreshes keep the current events on screen, and a failed refresh keeps
     // them too instead of replacing them with an error.
@@ -676,9 +687,12 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
           setFetchedFeeds(nextFetchedFeeds)
           setError(null)
           setLoading(false)
+          updateGoogleReconnectNeeded()
         })
         .catch((err: unknown) => {
-          if (cancelled || isRefresh) return
+          if (cancelled) return
+          updateGoogleReconnectNeeded()
+          if (isRefresh) return
           setError((err as Error).message ?? 'Could not load calendar.')
           setLoading(false)
         })
@@ -691,7 +705,20 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
       cancelled = true
       window.clearInterval(refreshId)
     }
-  }, [feedUrlsKey])
+  }, [feedUrlsKey, reloadKey])
+
+  const handleReconnectGoogle = () => {
+    setReconnectingGoogle(true)
+    startGoogleLogin()
+      .then(() => {
+        setGoogleReconnectNeeded(false)
+        setReloadKey((key) => key + 1)
+      })
+      .catch(() => {
+        // The popup was closed or blocked; the button stays for another try.
+      })
+      .finally(() => setReconnectingGoogle(false))
+  }
 
   const currentFetchedFeeds = useMemo(
     () => fetchedFeeds.filter(({ feed }) => feedColorsByUrl.has(feed.url)),
@@ -1086,7 +1113,21 @@ export function CalendarWidget({ isFullscreen = false, onAddNotification }: Cale
             <div className={styles.loading} aria-label="Loading events">Loading…</div>
           )}
 
-          {hasCalendarFeeds && !loading && error && (
+          {hasCalendarFeeds && !loading && googleReconnectNeeded && (
+            <div className={styles.reconnect}>
+              <p>Your Google session expired.</p>
+              <button
+                type="button"
+                className={styles.reconnectButton}
+                onClick={handleReconnectGoogle}
+                disabled={reconnectingGoogle}
+              >
+                {reconnectingGoogle ? 'Reconnecting…' : 'Reconnect Google'}
+              </button>
+            </div>
+          )}
+
+          {hasCalendarFeeds && !loading && error && !googleReconnectNeeded && (
             <div className={styles.error}>
               <p>{isMissingCalendarLinkError ? error : `Could not load calendar: ${error}`}</p>
               {!isMissingCalendarLinkError && (

@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { disconnectGoogle, fetchGoogleCalendarEvents, getStoredGoogleAuth, getValidGoogleAuth } from '../googleAuth'
+import {
+  disconnectGoogle,
+  fetchGoogleCalendarEvents,
+  getStoredGoogleAuth,
+  getValidGoogleAuth,
+  googleSessionNeedsReconnect,
+} from '../googleAuth'
 import { parseIcs } from '../parseCalendarFeed'
 
 const KEY = 'dayboard_google_auth'
@@ -78,6 +84,21 @@ describe('Google token refresh', () => {
     stubGis((config) => config.error_callback?.({ type: 'popup_failed_to_open' }))
 
     await expect(getValidGoogleAuth(getStoredGoogleAuth()!)).rejects.toThrow(/sign in again/i)
+  })
+
+  it('stays connected but asks for a reconnect when the silent refresh fails', async () => {
+    storeToken(-60_000)
+    stubGis((config) => config.error_callback?.({ type: 'popup_failed_to_open' }))
+
+    await expect(getValidGoogleAuth(getStoredGoogleAuth()!)).rejects.toThrow()
+
+    expect(getStoredGoogleAuth()).not.toBeNull()
+    expect(googleSessionNeedsReconnect()).toBe(true)
+  })
+
+  it('does not ask for a reconnect while the token is valid', () => {
+    storeToken(3_600_000)
+    expect(googleSessionNeedsReconnect()).toBe(false)
   })
 
   it('fails instead of hanging when Google never answers', async () => {

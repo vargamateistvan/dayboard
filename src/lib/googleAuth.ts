@@ -72,6 +72,13 @@ export function getStoredGoogleAuth(): GoogleAuthSession | null {
   return readStoredAuth()
 }
 
+// True when Google is connected but its token expired and could not be
+// refreshed silently, so the user has to reconnect with a click.
+export function googleSessionNeedsReconnect(): boolean {
+  const auth = readStoredAuth()
+  return auth !== null && Date.now() + EXPIRY_BUFFER_MS >= auth.expiresAt
+}
+
 export function clearStoredGoogleAuth() {
   localStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY)
 }
@@ -194,10 +201,10 @@ async function refreshGoogleAuth(): Promise<GoogleAuthSession> {
   return requestGoogleToken(google, clientId, {
     prompt: '',
     timeoutMs: SILENT_REFRESH_TIMEOUT_MS,
-    onFailure: () => {
-      clearStoredGoogleAuth()
-      return new Error(SESSION_EXPIRED_MESSAGE)
-    },
+    // The stored token is kept so the account still counts as connected;
+    // googleSessionNeedsReconnect then lets the UI offer a click-triggered
+    // reconnect, which the browser allows to open a popup.
+    onFailure: () => new Error(SESSION_EXPIRED_MESSAGE),
   })
 }
 

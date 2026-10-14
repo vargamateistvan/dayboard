@@ -631,3 +631,46 @@ END:VCALENDAR`
     vi.unstubAllGlobals()
   })
 })
+
+describe('CalendarWidget Google reconnect', () => {
+  beforeEach(() => vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-client'))
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
+    delete window.google
+  })
+
+  it('offers a reconnect button when the Google session expired, and reloads after reconnecting', async () => {
+    localStorage.setItem('dayboard_google_auth', JSON.stringify({ accessToken: 'old', expiresAt: Date.now() - 60_000 }))
+    // Silent refreshes are blocked; the click-triggered one succeeds.
+    let allowPopup = false
+    window.google = {
+      accounts: {
+        oauth2: {
+          initTokenClient: (config) => ({
+            requestAccessToken: () => {
+              if (allowPopup) config.callback({ access_token: 'fresh', expires_in: 3600 })
+              else config.error_callback?.({ type: 'popup_failed_to_open' })
+            },
+          }),
+        },
+      },
+    }
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ items: [{ id: '1', summary: 'Google Standup', start: { dateTime: new Date().toISOString() }, end: { dateTime: new Date(Date.now() + 1_800_000).toISOString() } }] }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithSettings([{ url: 'googlecalendar://primary', color: DEFAULT_CALENDAR_COLORS[0] }])
+
+    const button = await screen.findByRole('button', { name: 'Reconnect Google' })
+    expect(screen.queryByText(/not connected/i)).toBeNull()
+
+    allowPopup = true
+    fireEvent.click(button)
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Reconnect Google' })).toBeNull())
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+  })
+})
