@@ -9,8 +9,9 @@ import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 import { toLocalDayKey } from '../../lib/usePomodoroStats'
 
 // Clock digits render in separate spans, so match on the element's full text.
+// The time box wraps a measured text span; return the outermost match (the box).
 function getByTimeText(time: string): HTMLElement {
-  return screen.getByText((_, element) => element?.textContent === time && element.childElementCount > 0)
+  return screen.getAllByText((_, element) => element?.textContent === time && element.childElementCount > 0)[0]
 }
 
 function renderClockWidget(rowCount?: number) {

@@ -16,8 +16,9 @@
     Keep the clock visually dominant, but compact enough to leave room for
     the weather/calendar/tasks rows beneath it.
   */
-  font-size: clamp(2.8rem, min(12vw, 20dvh), 14rem);
-  font-size: var(--clock-time-size-override, var(--clock-time-size-auto, clamp(2.8rem, min(28cqw, 72cqh), 18rem)));
+  --clock-time-size: var(--clock-time-size-override, var(--clock-time-size-auto, clamp(2.8rem, min(28cqw, 72cqh), 18rem)));
+  /* --clock-time-fit-size is measured in ClockWidget so the time never overflows. */
+  font-size: min(var(--clock-time-size), var(--clock-time-fit-size, 9999px));
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 0.88;
@@ -32,6 +33,10 @@
   text-overflow: clip;
   transform: scaleX(var(--clock-time-stretch, 1));
   transform-origin: center center;
+}
+
+.timeText {
+  display: inline-block;
 }
 
 .date {
@@ -57,8 +62,7 @@
 }
 
 .fullscreen .time {
-  font-size: clamp(3.2rem, min(20vw, 26dvh), 22rem);
-  font-size: var(--clock-time-size-override, clamp(3.2rem, min(32cqw, 78cqh), 22rem));
+  --clock-time-size: var(--clock-time-size-override, clamp(3.2rem, min(32cqw, 78cqh), 22rem));
   line-height: 0.84;
   text-align: center;
 }
@@ -76,9 +80,16 @@
 
 /* Mobile optimizations */
 @media (max-width: 700px) {
+  /* The phone layout stacks widgets at their content height, so size by width only. */
+  .widget:not(.fullscreen) {
+    container-type: inline-size;
+    height: auto;
+    padding: 0.35rem 0;
+  }
+
   .time {
-    font-size: clamp(2.2rem, 10.5vw, 4.2rem);
-    font-size: var(--clock-time-size-override, var(--clock-time-size-auto, clamp(2.2rem, min(30cqw, 72cqh), 4.8rem)));
+    /* Row-count sizing is for the desktop grid; ignore it on phones. */
+    --clock-time-size: var(--clock-time-size-override, clamp(2.2rem, min(30cqw, 72cqh), 4.8rem));
     line-height: 0.88;
   }
 
@@ -95,8 +106,7 @@
   }
 
   .fullscreen .time {
-    font-size: clamp(2.2rem, min(14vw, 20dvh), 5.6rem);
-    font-size: var(--clock-time-size-override, clamp(2.2rem, min(30cqw, 72cqh), 6rem));
+    --clock-time-size: var(--clock-time-size-override, clamp(2.2rem, min(30cqw, 72cqh), 6rem));
     line-height: 0.86;
   }
 

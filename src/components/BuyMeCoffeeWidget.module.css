@@ -110,3 +110,17 @@
     min-height: min(360px, calc(100vh - 126px));
   }
 }
+
+@media (max-width: 700px) {
+  .fab {
+    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+    width: 52px;
+    height: 52px;
+  }
+
+  .fabIcon {
+    width: 28px;
+    height: 28px;
+  }
+}

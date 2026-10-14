@@ -969,8 +969,14 @@
 }
 
 @media (max-width: 1200px) {
-  .fullscreen .content {
+  .fullscreen .content,
+  .fullscreen .contentWeekly {
     grid-template-columns: 1fr;
+  }
+
+  .contentNoFeedsFullscreen {
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-content: center;
   }
 
   .fullscreen .monthCell {
