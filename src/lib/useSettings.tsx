@@ -9,7 +9,20 @@ import {
   SETTINGS_STORAGE_KEY,
   type Settings,
 } from './settings'
+import { readStorage, removeStorage, writeStorage } from './storage'
 import { saveWidgetLayoutState } from './useWidgetVisibility'
+
+// Persisted so a manual preset choice survives a reload instead of the
+// scheduled preset being re-applied over it.
+const SCHEDULED_PRESET_OVERRIDE_STORAGE_KEY = 'dayboard:scheduled-preset-override'
+
+function persistScheduledPresetOverride(name: string | null) {
+  if (name) {
+    writeStorage(SCHEDULED_PRESET_OVERRIDE_STORAGE_KEY, name)
+  } else {
+    removeStorage(SCHEDULED_PRESET_OVERRIDE_STORAGE_KEY)
+  }
+}
 
 interface SettingsContextValue {
   settings: Settings
@@ -21,7 +34,9 @@ const SettingsContext = createContext<SettingsContextValue | null>(null)
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<Settings>(() => loadSettings())
   const lastScheduledPresetRef = useRef<string | null>(null)
-  const scheduledPresetManualOverrideRef = useRef<string | null>(null)
+  const scheduledPresetManualOverrideRef = useRef<string | null>(
+    readStorage(SCHEDULED_PRESET_OVERRIDE_STORAGE_KEY),
+  )
 
   useEffect(() => {
     applyTheme(settings)
@@ -41,6 +56,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // out of state updaters, which React may call twice.
   const settingsRef = useRef(settings)
 
+  const setScheduledPresetManualOverride = useCallback((name: string | null) => {
+    scheduledPresetManualOverrideRef.current = name
+    persistScheduledPresetOverride(name)
+  }, [])
+
   const commitSettings = useCallback((next: Settings) => {
     settingsRef.current = next
     setSettings(next)
@@ -52,28 +72,28 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const activePreset = getActiveScheduledPreset()
 
     if (!activePreset) {
-      scheduledPresetManualOverrideRef.current = null
+      setScheduledPresetManualOverride(null)
     } else {
       const activeSnapshot = JSON.stringify(activePreset.settings)
       const nextSnapshot = JSON.stringify(next)
 
       if (nextSnapshot === activeSnapshot) {
-        scheduledPresetManualOverrideRef.current = null
+        setScheduledPresetManualOverride(null)
         lastScheduledPresetRef.current = activePreset.name
       } else {
-        scheduledPresetManualOverrideRef.current = activePreset.name
+        setScheduledPresetManualOverride(activePreset.name)
       }
     }
 
     commitSettings(next)
-  }, [commitSettings])
+  }, [commitSettings, setScheduledPresetManualOverride])
 
   const syncScheduledPreset = useCallback(() => {
     const activePreset = getActiveScheduledPreset()
 
     if (!activePreset) {
       lastScheduledPresetRef.current = null
-      scheduledPresetManualOverrideRef.current = null
+      setScheduledPresetManualOverride(null)
       return
     }
 
@@ -81,7 +101,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       scheduledPresetManualOverrideRef.current &&
       scheduledPresetManualOverrideRef.current !== activePreset.name
     ) {
-      scheduledPresetManualOverrideRef.current = null
+      setScheduledPresetManualOverride(null)
     }
 
     if (scheduledPresetManualOverrideRef.current === activePreset.name) {
@@ -103,7 +123,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (activePreset.layout) {
       saveWidgetLayoutState(activePreset.layout)
     }
-  }, [commitSettings])
+  }, [commitSettings, setScheduledPresetManualOverride])
 
   // Follow settings and presets saved in other tabs. Only reload here; saving
   // again would bounce the change back and forth between tabs.

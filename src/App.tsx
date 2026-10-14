@@ -770,10 +770,13 @@ function usePresetSelection(
     readStorage(ACTIVE_PRESET_STORAGE_KEY) ?? '',
   )
 
-  const currentPresetName = useMemo(
-    () => presets.find((preset) => presetMatchesSettings(preset, settings, rowCount, visibility, placements))?.name ?? '',
-    [presets, settings, rowCount, visibility, placements],
-  )
+  const currentPresetName = useMemo(() => {
+    const matches = presets.filter((preset) =>
+      presetMatchesSettings(preset, settings, rowCount, visibility, placements),
+    )
+    // Several presets can match the same settings; keep the one the user picked.
+    return (matches.find((preset) => preset.name === selectedPresetName) ?? matches[0])?.name ?? ''
+  }, [presets, settings, rowCount, visibility, placements, selectedPresetName])
 
   const selectedPresetExists = Boolean(
     selectedPresetName && presets.some((preset) => preset.name === selectedPresetName),
