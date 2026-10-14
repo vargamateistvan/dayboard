@@ -137,14 +137,15 @@ These proxies make remote requests work reliably during development and preview.
 
 ### Flights
 
-The Flights widget calls a local `/api/flights` endpoint in dev/preview, which proxies the public OpenSky Network API to avoid browser CORS issues. On static deployments such as GitHub Pages, the browser cannot call OpenSky directly because the API rejects non-matching origins, so the production default uses a CORS-safe proxy in front of the OpenSky endpoint.
+Flight positions come from [adsb.lol](https://api.adsb.lol), a free ADS-B feed with no API key or daily quota. adsb.lol sends no CORS headers, so the browser cannot call it directly:
 
-Public proxy services like `allorigins.win` are convenient but can rate-limit or occasionally return plain-text error pages, so the widget now treats those responses as temporary outages instead of crashing. If you deploy the app behind a custom reverse proxy or serverless endpoint, set `VITE_FLIGHTS_API_BASE` to that endpoint to avoid rate limits and keep data reliable.
+- In dev/preview, the Vite server proxies `/api/flights/v2/point/...` to adsb.lol.
+- On GitHub Pages, set `VITE_FLIGHTS_API_BASE` to your own proxy. Without it, the app falls back to the public `allorigins.win` proxy, which is shared by everyone and often rate-limited.
 
-Example:
+[proxy/](proxy/) is a Cloudflare Worker for exactly this, deployed by `.github/workflows/deploy-proxy.yml` (free plan, no custom domain needed). See [proxy/README.md](proxy/README.md) for setup, then add the worker URL as the `VITE_FLIGHTS_API_BASE` repository secret:
 
 ```bash
-VITE_FLIGHTS_API_BASE=https://your-proxy.example.com/api/flights
+VITE_FLIGHTS_API_BASE=https://dayboard-proxy.<your-subdomain>.workers.dev
 ```
 
 ## Project Structure

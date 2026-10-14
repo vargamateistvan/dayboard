@@ -274,58 +274,37 @@ function parseAirplanesLiveFlight(
   }
 }
 
-function buildOpenSkyFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): URL {
-  // Wide enough to cover the radius in every direction; a degree of longitude
-  // shrinks with latitude, so the east-west span grows toward the poles.
-  const latitudeDelta = Math.min(10, Math.max(0.15, radiusKm / 111))
-  const longitudeDelta = Math.min(
-    20,
-    Math.max(0.15, radiusKm / (111 * Math.max(0.05, Math.cos(toRadians(latitude))))),
-  )
+const ADSB_LOL_API_ORIGIN = 'https://api.adsb.lol'
+// adsb.lol rejects point queries wider than 250 nautical miles.
+const MAX_RADIUS_NAUTICAL_MILES = 250
 
-  const requestUrl = new URL('https://opensky-network.org/api/states/all')
-  requestUrl.searchParams.set('lamin', (latitude - latitudeDelta).toFixed(4))
-  requestUrl.searchParams.set('lomin', (longitude - longitudeDelta).toFixed(4))
-  requestUrl.searchParams.set('lamax', (latitude + latitudeDelta).toFixed(4))
-  requestUrl.searchParams.set('lomax', (longitude + longitudeDelta).toFixed(4))
-  return requestUrl
+function buildAdsbPointPath(latitude: number, longitude: number, radiusKm: number): string {
+  const radiusNauticalMiles = Math.min(
+    MAX_RADIUS_NAUTICAL_MILES,
+    Math.max(1, Math.ceil(radiusKm / KM_PER_NAUTICAL_MILE)),
+  )
+  return `/v2/point/${latitude.toFixed(4)}/${longitude.toFixed(4)}/${radiusNauticalMiles}`
 }
 
 function buildFlightRequestUrl(latitude: number, longitude: number, radiusKm: number): string {
-  const openSkyUrl = buildOpenSkyFlightRequestUrl(latitude, longitude, radiusKm)
+  const pointPath = buildAdsbPointPath(latitude, longitude, radiusKm)
 
   if (/^https?:\/\//i.test(FLIGHTS_API_BASE)) {
     const baseUrl = new URL(FLIGHTS_API_BASE)
 
-    if (baseUrl.hostname.includes('allorigins.win') && baseUrl.pathname === '/raw') {
-      const proxyUrl = new URL(baseUrl.toString())
-      proxyUrl.searchParams.set('url', openSkyUrl.toString())
-      return proxyUrl.toString()
-    }
-
+    // Generic CORS proxies take the upstream URL as a `url` query parameter.
     if (baseUrl.searchParams.has('url')) {
-      const proxyUrl = new URL(baseUrl.toString())
-      proxyUrl.searchParams.set('url', openSkyUrl.toString())
-      return proxyUrl.toString()
+      baseUrl.searchParams.set('url', `${ADSB_LOL_API_ORIGIN}${pointPath}`)
+      return baseUrl.toString()
     }
 
-    const pathname = baseUrl.pathname.replace(/\/$/, '')
-    baseUrl.pathname = pathname.endsWith('/api') ? `${pathname}/states/all` : pathname
+    // Our own proxy (dev server or Cloudflare Worker) mirrors the adsb.lol paths.
+    baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, '')}${pointPath}`
     baseUrl.search = ''
-    baseUrl.searchParams.set('lamin', openSkyUrl.searchParams.get('lamin') ?? '')
-    baseUrl.searchParams.set('lomin', openSkyUrl.searchParams.get('lomin') ?? '')
-    baseUrl.searchParams.set('lamax', openSkyUrl.searchParams.get('lamax') ?? '')
-    baseUrl.searchParams.set('lomax', openSkyUrl.searchParams.get('lomax') ?? '')
     return baseUrl.toString()
   }
 
-  const requestUrl = new URL(FLIGHTS_API_BASE, 'http://localhost')
-  requestUrl.searchParams.set('lamin', openSkyUrl.searchParams.get('lamin') ?? '')
-  requestUrl.searchParams.set('lomin', openSkyUrl.searchParams.get('lomin') ?? '')
-  requestUrl.searchParams.set('lamax', openSkyUrl.searchParams.get('lamax') ?? '')
-  requestUrl.searchParams.set('lomax', openSkyUrl.searchParams.get('lomax') ?? '')
-  const relativeUrl = requestUrl.pathname + requestUrl.search
-  return relativeUrl.startsWith('/') ? relativeUrl : `/${relativeUrl}`
+  return `/${FLIGHTS_API_BASE.replace(/^\/+|\/+$/g, '')}${pointPath}`
 }
 
 function isProxyRateLimitError(rawText: string): boolean {

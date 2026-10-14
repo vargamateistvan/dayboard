@@ -43,6 +43,7 @@ jobs:
         env:
           VITE_GOOGLE_CLIENT_ID: ${{ secrets.VITE_GOOGLE_CLIENT_ID }}
           VITE_SPOTIFY_CLIENT_ID: ${{ secrets.VITE_SPOTIFY_CLIENT_ID }}
+          VITE_FLIGHTS_API_BASE: ${{ secrets.VITE_FLIGHTS_API_BASE }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

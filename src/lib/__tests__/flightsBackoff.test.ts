@@ -88,16 +88,13 @@ describe('flight request backoff', () => {
     await expect(fetchNearbyFlights(REQUEST)).rejects.toThrow(/malformed|unavailable/i)
   })
 
-  it('covers the whole radius east-west at high latitudes', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { states: [] }))
+  it('requests an adsb.lol point query with the radius in nautical miles', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { ac: [] }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await fetchNearbyFlights({ latitude: 60, longitude: 10, radiusKm: 250, onlyAirborne: false })
+    await fetchNearbyFlights({ latitude: 60, longitude: 10, radiusKm: 50, onlyAirborne: false })
 
-    const requested = decodeURIComponent(String(fetchMock.mock.calls[0][0]))
-    const lomin = Number(/lomin=([-\d.]+)/.exec(requested)?.[1])
-    const lomax = Number(/lomax=([-\d.]+)/.exec(requested)?.[1])
-    // 250 km at 60°N is about 4.5° of longitude each way.
-    expect(lomax - lomin).toBeGreaterThan(8.5)
+    // 50 km is 27 nautical miles, rounded up so the whole radius is covered.
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/v2/point/60.0000/10.0000/27')
   })
 })

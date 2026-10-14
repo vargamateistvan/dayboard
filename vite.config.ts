@@ -81,12 +81,21 @@ async function handleFlightsProxy(
     return;
   }
 
-  const remoteUrl = new URL("https://opensky-network.org");
-  remoteUrl.pathname = "/api/states/all";
-  remoteUrl.search = requestUrl.search;
+  // Only forward adsb.lol point queries: /v2/point/{lat}/{lon}/{radiusNm}.
+  if (!/^\/v2\/point\/-?[\d.]+\/-?[\d.]+\/\d+$/.test(requestUrl.pathname)) {
+    res.statusCode = 400;
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.end("Unsupported flights request.");
+    return;
+  }
+
+  const remoteUrl = new URL(requestUrl.pathname, "https://api.adsb.lol");
 
   try {
-    const response = await fetch(remoteUrl);
+    // adsb.lol rejects generic user agents such as Node's default.
+    const response = await fetch(remoteUrl, {
+      headers: { "User-Agent": "dayboard-flights-proxy (+https://github.com/vargamateistvan/dayboard)" },
+    });
     res.statusCode = response.status;
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
