@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
-import { clampPollIntervalMs, MAX_POLL_INTERVAL_MS, usePolledResource } from '../usePolledResource'
+import {
+  clampPollIntervalMs,
+  FAILURE_RETRY_BASE_MS,
+  MAX_POLL_INTERVAL_MS,
+  usePolledResource,
+} from '../usePolledResource'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -162,5 +167,44 @@ describe('usePolledResource', () => {
       await vi.advanceTimersByTimeAsync(5 * 60_000)
     })
     expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it('retries a failed request before the next poll, backing off on repeated failures', async () => {
+    const fetcher = vi.fn(async (): Promise<string> => {
+      throw new Error('HTTP 503')
+    })
+    renderHook(() => usePolledResource(fetcher, { intervalMs: 10 * 60_000, key: 'a' }))
+    await flush()
+    expect(fetcher).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FAILURE_RETRY_BASE_MS)
+    })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FAILURE_RETRY_BASE_MS)
+    })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FAILURE_RETRY_BASE_MS)
+    })
+    expect(fetcher).toHaveBeenCalledTimes(3)
+  })
+
+  it('shows data once a retry succeeds', async () => {
+    const fetcher = vi.fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new Error('HTTP 503'))
+      .mockResolvedValue('v1')
+    const { result } = renderHook(() => usePolledResource(fetcher, { intervalMs: 10 * 60_000, key: 'a' }))
+    await flush()
+    expect(result.current.error).toBe('HTTP 503')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FAILURE_RETRY_BASE_MS)
+    })
+    expect(result.current.data).toBe('v1')
+    expect(result.current.error).toBeNull()
   })
 })
