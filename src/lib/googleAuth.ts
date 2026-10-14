@@ -1,3 +1,5 @@
+import { readStorage, removeStorage, writeStorage } from './storage'
+
 export interface GoogleAuthSession {
   accessToken: string
   expiresAt: number
@@ -35,6 +37,9 @@ declare global {
 }
 
 const GOOGLE_AUTH_STORAGE_KEY = 'dayboard_google_auth'
+// Holds the expired token whose silent refresh failed (the popup was blocked),
+// so background reloads stop reopening it until the user reconnects.
+const GOOGLE_REFRESH_FAILED_STORAGE_KEY = 'dayboard_google_refresh_failed'
 const EXPIRY_BUFFER_MS = 60_000
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'
 
@@ -66,6 +71,7 @@ function readStoredAuth(): GoogleAuthSession | null {
 
 function persistAuth(auth: GoogleAuthSession) {
   localStorage.setItem(GOOGLE_AUTH_STORAGE_KEY, JSON.stringify(auth))
+  removeStorage(GOOGLE_REFRESH_FAILED_STORAGE_KEY)
 }
 
 export function getStoredGoogleAuth(): GoogleAuthSession | null {
@@ -81,6 +87,7 @@ export function googleSessionNeedsReconnect(): boolean {
 
 export function clearStoredGoogleAuth() {
   localStorage.removeItem(GOOGLE_AUTH_STORAGE_KEY)
+  removeStorage(GOOGLE_REFRESH_FAILED_STORAGE_KEY)
 }
 
 // Revokes the grant with Google (so the token stops working right away, not
@@ -219,8 +226,15 @@ export async function getValidGoogleAuth(auth: GoogleAuthSession): Promise<Googl
     return stored
   }
 
+  if (readStorage(GOOGLE_REFRESH_FAILED_STORAGE_KEY) === auth.accessToken) {
+    throw new Error(SESSION_EXPIRED_MESSAGE)
+  }
+
   // Several Google feeds refresh at once; share one token request.
-  refreshInFlight ??= refreshGoogleAuth().finally(() => {
+  refreshInFlight ??= refreshGoogleAuth().catch((error: unknown) => {
+    writeStorage(GOOGLE_REFRESH_FAILED_STORAGE_KEY, auth.accessToken)
+    throw error
+  }).finally(() => {
     refreshInFlight = null
   })
   return refreshInFlight

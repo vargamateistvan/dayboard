@@ -96,6 +96,16 @@ describe('Google token refresh', () => {
     expect(googleSessionNeedsReconnect()).toBe(true)
   })
 
+  it('does not reopen a blocked refresh popup until the user signs in again', async () => {
+    storeToken(-60_000)
+    const initTokenClient = stubGis((config) => config.error_callback?.({ type: 'popup_failed_to_open' }))
+
+    await expect(getValidGoogleAuth(getStoredGoogleAuth()!)).rejects.toThrow()
+    await expect(getValidGoogleAuth(getStoredGoogleAuth()!)).rejects.toThrow(/sign in again/i)
+
+    expect(initTokenClient).toHaveBeenCalledTimes(1)
+  })
+
   it('does not ask for a reconnect while the token is valid', () => {
     storeToken(3_600_000)
     expect(googleSessionNeedsReconnect()).toBe(false)

@@ -23,6 +23,19 @@ function buildLocalProxyUrl(calendarUrl: string): string {
   return `${LOCAL_PROXY_PATH}?url=${encodeURIComponent(calendarUrl)}`
 }
 
+// The calendar ID in a Google iCal address:
+// /calendar/ical/{calendarId}/{public|private-<key>}/basic.ics
+function parseGoogleIcalCalendarId(calendarUrl: string): string | null {
+  try {
+    const url = new URL(calendarUrl)
+    if (url.hostname !== GOOGLE_CALENDAR_HOST) return null
+    const match = /^\/calendar\/ical\/([^/]+)\/[^/]+\/basic\.ics$/.exec(url.pathname)
+    return match ? decodeURIComponent(match[1]) : null
+  } catch {
+    return null
+  }
+}
+
 function isGoogleCalendarUrl(calendarUrl: string): boolean {
   try {
     return new URL(calendarUrl).hostname === GOOGLE_CALENDAR_HOST
@@ -74,6 +87,18 @@ export async function fetchCalendarFeed(rawCalendarUrl: string): Promise<string>
     }
     const validAuth = await getValidGoogleAuth(auth)
     return fetchGoogleCalendarEvents(googleCalendarId, validAuth)
+  }
+
+  // Google sends no CORS headers for iCal feeds, but a connected account can
+  // read the same calendar through the Calendar API, which browsers may call.
+  const googleIcalCalendarId = parseGoogleIcalCalendarId(normalizeCalendarUrl(rawCalendarUrl))
+  const googleAuth = googleIcalCalendarId === null ? null : getStoredGoogleAuth()
+  if (googleIcalCalendarId !== null && googleAuth !== null) {
+    try {
+      return await fetchGoogleCalendarEvents(googleIcalCalendarId, googleAuth)
+    } catch {
+      // Fall back to the iCal address (works through the local dev proxy).
+    }
   }
 
   const requestUrls = getCalendarFeedRequestUrls(rawCalendarUrl)

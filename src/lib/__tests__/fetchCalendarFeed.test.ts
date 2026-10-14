@@ -103,6 +103,24 @@ describe('fetchCalendarFeed', () => {
     ).rejects.toThrow(/connect google calendar in settings/i)
   })
 
+  it('reads a Google iCal link through the Calendar API when Google is connected', async () => {
+    localStorage.setItem('dayboard_google_auth', JSON.stringify({ accessToken: 'token', expiresAt: Date.now() + 3_600_000 }))
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    try {
+      await expect(
+        fetchCalendarFeed('https://calendar.google.com/calendar/ical/katolikus.hu%40gmail.com/public/basic.ics'),
+      ).resolves.toContain('BEGIN:VCALENDAR')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      expect(String(fetchMock.mock.calls[0][0])).toContain(
+        'https://www.googleapis.com/calendar/v3/calendars/katolikus.hu%40gmail.com/events',
+      )
+    } finally {
+      localStorage.clear()
+    }
+  })
+
   it('explains that a Google calendar is not public when Google answers 404', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, text: async () => '' }))
 
