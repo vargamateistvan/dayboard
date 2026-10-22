@@ -137,6 +137,7 @@ describe('settings persistence', () => {
       clockDateFontSizeRem: 1.8,
       clockTimeStretchPercent: 130,
       clockStyle: 'flip',
+      clockHourFormat: '24h',
       clockShowSeconds: false,
       clockShowMilliseconds: true,
       showBuyMeACoffeeWidget: false,

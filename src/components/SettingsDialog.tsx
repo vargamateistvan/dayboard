@@ -53,6 +53,7 @@ import {
   type CalendarExtraInfoPreview,
   type CalendarWeekStartsOn,
   type ClockStyle,
+  type ClockHourFormat,
   type Theme,
   type ColorScheme,
   type CustomColors,
@@ -142,6 +143,12 @@ const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
 const CLOCK_STYLES: { id: ClockStyle; label: string }[] = [
   { id: "digital", label: "Digital" },
   { id: "flip", label: "Flip" },
+];
+
+const CLOCK_HOUR_FORMATS: { id: ClockHourFormat; label: string }[] = [
+  { id: "auto", label: "Auto" },
+  { id: "12h", label: "12-hour" },
+  { id: "24h", label: "24-hour" },
 ];
 
 const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
@@ -935,6 +942,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     formatOptionalStretchPercent(settings.clockTimeStretchPercent),
   );
   const [clockStyle, setClockStyle] = useState<ClockStyle>(settings.clockStyle);
+  const [clockHourFormat, setClockHourFormat] = useState<ClockHourFormat>(
+    settings.clockHourFormat,
+  );
   const [clockShowSeconds, setClockShowSeconds] = useState(settings.clockShowSeconds);
   const [clockShowMilliseconds, setClockShowMilliseconds] = useState(
     settings.clockShowMilliseconds,
@@ -1106,6 +1116,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setClockDateFontSize(formatOptionalFontSizeRem(nextSettings.clockDateFontSizeRem));
     setClockTimeStretch(formatOptionalStretchPercent(nextSettings.clockTimeStretchPercent));
     setClockStyle(nextSettings.clockStyle);
+    setClockHourFormat(nextSettings.clockHourFormat);
     setClockShowSeconds(nextSettings.clockShowSeconds);
     setClockShowMilliseconds(nextSettings.clockShowMilliseconds);
     setWorldClockCity(nextSettings.worldClockCity);
@@ -1176,6 +1187,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     clockDateFontSizeRem: parseOptionalFontSizeRem(clockDateFontSize),
     clockTimeStretchPercent: parseOptionalStretchPercent(clockTimeStretch),
     clockStyle,
+    clockHourFormat,
     clockShowSeconds,
     clockShowMilliseconds,
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
@@ -1226,6 +1238,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       && settings.clockDateFontSizeRem === nextClockDateFontSizeRem
       && settings.clockTimeStretchPercent === nextClockTimeStretchPercent
       && settings.clockStyle === clockStyle
+      && settings.clockHourFormat === clockHourFormat
       && settings.clockShowSeconds === clockShowSeconds
       && settings.clockShowMilliseconds === clockShowMilliseconds
     ) {
@@ -1237,17 +1250,20 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       clockDateFontSizeRem: nextClockDateFontSizeRem,
       clockTimeStretchPercent: nextClockTimeStretchPercent,
       clockStyle,
+      clockHourFormat,
       clockShowSeconds,
       clockShowMilliseconds,
     });
   }, [
     clockDateFontSize,
+    clockHourFormat,
     clockShowMilliseconds,
     clockShowSeconds,
     clockStyle,
     clockTimeFontSize,
     clockTimeStretch,
     settings.clockDateFontSizeRem,
+    settings.clockHourFormat,
     settings.clockTimeFontSizeRem,
     settings.clockShowMilliseconds,
     settings.clockShowSeconds,
@@ -2768,6 +2784,22 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                           ].join(" ")}
                           onClick={() => setClockStyle(option.id)}
                           aria-pressed={clockStyle === option.id}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.segmented}>
+                      {CLOCK_HOUR_FORMATS.map((option) => (
+                        <button
+                          key={option.id}
+                          className={[
+                            styles.segment,
+                            clockHourFormat === option.id ? styles.segmentActive : "",
+                          ].join(" ")}
+                          onClick={() => setClockHourFormat(option.id)}
+                          aria-pressed={clockHourFormat === option.id}
                           type="button"
                         >
                           {option.label}

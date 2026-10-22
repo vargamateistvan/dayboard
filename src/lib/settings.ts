@@ -17,6 +17,8 @@ export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pi
 export type WeatherUnitSystem = 'metric' | 'imperial'
 export type CalendarWeekStartsOn = 'sunday' | 'monday'
 export type ClockStyle = 'digital' | 'flip'
+/** 'auto' follows the locale's convention. */
+export type ClockHourFormat = 'auto' | '12h' | '24h'
 export type CalendarExtraInfoPreview = 'monthly' | 'weekly'
 export type SportsSport = 'soccer' | 'basketball' | 'american_football' | 'baseball' | 'hockey'
 export type SportsLeagueId =
@@ -75,6 +77,7 @@ export interface Settings {
   clockDateFontSizeRem: number | null
   clockTimeStretchPercent: number | null
   clockStyle: ClockStyle
+  clockHourFormat: ClockHourFormat
   clockShowSeconds: boolean
   clockShowMilliseconds: boolean
   showBuyMeACoffeeWidget: boolean
@@ -224,6 +227,7 @@ export const DEFAULT_SETTINGS: Settings = {
   clockDateFontSizeRem: null,
   clockTimeStretchPercent: null,
   clockStyle: 'digital',
+  clockHourFormat: 'auto',
   clockShowSeconds: true,
   clockShowMilliseconds: false,
   showBuyMeACoffeeWidget: true,
@@ -492,6 +496,22 @@ function normalizeClockTimeStretchPercent(value: unknown): number | null {
 
 function normalizeClockStyle(value: unknown): ClockStyle {
   return value === 'digital' || value === 'flip' ? value : DEFAULT_SETTINGS.clockStyle
+}
+
+function normalizeClockHourFormat(value: unknown): ClockHourFormat {
+  return value === 'auto' || value === '12h' || value === '24h' ? value : DEFAULT_SETTINGS.clockHourFormat
+}
+
+/** Intl options that apply a clock hour format; empty for 'auto'. */
+export function getClockHourCycleOptions(format: ClockHourFormat): Intl.DateTimeFormatOptions {
+  if (format === '12h') {
+    return { hourCycle: 'h12' }
+  }
+  // h23 rather than hour12: false, which renders midnight as "24" in some engines.
+  if (format === '24h') {
+    return { hourCycle: 'h23' }
+  }
+  return {}
 }
 
 /** Refresh intervals are capped at a day; larger values overflow setInterval. */
@@ -918,6 +938,7 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
     clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
     clockStyle: normalizeClockStyle((rest as { clockStyle?: unknown }).clockStyle),
+    clockHourFormat: normalizeClockHourFormat((rest as { clockHourFormat?: unknown }).clockHourFormat),
     clockShowSeconds: normalizeBoolean((rest as { clockShowSeconds?: unknown }).clockShowSeconds, DEFAULT_SETTINGS.clockShowSeconds),
     clockShowMilliseconds: normalizeBoolean(
       (rest as { clockShowMilliseconds?: unknown }).clockShowMilliseconds,
@@ -1058,6 +1079,7 @@ export function saveSettings(settings: Settings): void {
       clockDateFontSizeRem: normalizedSettings.clockDateFontSizeRem,
       clockTimeStretchPercent: normalizedSettings.clockTimeStretchPercent,
       clockStyle: normalizedSettings.clockStyle,
+      clockHourFormat: normalizedSettings.clockHourFormat,
       clockShowSeconds: normalizedSettings.clockShowSeconds,
       clockShowMilliseconds: normalizedSettings.clockShowMilliseconds,
       showBuyMeACoffeeWidget: normalizedSettings.showBuyMeACoffeeWidget,
@@ -1224,6 +1246,10 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
 
   if (settings.clockStyle !== 'digital' && settings.clockStyle !== 'flip') {
     errors.push('clockStyle must be "digital" or "flip"')
+  }
+
+  if (settings.clockHourFormat !== 'auto' && settings.clockHourFormat !== '12h' && settings.clockHourFormat !== '24h') {
+    errors.push('clockHourFormat must be "auto", "12h" or "24h"')
   }
 
   if (typeof settings.clockShowSeconds !== 'boolean') {

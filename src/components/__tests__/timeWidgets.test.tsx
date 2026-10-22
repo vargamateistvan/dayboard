@@ -177,6 +177,44 @@ describe('ClockWidget', () => {
     expect(getByTimeText(currentTime)).toBeTruthy()
   })
 
+  it('uses a 24-hour clock when configured', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockShowSeconds: false,
+      clockHourFormat: '24h',
+    })
+
+    renderClockWidget()
+
+    const now = new Date()
+    const currentTime = now.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+    expect(getByTimeText(currentTime).textContent).toContain(String(now.getHours()).padStart(2, '0'))
+    expect(getByTimeText(currentTime).textContent).not.toMatch(/AM|PM/i)
+  })
+
+  it('uses a 12-hour clock when configured', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockShowSeconds: false,
+      clockHourFormat: '12h',
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date()
+      .toLocaleTimeString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h12',
+      })
+      .replace(/\u202f/g, ' ')
+    expect(getByTimeText(currentTime)).toBeTruthy()
+  })
+
   it('renders each digit on its own flip card when the flip style is selected', () => {
     saveSettings({
       ...DEFAULT_SETTINGS,

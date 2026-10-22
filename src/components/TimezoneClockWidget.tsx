@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { scheduleEverySecond } from '../lib/scheduleEverySecond'
+import { getClockHourCycleOptions, type ClockHourFormat } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './TimezoneClockWidget.module.css'
@@ -8,11 +9,12 @@ interface TimezoneClockWidgetProps {
   readonly isFullscreen?: boolean
 }
 
-function formatTime(now: Date, timeZone?: string): string {
+function formatTime(now: Date, hourFormat: ClockHourFormat, timeZone?: string): string {
   return now.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
+    ...getClockHourCycleOptions(hourFormat),
     ...(timeZone ? { timeZone } : {}),
   })
 }
@@ -42,7 +44,7 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
       <div className={styles.clockCard}>
         <div className={styles.clockHeader}>My location ({localTimeZone})</div>
         <div className={styles.time}>
-          <FixedWidthDigits text={formatTime(now)} />
+          <FixedWidthDigits text={formatTime(now, settings.clockHourFormat)} />
         </div>
         <div className={styles.date}>{formatDate(now)}</div>
       </div>
@@ -52,7 +54,7 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
           {settings.worldClockCity} ({settings.worldClockTimeZone})
         </div>
         <div className={styles.time}>
-          <FixedWidthDigits text={formatTime(now, settings.worldClockTimeZone)} />
+          <FixedWidthDigits text={formatTime(now, settings.clockHourFormat, settings.worldClockTimeZone)} />
         </div>
         <div className={styles.date}>{formatDate(now, settings.worldClockTimeZone)}</div>
       </div>

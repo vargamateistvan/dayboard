@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { scheduleEverySecond } from '../lib/scheduleEverySecond'
+import { getClockHourCycleOptions } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
 import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './ClockWidget.module.css'
@@ -127,6 +128,7 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
     minute: '2-digit',
     second: showSeconds ? '2-digit' : undefined,
     fractionalSecondDigits: showMilliseconds ? 3 : undefined,
+    ...getClockHourCycleOptions(settings.clockHourFormat),
   })
     .formatToParts(now)
     // Match toLocaleTimeString, which uses a plain space where Intl puts U+202F before AM/PM.
