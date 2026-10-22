@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { scheduleEverySecond } from '../lib/scheduleEverySecond'
 import { useSettings } from '../lib/useSettings'
 import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './TimezoneClockWidget.module.css'
@@ -31,8 +32,7 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
   const { settings } = useSettings()
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
+    return scheduleEverySecond(() => setNow(new Date()))
   }, [])
 
   const localTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone

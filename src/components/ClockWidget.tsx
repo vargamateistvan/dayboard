@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
+import { scheduleEverySecond } from '../lib/scheduleEverySecond'
 import { useSettings } from '../lib/useSettings'
 import { FixedWidthDigits } from './FixedWidthDigits'
 import styles from './ClockWidget.module.css'
@@ -117,8 +118,8 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
       return () => cancelAnimationFrame(frame)
     }
 
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
+    setNow(new Date())
+    return scheduleEverySecond(() => setNow(new Date()))
   }, [showMilliseconds])
 
   const timeParts = new Intl.DateTimeFormat(undefined, {
