@@ -136,6 +136,9 @@ describe('settings persistence', () => {
       clockTimeFontSizeRem: 18,
       clockDateFontSizeRem: 1.8,
       clockTimeStretchPercent: 130,
+      clockStyle: 'flip',
+      clockShowSeconds: false,
+      clockShowMilliseconds: true,
       showBuyMeACoffeeWidget: false,
       calendarFeeds: [
         { url: 'https://example.com/cal.ics', color: '#123456' },

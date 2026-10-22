@@ -115,3 +115,164 @@
     font-size: var(--clock-date-size-override, clamp(0.82rem, min(4cqw, 10cqh), 1.2rem));
   }
 }
+
+/* ── Flip clock ──────────────────────────────────────────── */
+.timeFlip {
+  /*
+    Cards are taller than bare digits, so trim the size and cap it by the widget
+    height so the cards and the date both fit.
+  */
+  font-size: min(calc(var(--clock-time-size) * 0.82), var(--clock-time-fit-size, 9999px), 68cqh);
+  letter-spacing: 0;
+  /* Just taller than the 1.18em cards so the row never clips their rounded bottoms. */
+  line-height: 1.2;
+}
+
+.flipTime {
+  /* Cards take a tint of the theme accent so every theme gets its own flip clock. */
+  --flip-card: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface-alt));
+  --flip-card-edge: color-mix(in srgb, var(--color-accent) 35%, transparent);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06em;
+  /* Baseline alignment would push the cards below the clock box. */
+  vertical-align: top;
+}
+
+.flipCard {
+  --flip-height: 1.18em;
+  --flip-duration: 600ms;
+  --flip-radius: 0.09em;
+  position: relative;
+  display: inline-block;
+  width: 0.84em;
+  height: var(--flip-height);
+  perspective: 6em;
+  border-radius: var(--flip-radius);
+  box-shadow: inset 0 0 0 max(1px, 0.01em) var(--flip-card-edge);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The hinge line between the two halves. */
+.flipCard::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  z-index: 3;
+  height: max(1px, 0.014em);
+  transform: translateY(-50%);
+  background: var(--color-bg);
+  pointer-events: none;
+}
+
+.flipTop,
+.flipBottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  background: var(--flip-card);
+  color: var(--color-text);
+  backface-visibility: hidden;
+}
+
+.flipTop {
+  top: 0;
+  border-radius: var(--flip-radius) var(--flip-radius) 0 0;
+  transform-origin: bottom center;
+}
+
+.flipBottom {
+  bottom: 0;
+  border-radius: 0 0 var(--flip-radius) var(--flip-radius);
+  transform-origin: top center;
+  /* A little shade on the lower half sells the fold. */
+  background: color-mix(in srgb, var(--flip-card) 88%, var(--color-bg));
+}
+
+/* Both halves clip the same full-height glyph, so top and bottom always line up. */
+.flipGlyph {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 200%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Leave some card around the digit. */
+  font-size: 0.82em;
+  line-height: 1;
+}
+
+.flipBottom .flipGlyph {
+  top: -100%;
+}
+
+.flipFlaps {
+  position: absolute;
+  inset: 0;
+}
+
+.flipTopFlap {
+  z-index: 2;
+  animation: flip-top calc(var(--flip-duration) / 2) ease-in forwards;
+}
+
+.flipBottomFlap {
+  z-index: 2;
+  transform: rotateX(90deg);
+  animation: flip-bottom calc(var(--flip-duration) / 2) ease-out calc(var(--flip-duration) / 2) forwards;
+}
+
+@keyframes flip-top {
+  from {
+    transform: rotateX(0deg);
+  }
+  to {
+    transform: rotateX(-90deg);
+  }
+}
+
+@keyframes flip-bottom {
+  from {
+    transform: rotateX(90deg);
+  }
+  to {
+    transform: rotateX(0deg);
+  }
+}
+
+.flipSeparator {
+  display: inline-block;
+  min-width: 0.2em;
+  font-size: 0.6em;
+  font-weight: 700;
+  color: var(--color-accent);
+  text-align: center;
+}
+
+/* AM/PM is a label, not a digit: keep it small and tuck it under the last card. */
+.flipSeparator:last-child:not(:empty) {
+  align-self: flex-end;
+  margin-left: 0.08em;
+  font-size: 0.26em;
+  letter-spacing: 0.04em;
+}
+
+.flipMillis {
+  align-self: flex-end;
+  font-size: 0.3em;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flipCard {
+    /* Keep a tiny duration so animationend still fires and the card settles. */
+    --flip-duration: 2ms;
+  }
+}

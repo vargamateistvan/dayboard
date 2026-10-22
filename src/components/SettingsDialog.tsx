@@ -52,6 +52,7 @@ import {
   type CalendarFeed,
   type CalendarExtraInfoPreview,
   type CalendarWeekStartsOn,
+  type ClockStyle,
   type Theme,
   type ColorScheme,
   type CustomColors,
@@ -136,6 +137,11 @@ const COLOR_SCHEMES: {
 const WEATHER_UNITS: { id: WeatherUnitSystem; label: string }[] = [
   { id: "metric", label: "Metric" },
   { id: "imperial", label: "Imperial" },
+];
+
+const CLOCK_STYLES: { id: ClockStyle; label: string }[] = [
+  { id: "digital", label: "Digital" },
+  { id: "flip", label: "Flip" },
 ];
 
 const CALENDAR_WEEK_STARTS: { id: CalendarWeekStartsOn; label: string }[] = [
@@ -928,6 +934,11 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [clockTimeStretch, setClockTimeStretch] = useState(
     formatOptionalStretchPercent(settings.clockTimeStretchPercent),
   );
+  const [clockStyle, setClockStyle] = useState<ClockStyle>(settings.clockStyle);
+  const [clockShowSeconds, setClockShowSeconds] = useState(settings.clockShowSeconds);
+  const [clockShowMilliseconds, setClockShowMilliseconds] = useState(
+    settings.clockShowMilliseconds,
+  );
   const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
     string | null
   >(null);
@@ -1094,6 +1105,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setClockTimeFontSize(formatOptionalFontSizeRem(nextSettings.clockTimeFontSizeRem));
     setClockDateFontSize(formatOptionalFontSizeRem(nextSettings.clockDateFontSizeRem));
     setClockTimeStretch(formatOptionalStretchPercent(nextSettings.clockTimeStretchPercent));
+    setClockStyle(nextSettings.clockStyle);
+    setClockShowSeconds(nextSettings.clockShowSeconds);
+    setClockShowMilliseconds(nextSettings.clockShowMilliseconds);
     setWorldClockCity(nextSettings.worldClockCity);
     setWorldClockTimeZone(nextSettings.worldClockTimeZone);
     setWorldClockTimeZoneError(null);
@@ -1161,6 +1175,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     clockTimeFontSizeRem: parseOptionalFontSizeRem(clockTimeFontSize),
     clockDateFontSizeRem: parseOptionalFontSizeRem(clockDateFontSize),
     clockTimeStretchPercent: parseOptionalStretchPercent(clockTimeStretch),
+    clockStyle,
+    clockShowSeconds,
+    clockShowMilliseconds,
     worldClockCity: worldClockCity.trim() || settings.worldClockCity,
     worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl: settings.spotifyEmbedUrl,
@@ -1208,6 +1225,9 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       settings.clockTimeFontSizeRem === nextClockTimeFontSizeRem
       && settings.clockDateFontSizeRem === nextClockDateFontSizeRem
       && settings.clockTimeStretchPercent === nextClockTimeStretchPercent
+      && settings.clockStyle === clockStyle
+      && settings.clockShowSeconds === clockShowSeconds
+      && settings.clockShowMilliseconds === clockShowMilliseconds
     ) {
       return;
     }
@@ -1216,13 +1236,22 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       clockTimeFontSizeRem: nextClockTimeFontSizeRem,
       clockDateFontSizeRem: nextClockDateFontSizeRem,
       clockTimeStretchPercent: nextClockTimeStretchPercent,
+      clockStyle,
+      clockShowSeconds,
+      clockShowMilliseconds,
     });
   }, [
     clockDateFontSize,
+    clockShowMilliseconds,
+    clockShowSeconds,
+    clockStyle,
     clockTimeFontSize,
     clockTimeStretch,
     settings.clockDateFontSizeRem,
     settings.clockTimeFontSizeRem,
+    settings.clockShowMilliseconds,
+    settings.clockShowSeconds,
+    settings.clockStyle,
     settings.clockTimeStretchPercent,
     updateSettings,
   ]);
@@ -2722,6 +2751,55 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                 {activeWidgetSettings === "clock" && (
                   <section className={styles.section}>
                     <h3 className={styles.sectionTitle}>Clock</h3>
+                    <div className={styles.segmented}>
+                      {CLOCK_STYLES.map((option) => (
+                        <button
+                          key={option.id}
+                          className={[
+                            styles.segment,
+                            clockStyle === option.id ? styles.segmentActive : "",
+                          ].join(" ")}
+                          onClick={() => setClockStyle(option.id)}
+                          aria-pressed={clockStyle === option.id}
+                          type="button"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.widgetGrid}>
+                      <button
+                        className={[
+                          styles.widgetToggle,
+                          clockShowSeconds ? styles.widgetVisible : "",
+                        ].join(" ")}
+                        onClick={() => setClockShowSeconds((value) => !value)}
+                        type="button"
+                      >
+                        {clockShowSeconds ? (
+                          <Eye size={14} />
+                        ) : (
+                          <EyeOff size={14} />
+                        )}
+                        <span>Show seconds</span>
+                      </button>
+                      <button
+                        className={[
+                          styles.widgetToggle,
+                          clockShowMilliseconds ? styles.widgetVisible : "",
+                        ].join(" ")}
+                        onClick={() => setClockShowMilliseconds((value) => !value)}
+                        disabled={!clockShowSeconds}
+                        type="button"
+                      >
+                        {clockShowMilliseconds ? (
+                          <Eye size={14} />
+                        ) : (
+                          <EyeOff size={14} />
+                        )}
+                        <span>Show milliseconds</span>
+                      </button>
+                    </div>
                     <div className={styles.intervalRow}>
                       <label className={styles.intervalLabel}>
                         <span>Time font size (rem)</span>

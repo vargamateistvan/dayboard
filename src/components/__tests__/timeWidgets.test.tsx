@@ -126,6 +126,75 @@ describe('ClockWidget', () => {
     expect(widgetElement?.style.getPropertyValue('--clock-time-stretch')).toBe('1.4')
     expect(widgetElement?.style.getPropertyValue('--clock-time-width-factor')).toBe('1.4')
   })
+
+  it('hides seconds when configured', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockShowSeconds: false,
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    expect(getByTimeText(currentTime)).toBeTruthy()
+  })
+
+  it('shows milliseconds when configured alongside seconds', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockShowMilliseconds: true,
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Intl.DateTimeFormat(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      fractionalSecondDigits: 3,
+    })
+      .format(new Date())
+      .replace(/\u202f/g, ' ')
+    expect(getByTimeText(currentTime)).toBeTruthy()
+  })
+
+  it('ignores milliseconds when seconds are hidden', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockShowSeconds: false,
+      clockShowMilliseconds: true,
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    expect(getByTimeText(currentTime)).toBeTruthy()
+  })
+
+  it('renders each digit on its own flip card when the flip style is selected', () => {
+    saveSettings({
+      ...DEFAULT_SETTINGS,
+      clockStyle: 'flip',
+    })
+
+    renderClockWidget()
+
+    const currentTime = new Date().toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    const flipTime = screen.getByRole('img', { name: currentTime })
+    const digitCount = currentTime.replace(/\D/g, '').length
+
+    expect(Array.from(flipTime.children).filter((child) => /\d/.test(child.textContent ?? ''))).toHaveLength(digitCount)
+  })
 })
 
 describe('TimezoneClockWidget', () => {

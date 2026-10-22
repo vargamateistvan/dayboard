@@ -16,6 +16,7 @@ const THEME_IDS: readonly Theme[] = ['default', 'retro', 'futuristic', 'nature',
 export type FontPreset = 'space-grotesk' | 'jetbrains-mono' | 'geist-mono' | 'pixelify-sans' | 'orbitron' | 'doto' | 'bitcount-single'
 export type WeatherUnitSystem = 'metric' | 'imperial'
 export type CalendarWeekStartsOn = 'sunday' | 'monday'
+export type ClockStyle = 'digital' | 'flip'
 export type CalendarExtraInfoPreview = 'monthly' | 'weekly'
 export type SportsSport = 'soccer' | 'basketball' | 'american_football' | 'baseball' | 'hockey'
 export type SportsLeagueId =
@@ -73,6 +74,9 @@ export interface Settings {
   clockTimeFontSizeRem: number | null
   clockDateFontSizeRem: number | null
   clockTimeStretchPercent: number | null
+  clockStyle: ClockStyle
+  clockShowSeconds: boolean
+  clockShowMilliseconds: boolean
   showBuyMeACoffeeWidget: boolean
   calendarFeeds: CalendarFeed[]
   globalCalendarFeeds: CalendarFeed[]
@@ -219,6 +223,9 @@ export const DEFAULT_SETTINGS: Settings = {
   clockTimeFontSizeRem: null,
   clockDateFontSizeRem: null,
   clockTimeStretchPercent: null,
+  clockStyle: 'digital',
+  clockShowSeconds: true,
+  clockShowMilliseconds: false,
   showBuyMeACoffeeWidget: true,
   calendarFeeds: [],
   globalCalendarFeeds: [],
@@ -481,6 +488,10 @@ function normalizeClockTimeStretchPercent(value: unknown): number | null {
   }
 
   return Math.min(200, Math.max(50, Math.round(value)))
+}
+
+function normalizeClockStyle(value: unknown): ClockStyle {
+  return value === 'digital' || value === 'flip' ? value : DEFAULT_SETTINGS.clockStyle
 }
 
 /** Refresh intervals are capped at a day; larger values overflow setInterval. */
@@ -906,6 +917,12 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     clockTimeFontSizeRem: normalizeClockFontSizeRem((rest as { clockTimeFontSizeRem?: unknown }).clockTimeFontSizeRem),
     clockDateFontSizeRem: normalizeClockFontSizeRem((rest as { clockDateFontSizeRem?: unknown }).clockDateFontSizeRem),
     clockTimeStretchPercent: normalizeClockTimeStretchPercent((rest as { clockTimeStretchPercent?: unknown }).clockTimeStretchPercent),
+    clockStyle: normalizeClockStyle((rest as { clockStyle?: unknown }).clockStyle),
+    clockShowSeconds: normalizeBoolean((rest as { clockShowSeconds?: unknown }).clockShowSeconds, DEFAULT_SETTINGS.clockShowSeconds),
+    clockShowMilliseconds: normalizeBoolean(
+      (rest as { clockShowMilliseconds?: unknown }).clockShowMilliseconds,
+      DEFAULT_SETTINGS.clockShowMilliseconds,
+    ),
     showBuyMeACoffeeWidget: normalizeBuyMeACoffeeWidget(rest.showBuyMeACoffeeWidget),
     calendarFeeds: normalizeCalendarFeeds(calendarFeeds, calendarUrls, calendarUrl),
     globalCalendarFeeds: normalizeCalendarFeeds((rest as { globalCalendarFeeds?: unknown }).globalCalendarFeeds),
@@ -1040,6 +1057,9 @@ export function saveSettings(settings: Settings): void {
       clockTimeFontSizeRem: normalizedSettings.clockTimeFontSizeRem,
       clockDateFontSizeRem: normalizedSettings.clockDateFontSizeRem,
       clockTimeStretchPercent: normalizedSettings.clockTimeStretchPercent,
+      clockStyle: normalizedSettings.clockStyle,
+      clockShowSeconds: normalizedSettings.clockShowSeconds,
+      clockShowMilliseconds: normalizedSettings.clockShowMilliseconds,
       showBuyMeACoffeeWidget: normalizedSettings.showBuyMeACoffeeWidget,
       calendarFeeds: normalizedSettings.calendarFeeds,
       globalCalendarFeeds: normalizedSettings.globalCalendarFeeds,
@@ -1200,6 +1220,18 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
     (settings.clockTimeStretchPercent < 50 || settings.clockTimeStretchPercent > 200)
   ) {
     errors.push('clockTimeStretchPercent must be between 50 and 200 when provided')
+  }
+
+  if (settings.clockStyle !== 'digital' && settings.clockStyle !== 'flip') {
+    errors.push('clockStyle must be "digital" or "flip"')
+  }
+
+  if (typeof settings.clockShowSeconds !== 'boolean') {
+    errors.push('clockShowSeconds must be boolean')
+  }
+
+  if (typeof settings.clockShowMilliseconds !== 'boolean') {
+    errors.push('clockShowMilliseconds must be boolean')
   }
 
   if (typeof settings.showBuyMeACoffeeWidget !== 'boolean') {

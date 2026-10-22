@@ -815,6 +815,13 @@
   color: var(--color-text);
 }
 
+.widgetToggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
 .widgetToggle svg {
   flex-shrink: 0;
   display: block;

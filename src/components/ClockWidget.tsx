@@ -33,6 +33,70 @@ function getClockTimeSize(rowCount: number): string | undefined {
   return undefined
 }
 
+// One split-flap card. When the digit changes, the upper flap folds down to
+// reveal the new digit while the lower flap swings into place over the old one.
+function FlipDigit({ digit }: { readonly digit: string }) {
+  const [current, setCurrent] = useState(digit)
+  const [previous, setPrevious] = useState(digit)
+  if (digit !== current) {
+    setPrevious(current)
+    setCurrent(digit)
+  }
+
+  return (
+    <span className={styles.flipCard}>
+      <span className={styles.flipTop}>
+        <span className={styles.flipGlyph}>{current}</span>
+      </span>
+      <span className={styles.flipBottom}>
+        <span className={styles.flipGlyph}>{previous}</span>
+      </span>
+      {previous !== current && (
+        <span key={current} className={styles.flipFlaps}>
+          <span className={[styles.flipTop, styles.flipTopFlap].join(' ')}>
+            <span className={styles.flipGlyph}>{previous}</span>
+          </span>
+          <span
+            className={[styles.flipBottom, styles.flipBottomFlap].join(' ')}
+            onAnimationEnd={() => setPrevious(current)}
+          >
+            <span className={styles.flipGlyph}>{current}</span>
+          </span>
+        </span>
+      )}
+    </span>
+  )
+}
+
+function FlipTime({ parts }: { readonly parts: Intl.DateTimeFormatPart[] }) {
+  const text = parts.map((part) => part.value).join('')
+  return (
+    <span className={styles.flipTime} role="img" aria-label={text}>
+      {parts.map((part, index) => {
+        // Milliseconds change too fast to flip, so they sit beside the cards as plain digits.
+        if (part.type === 'fractionalSecond') {
+          return (
+            <span key={index} className={styles.flipMillis} aria-hidden="true">
+              <FixedWidthDigits text={part.value} />
+            </span>
+          )
+        }
+        // Every digit gets its own card; separators and AM/PM sit between them.
+        if (/^\d+$/.test(part.value)) {
+          return Array.from(part.value).map((digit, digitIndex) => (
+            <FlipDigit key={`${index}-${digitIndex}`} digit={digit} />
+          ))
+        }
+        return (
+          <span key={index} className={styles.flipSeparator} aria-hidden="true">
+            {part.value.trim()}
+          </span>
+        )
+      })}
+    </span>
+  )
+}
+
 export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetProps) {
   const [now, setNow] = useState(() => new Date())
   const { settings } = useSettings()
@@ -40,16 +104,33 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
   const timeTextRef = useRef<HTMLSpanElement | null>(null)
   const [fitSize, setFitSize] = useState<number | null>(null)
 
+  const showSeconds = settings.clockShowSeconds
+  // Milliseconds only make sense next to seconds.
+  const showMilliseconds = showSeconds && settings.clockShowMilliseconds
+
   useEffect(() => {
+    if (showMilliseconds) {
+      let frame = requestAnimationFrame(function tick() {
+        setNow(new Date())
+        frame = requestAnimationFrame(tick)
+      })
+      return () => cancelAnimationFrame(frame)
+    }
+
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
-  }, [])
+  }, [showMilliseconds])
 
-  const time = now.toLocaleTimeString(undefined, {
+  const timeParts = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit',
+    second: showSeconds ? '2-digit' : undefined,
+    fractionalSecondDigits: showMilliseconds ? 3 : undefined,
   })
+    .formatToParts(now)
+    // Match toLocaleTimeString, which uses a plain space where Intl puts U+202F before AM/PM.
+    .map((part) => ({ ...part, value: part.value.replace(/\u202f/g, ' ') }))
+  const time = timeParts.map((part) => part.value).join('')
 
   const date = now.toLocaleDateString(undefined, {
     weekday: 'long',
@@ -83,7 +164,16 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
     resizeObserver.observe(box)
     void document.fonts?.ready.then(updateFitSize)
     return () => resizeObserver.disconnect()
-  }, [timeLength, settings.clockTimeFontSizeRem, settings.clockTimeStretchPercent, rowCount, isFullscreen])
+  }, [
+    timeLength,
+    settings.clockStyle,
+    settings.clockTimeFontSizeRem,
+    settings.clockTimeStretchPercent,
+    rowCount,
+    isFullscreen,
+  ])
+
+  const isFlip = settings.clockStyle === 'flip'
 
   const style: ClockWidgetStyle = {
     '--clock-time-size-auto': getClockTimeSize(rowCount),
@@ -102,9 +192,9 @@ export function ClockWidget({ isFullscreen = false, rowCount = 3 }: ClockWidgetP
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')} style={style}>
-      <div ref={timeRef} className={styles.time}>
+      <div ref={timeRef} className={[styles.time, isFlip ? styles.timeFlip : ''].join(' ')}>
         <span ref={timeTextRef} className={styles.timeText}>
-          <FixedWidthDigits text={time} />
+          {isFlip ? <FlipTime parts={timeParts} /> : <FixedWidthDigits text={time} />}
         </span>
       </div>
       <div className={styles.date}>{date}</div>
