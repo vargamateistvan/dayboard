@@ -1099,16 +1099,41 @@
     flex-direction: row;
     overflow-x: auto;
     padding:
-      var(--space-4)
+      var(--space-3)
       calc(var(--space-4) + env(safe-area-inset-right, 0px))
-      0
+      var(--space-3)
       calc(var(--space-4) + env(safe-area-inset-left, 0px));
     border-right: none;
     border-bottom: 1px solid var(--color-border);
+    scrollbar-width: none;
   }
 
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Compact pills: the desktop cards with descriptions eat a third of the screen. */
   .sidebarTab {
-    min-width: 12rem;
+    flex: 0 0 auto;
+    padding: var(--space-2) var(--space-4);
+    border-color: var(--color-border);
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* Touch keeps :hover after a tap, so the active pill must win over it. */
+  .sidebarTabActive,
+  .sidebarTabActive:hover {
+    border-color: var(--color-accent);
+  }
+
+  .sidebarTabDescription {
+    display: none;
+  }
+
+  .sectionHeader {
+    flex-wrap: wrap;
+    row-gap: var(--space-1);
   }
 
   .content {

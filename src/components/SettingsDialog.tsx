@@ -363,7 +363,7 @@ const WIDGET_SETTINGS_TABS: ReadonlyArray<{
   description: string;
   icon: React.ReactNode;
 }> = [
-  { id: "clock", label: "Clock", description: "Font sizes and stretch for the main clock.", icon: <Clock size={14} /> },
+  { id: "clock", label: "Clock", description: "Style, seconds, font sizes and stretch for the main clock.", icon: <Clock size={14} /> },
   { id: "calendar", label: "Calendar", description: "Calendar sources and how events are displayed.", icon: <Calendar size={14} /> },
   { id: "weather", label: "Weather", description: "Units, details, and refresh interval.", icon: <CloudSun size={14} /> },
   { id: "flights", label: "Flights", description: "Radar range, scan interval, and location.", icon: <Plane size={14} /> },
@@ -1545,6 +1545,13 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
       setEditingPresetName(newName);
     }
   };
+
+  // On phones the section tabs scroll sideways; keep the active one fully visible.
+  useEffect(() => {
+    document
+      .getElementById(`settings-tab-${activeTab}`)
+      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [activeTab]);
 
   const handleTabKeyDown = (
     event: KeyboardEvent<HTMLButtonElement>,
