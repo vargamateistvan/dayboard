@@ -130,7 +130,7 @@
 
 .flipTime {
   /* Cards take a tint of the theme accent so every theme gets its own flip clock. */
-  --flip-card: color-mix(in srgb, var(--color-accent) 16%, var(--color-surface-alt));
+  --flip-card: color-mix(in srgb, var(--color-accent) 85%, var(--color-text));
   --flip-card-edge: color-mix(in srgb, var(--color-accent) 35%, transparent);
   display: inline-flex;
   align-items: center;
