@@ -1,0 +1,335 @@
+/* ── Backdrop: same treatment as the app's other dialogs ── */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  animation: backdrop-in 160ms ease-out;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 26rem);
+  height: min(36rem, 85vh);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+  animation: sheet-in 200ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.header {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.heading {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin: 0.15rem 0 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+.doneButton {
+  flex: none;
+  padding: 0.4rem 0.95rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.doneButton:hover {
+  background: var(--color-accent-hover);
+}
+
+/* ── Search ──────────────────────────────────────────────── */
+.searchRow {
+  flex: none;
+  padding: 0 var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.searchField {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 2.5rem;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-alt);
+  transition: border-color var(--transition-fast);
+}
+
+.searchField:focus-within {
+  border-color: var(--color-accent);
+}
+
+.searchIcon {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-sm);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* The field has its own clear button. */
+.searchInput::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.clearButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-text-muted) 30%, transparent);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.clearButton:hover {
+  background: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+}
+
+/* ── List ────────────────────────────────────────────────── */
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-2) var(--space-3);
+  scrollbar-width: thin;
+}
+
+.groupHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  padding: var(--space-3) var(--space-3) var(--space-1);
+  background: var(--color-surface);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+.groupList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group:first-child .groupList {
+  padding-top: var(--space-2);
+}
+
+.groupHeader + .groupList {
+  padding-top: 0;
+}
+
+/* Hairline between rows, inset to the text like iOS lists. */
+.groupItem + .groupItem::before {
+  content: '';
+  display: block;
+  height: 1px;
+  margin: 0 var(--space-3);
+  background: color-mix(in srgb, var(--color-border) 55%, transparent);
+}
+
+.option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0.6rem var(--space-3);
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.option:hover {
+  background: var(--color-surface-alt);
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.optionText {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.optionName,
+.optionMeta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionName {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.optionMeta {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  line-height: 1.35;
+}
+
+.optionTime {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.optionIcon,
+.optionIconSelected {
+  flex: none;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.optionIcon {
+  color: var(--color-text-muted);
+}
+
+.option:hover .optionIcon {
+  color: var(--color-accent);
+}
+
+/* A filled badge, so added cities stand out while scrolling. */
+.optionIconSelected {
+  color: var(--color-accent-text);
+  fill: var(--color-accent);
+}
+
+.optionIconSelected circle {
+  stroke: var(--color-accent);
+}
+
+.optionSelected .optionName {
+  font-weight: 600;
+}
+
+.option:active .optionIcon,
+.option:active .optionIconSelected {
+  transform: scale(0.88);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.emptyHint {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Motion ──────────────────────────────────────────────── */
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop,
+  .sheet {
+    animation: none;
+  }
+}
+
+/* ── Phones: a bottom sheet ──────────────────────────────── */
+@media (max-width: 520px) {
+  .backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .sheet {
+    width: 100%;
+    height: 88dvh;
+    border-bottom: none;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    animation-name: sheet-up;
+  }
+}

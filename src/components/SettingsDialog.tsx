@@ -106,7 +106,6 @@ import {
   Plane,
   Telescope,
   Clock,
-  Earth,
   TrendingUp,
   Trophy,
   Music,
@@ -173,15 +172,6 @@ function buildCustomGoogleFontPatch(
     customGoogleFontUrl: value,
     customGoogleFontFamily: value.trim() ? derivedFamily || currentFamily : "",
   };
-}
-
-function isValidTimeZone(value: string): boolean {
-  try {
-    new Intl.DateTimeFormat(undefined, { timeZone: value });
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 function formatOptionalFontSizeRem(value: number | null): string {
@@ -358,7 +348,6 @@ type WidgetSettingsId =
   | "flights"
   | "astronomy"
   | "clock"
-  | "timezoneClock"
   | "finance"
   | "sports"
   | "music"
@@ -375,7 +364,6 @@ const WIDGET_SETTINGS_TABS: ReadonlyArray<{
   { id: "weather", label: "Weather", description: "Units, details, and refresh interval.", icon: <CloudSun size={14} /> },
   { id: "flights", label: "Flights", description: "Radar range, scan interval, and location.", icon: <Plane size={14} /> },
   { id: "astronomy", label: "Astronomy", description: "Location and refresh interval.", icon: <Telescope size={14} /> },
-  { id: "timezoneClock", label: "World Clock", description: "The second city shown next to your local time.", icon: <Earth size={14} /> },
   { id: "finance", label: "Finance", description: "Stock symbols, currency pairs, and refresh interval.", icon: <TrendingUp size={14} /> },
   { id: "sports", label: "Sports", description: "Leagues, favorite teams, and refresh interval.", icon: <Trophy size={14} /> },
   { id: "music", label: "Music", description: "Accounts and saved links for media players.", icon: <Music size={14} /> },
@@ -928,10 +916,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [flightsManualLongitude, setFlightsManualLongitude] = useState(
     settings.flightsManualLongitude,
   );
-  const [worldClockCity, setWorldClockCity] = useState(settings.worldClockCity);
-  const [worldClockTimeZone, setWorldClockTimeZone] = useState(
-    settings.worldClockTimeZone,
-  );
   const [clockTimeFontSize, setClockTimeFontSize] = useState(
     formatOptionalFontSizeRem(settings.clockTimeFontSizeRem),
   );
@@ -949,9 +933,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [clockShowMilliseconds, setClockShowMilliseconds] = useState(
     settings.clockShowMilliseconds,
   );
-  const [worldClockTimeZoneError, setWorldClockTimeZoneError] = useState<
-    string | null
-  >(null);
   const [appleMusicEmbedUrl, setAppleMusicEmbedUrl] = useState(settings.appleMusicEmbedUrl);
   const [appleMusicEmbedLinks, setAppleMusicEmbedLinks] = useState(
     normalizeSavedMediaLinks(settings.appleMusicEmbedLinks, settings.appleMusicEmbedUrl),
@@ -1028,7 +1009,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isAstronomyOnLayout = visibility.astronomy;
   const isFlightsOnLayout = visibility.flights;
   const isClockOnLayout = visibility.clock;
-  const isTimezoneClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
   const isSportsOnLayout = visibility.sports;
   const isMusicOnLayout =
@@ -1045,7 +1025,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     flights: isFlightsOnLayout,
     astronomy: isAstronomyOnLayout,
     clock: isClockOnLayout,
-    timezoneClock: isTimezoneClockOnLayout,
     finance: isFinanceOnLayout,
     sports: isSportsOnLayout,
     music: isMusicOnLayout,
@@ -1119,9 +1098,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setClockHourFormat(nextSettings.clockHourFormat);
     setClockShowSeconds(nextSettings.clockShowSeconds);
     setClockShowMilliseconds(nextSettings.clockShowMilliseconds);
-    setWorldClockCity(nextSettings.worldClockCity);
-    setWorldClockTimeZone(nextSettings.worldClockTimeZone);
-    setWorldClockTimeZoneError(null);
     setAppleMusicEmbedUrl(nextSettings.appleMusicEmbedUrl);
     setAppleMusicEmbedLinks(
       normalizeSavedMediaLinks(nextSettings.appleMusicEmbedLinks, nextSettings.appleMusicEmbedUrl),
@@ -1190,8 +1166,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     clockHourFormat,
     clockShowSeconds,
     clockShowMilliseconds,
-    worldClockCity: worldClockCity.trim() || settings.worldClockCity,
-    worldClockTimeZone: worldClockTimeZone.trim() || settings.worldClockTimeZone,
     spotifyEmbedUrl: settings.spotifyEmbedUrl,
     spotifyEmbedLinks: settings.spotifyEmbedLinks,
     appleMusicEmbedUrl,
@@ -1630,16 +1604,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   };
 
   const save = () => {
-    const trimmedTimeZone = worldClockTimeZone.trim();
-    if (!isValidTimeZone(trimmedTimeZone)) {
-      setWorldClockTimeZoneError(
-        "Use a valid IANA timezone (for example: Europe/Budapest).",
-      );
-      return;
-    }
-
     const nextSettings = buildDraftSettings();
-    nextSettings.worldClockTimeZone = trimmedTimeZone;
     updateSettings(nextSettings);
 
     const presetNameToUpdate = editingPresetName.trim()
@@ -2897,49 +2862,6 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                     </div>
                     <p className={styles.hint}>
                       Leave size fields empty to keep automatic sizing based on the clock row height. Stretch starts at 100% when blank.
-                    </p>
-                  </section>
-                )}
-
-                {activeWidgetSettings === "timezoneClock" && (
-                  <section className={styles.section}>
-                    <h3 className={styles.sectionTitle}>Timezone Clock</h3>
-                    <div className={styles.calendarList}>
-                      <label className={styles.intervalLabel}>
-                        <span>City name</span>
-                        <input
-                          className={styles.input}
-                          type="text"
-                          value={worldClockCity}
-                          placeholder="New York"
-                          onChange={(e) => setWorldClockCity(e.target.value)}
-                        />
-                      </label>
-                      <label className={styles.intervalLabel}>
-                        <span>Timezone (IANA)</span>
-                        <input
-                          className={styles.input}
-                          type="text"
-                          value={worldClockTimeZone}
-                          placeholder="America/New_York"
-                          onChange={(e) => {
-                            const nextValue = e.target.value;
-                            setWorldClockTimeZone(nextValue);
-                            const trimmedValue = nextValue.trim();
-                            setWorldClockTimeZoneError(
-                              trimmedValue.length === 0 || isValidTimeZone(trimmedValue)
-                                ? null
-                                : "Use a valid IANA timezone (for example: Europe/Budapest).",
-                            );
-                          }}
-                        />
-                      </label>
-                      {worldClockTimeZoneError && (
-                        <p className={styles.mediaLinkError}>{worldClockTimeZoneError}</p>
-                      )}
-                    </div>
-                    <p className={styles.hint}>
-                      This widget always shows your local time next to your selected city.
                     </p>
                   </section>
                 )}

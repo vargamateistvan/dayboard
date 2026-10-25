@@ -2,7 +2,7 @@ import type { Widget } from './useWidgetVisibility'
 
 export const WIDGET_METADATA: Array<{ id: Widget; label: string }> = [
   { id: 'clock', label: 'Clock' },
-  { id: 'timezoneClock', label: 'Timezone Clock' },
+  { id: 'timezoneClock', label: 'World Clock' },
   { id: 'weather', label: 'Weather' },
   { id: 'astronomy', label: 'Astronomy' },
   { id: 'flights', label: 'Flights Radar' },

@@ -4,7 +4,7 @@ Dayboard is a customizable dashboard built with React, TypeScript, and Vite. It 
 
 ## Features
 
-- Clock and timezone clock widgets
+- Clock and Apple-style world clock widgets (dotted day/night map, analog city clocks, sunrise and sunset)
 - Weather widget
 - Flights radar widget
 - Calendar widget with iCal feed support and event notifications

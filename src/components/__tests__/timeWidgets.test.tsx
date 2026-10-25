@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { ClockWidget } from '../ClockWidget'
 import { TimezoneClockWidget } from '../TimezoneClockWidget'
 import { QuoteWidget } from '../QuoteWidget'
@@ -242,8 +242,8 @@ describe('TimezoneClockWidget', () => {
     localStorage.clear()
     saveSettings({
       ...DEFAULT_SETTINGS,
-      worldClockCity: 'Tokyo',
-      worldClockTimeZone: 'Asia/Tokyo',
+      clockHourFormat: '24h',
+      worldClockCities: ['tokyo', 'new-delhi'],
     })
   })
 
@@ -253,15 +253,101 @@ describe('TimezoneClockWidget', () => {
     vi.restoreAllMocks()
   })
 
-  it('renders local and selected city clocks', () => {
-    render(
+  function renderWorldClock() {
+    return render(
       <SettingsProvider>
         <TimezoneClockWidget />
       </SettingsProvider>,
     )
+  }
 
-    expect(screen.getByText(/My location/)).toBeInTheDocument()
-    expect(screen.getByText(/Tokyo \(Asia\/Tokyo\)/)).toBeInTheDocument()
+  function savedCities(): unknown {
+    return JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').worldClockCities
+  }
+
+  it('shows a clock card for each city with its time, day offset and sun times', () => {
+    renderWorldClock()
+
+    const tokyo = screen.getByRole('listitem', { name: 'Tokyo, 21:34' })
+    expect(tokyo).toHaveTextContent(/(Today|Tomorrow|Yesterday), [+-]\d+(:\d\d)? HRS?/)
+    expect(tokyo).toHaveTextContent(/Sunrise: 0[45]:\d\d/)
+    expect(tokyo).toHaveTextContent(/Sunset: 18:\d\d/)
+    expect(screen.getByRole('listitem', { name: 'New Delhi, 18:04' })).toBeInTheDocument()
+  })
+
+  it('advances the time every second', () => {
+    renderWorldClock()
+
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+
+    expect(screen.getByRole('listitem', { name: 'Tokyo, 21:35' })).toBeInTheDocument()
+  })
+
+  it('removes a city in edit mode', () => {
+    renderWorldClock()
+
+    expect(screen.queryByRole('button', { name: 'Remove Tokyo' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Tokyo' }))
+
+    expect(screen.queryByRole('listitem', { name: /Tokyo/ })).not.toBeInTheDocument()
+    expect(savedCities()).toEqual(['new-delhi'])
+  })
+
+  it('adds and removes cities from the picker', () => {
+    renderWorldClock()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add city' }))
+    const picker = screen.getByRole('dialog', { name: 'Choose a City' })
+    fireEvent.change(within(picker).getByRole('searchbox', { name: 'Search cities' }), { target: { value: 'buda' } })
+    fireEvent.click(within(picker).getByRole('button', { name: /Budapest/ }))
+
+    expect(savedCities()).toEqual(['tokyo', 'new-delhi', 'budapest'])
+    expect(within(picker).getByRole('button', { name: /Budapest/ })).toHaveAttribute('aria-pressed', 'true')
+
+    fireEvent.change(within(picker).getByRole('searchbox', { name: 'Search cities' }), { target: { value: 'tokyo' } })
+    fireEvent.click(within(picker).getByRole('button', { name: /Tokyo/ }))
+    expect(savedCities()).toEqual(['new-delhi', 'budapest'])
+
+    fireEvent.keyDown(picker, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: 'Choose a City' })).not.toBeInTheDocument()
+    expect(screen.getByRole('listitem', { name: /^Budapest, / })).toBeInTheDocument()
+  })
+
+  it('adds the top search result with Enter and returns focus when closed', () => {
+    renderWorldClock()
+
+    const addButton = screen.getByRole('button', { name: 'Add city' })
+    addButton.focus()
+    fireEvent.click(addButton)
+    const picker = screen.getByRole('dialog', { name: 'Choose a City' })
+    const search = within(picker).getByRole('searchbox', { name: 'Search cities' })
+    expect(search).toHaveFocus()
+    expect(picker).toHaveTextContent('2 cities on your clock')
+
+    fireEvent.change(search, { target: { value: 'paris' } })
+    fireEvent.keyDown(search, { key: 'Enter' })
+    expect(savedCities()).toEqual(['tokyo', 'new-delhi', 'paris'])
+    expect(search).toHaveValue('')
+    expect(picker).toHaveTextContent('3 cities on your clock')
+
+    fireEvent.change(search, { target: { value: 'zzz' } })
+    expect(picker).toHaveTextContent('No cities match “zzz”.')
+
+    fireEvent.click(within(picker).getByRole('button', { name: 'Done' }))
+    expect(screen.queryByRole('dialog', { name: 'Choose a City' })).not.toBeInTheDocument()
+    expect(addButton).toHaveFocus()
+  })
+
+  it('offers to add a city when the list is empty', () => {
+    saveSettings({ ...DEFAULT_SETTINGS, worldClockCities: [] })
+    renderWorldClock()
+
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add a city' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a City' })).toBeInTheDocument()
   })
 })
 

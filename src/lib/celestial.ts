@@ -81,6 +81,23 @@ export function getSunPosition(date: Date, latitude: number, longitude: number):
   return toHorizontal(siderealTime(days, -longitude * RAD) - ra, latitude * RAD, dec)
 }
 
+export interface GeoPoint {
+  latitude: number
+  longitude: number
+}
+
+/** The point on Earth where the sun is directly overhead. */
+export function getSubsolarPoint(date: Date): GeoPoint {
+  const days = toDays(date)
+  const { ra, dec } = sunCoordinates(days)
+  // The hour angle is zero where local sidereal time equals the sun's right ascension.
+  const longitude = (ra - siderealTime(days, 0)) / RAD
+  return {
+    latitude: dec / RAD,
+    longitude: ((((longitude + 180) % 360) + 360) % 360) - 180,
+  }
+}
+
 export function getMoonPosition(date: Date, latitude: number, longitude: number): HorizontalPosition {
   const days = toDays(date)
   const { ra, dec } = moonCoordinates(days)

@@ -5,6 +5,7 @@ import { SettingsProvider } from '../../lib/useSettings'
 import { searchSportsTeams } from '../../lib/sports'
 import * as spotifyAuth from '../../lib/spotifyAuth'
 import { loadWidgetLayoutState } from '../../lib/useWidgetVisibility'
+import { DEFAULT_SETTINGS } from '../../lib/settings'
 
 vi.mock('../../lib/sports', () => ({
   searchSportsTeams: vi.fn(),
@@ -356,7 +357,11 @@ describe('SettingsDialog', () => {
     ])
   })
 
-  it('persists timezone clock city and timezone settings', () => {
+  it('keeps world clock cities, which the widget manages, when saving', () => {
+    localStorage.setItem(
+      SETTINGS_STORAGE_KEY,
+      JSON.stringify({ ...DEFAULT_SETTINGS, worldClockCities: ['budapest', 'tokyo'] }),
+    )
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({
@@ -365,19 +370,13 @@ describe('SettingsDialog', () => {
     )
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
-    fireEvent.click(screen.getByRole('tab', { name: 'World Clock' }))
 
-    fireEvent.change(screen.getByPlaceholderText('New York'), {
-      target: { value: 'Budapest' },
-    })
-    fireEvent.change(screen.getByPlaceholderText('America/New_York'), {
-      target: { value: 'Europe/Budapest' },
-    })
+    expect(screen.queryByRole('tab', { name: 'World Clock' })).not.toBeInTheDocument()
+
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
-      worldClockCity: 'Budapest',
-      worldClockTimeZone: 'Europe/Budapest',
+      worldClockCities: ['budapest', 'tokyo'],
     })
   })
 
