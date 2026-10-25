@@ -88,6 +88,12 @@ describe('world clock cities', () => {
     )
   })
 
+  it('shows the clock cards unless they were turned off', () => {
+    expect(loadStored({}).worldClockShowClocks).toBe(true)
+    expect(loadStored({ worldClockShowClocks: 'no' }).worldClockShowClocks).toBe(true)
+    expect(loadStored({ worldClockShowClocks: false }).worldClockShowClocks).toBe(false)
+  })
+
   it('reports unknown city ids as invalid', () => {
     expect(validateSettings({ ...DEFAULT_SETTINGS, worldClockCities: ['tokyo'] }).errors).not.toContain(
       'worldClockCities must be a list of known city ids',

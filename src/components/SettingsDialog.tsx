@@ -105,6 +105,7 @@ import {
   CloudSun,
   Plane,
   Telescope,
+  Earth,
   Clock,
   TrendingUp,
   Trophy,
@@ -348,6 +349,7 @@ type WidgetSettingsId =
   | "flights"
   | "astronomy"
   | "clock"
+  | "timezoneClock"
   | "finance"
   | "sports"
   | "music"
@@ -364,6 +366,7 @@ const WIDGET_SETTINGS_TABS: ReadonlyArray<{
   { id: "weather", label: "Weather", description: "Units, details, and refresh interval.", icon: <CloudSun size={14} /> },
   { id: "flights", label: "Flights", description: "Radar range, scan interval, and location.", icon: <Plane size={14} /> },
   { id: "astronomy", label: "Astronomy", description: "Location and refresh interval.", icon: <Telescope size={14} /> },
+  { id: "timezoneClock", label: "World Clock", description: "Map only, or map with clock cards.", icon: <Earth size={14} /> },
   { id: "finance", label: "Finance", description: "Stock symbols, currency pairs, and refresh interval.", icon: <TrendingUp size={14} /> },
   { id: "sports", label: "Sports", description: "Leagues, favorite teams, and refresh interval.", icon: <Trophy size={14} /> },
   { id: "music", label: "Music", description: "Accounts and saved links for media players.", icon: <Music size={14} /> },
@@ -876,6 +879,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const [weatherUnitSystem, setWeatherUnitSystem] = useState<WeatherUnitSystem>(
     settings.weatherUnitSystem,
   );
+  const [worldClockShowClocks, setWorldClockShowClocks] = useState(settings.worldClockShowClocks);
   const [weatherShowExtraDetails, setWeatherShowExtraDetails] = useState(
     settings.weatherShowExtraDetails,
   );
@@ -1009,6 +1013,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
   const isAstronomyOnLayout = visibility.astronomy;
   const isFlightsOnLayout = visibility.flights;
   const isClockOnLayout = visibility.clock;
+  const isWorldClockOnLayout = visibility.timezoneClock;
   const isFinanceOnLayout = visibility.stocks || visibility.currencies;
   const isSportsOnLayout = visibility.sports;
   const isMusicOnLayout =
@@ -1025,6 +1030,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     flights: isFlightsOnLayout,
     astronomy: isAstronomyOnLayout,
     clock: isClockOnLayout,
+    timezoneClock: isWorldClockOnLayout,
     finance: isFinanceOnLayout,
     sports: isSportsOnLayout,
     music: isMusicOnLayout,
@@ -1078,6 +1084,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     setWeatherRefreshMin(nextSettings.weatherRefreshMinutes);
     setWeatherUnitSystem(nextSettings.weatherUnitSystem);
     setWeatherShowExtraDetails(nextSettings.weatherShowExtraDetails);
+    setWorldClockShowClocks(nextSettings.worldClockShowClocks);
     setAstronomyRefreshMin(nextSettings.astronomyRefreshMinutes);
     setAstronomyUseDeviceLocation(nextSettings.astronomyUseDeviceLocation);
     setAstronomyManualLatitude(nextSettings.astronomyManualLatitude);
@@ -1146,6 +1153,7 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
     weatherRefreshMinutes: weatherRefreshMin,
     weatherUnitSystem,
     weatherShowExtraDetails,
+    worldClockShowClocks,
     astronomyRefreshMinutes: astronomyRefreshMin,
     astronomyUseDeviceLocation,
     astronomyManualLatitude: astronomyManualLatitude.trim(),
@@ -2862,6 +2870,33 @@ export function SettingsDialog({ onClose, selectedPresetName }: Props) {
                     </div>
                     <p className={styles.hint}>
                       Leave size fields empty to keep automatic sizing based on the clock row height. Stretch starts at 100% when blank.
+                    </p>
+                  </section>
+                )}
+
+                {activeWidgetSettings === "timezoneClock" && (
+                  <section className={styles.section}>
+                    <h3 className={styles.sectionTitle}>World Clock</h3>
+                    <div className={styles.widgetGrid}>
+                      <button
+                        className={[
+                          styles.widgetToggle,
+                          worldClockShowClocks ? styles.widgetVisible : "",
+                        ].join(" ")}
+                        onClick={() => setWorldClockShowClocks((value) => !value)}
+                        aria-pressed={worldClockShowClocks}
+                        type="button"
+                      >
+                        {worldClockShowClocks ? (
+                          <Eye size={14} />
+                        ) : (
+                          <EyeOff size={14} />
+                        )}
+                        <span>Show clock cards</span>
+                      </button>
+                    </div>
+                    <p className={styles.hint}>
+                      Turn off to show only the map. Add and remove cities with the + button on the widget.
                     </p>
                   </section>
                 )}

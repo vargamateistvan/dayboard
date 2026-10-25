@@ -357,7 +357,7 @@ describe('SettingsDialog', () => {
     ])
   })
 
-  it('keeps world clock cities, which the widget manages, when saving', () => {
+  it('keeps world clock cities, which the widget manages, and saves the clock cards toggle', () => {
     localStorage.setItem(
       SETTINGS_STORAGE_KEY,
       JSON.stringify({ ...DEFAULT_SETTINGS, worldClockCities: ['budapest', 'tokyo'] }),
@@ -370,13 +370,18 @@ describe('SettingsDialog', () => {
     )
     renderSettingsDialog()
     fireEvent.click(screen.getByRole('tab', { name: /Widgets/i }))
+    fireEvent.click(screen.getByRole('tab', { name: 'World Clock' }))
 
-    expect(screen.queryByRole('tab', { name: 'World Clock' })).not.toBeInTheDocument()
+    const toggle = screen.getByRole('button', { name: 'Show clock cards' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
       worldClockCities: ['budapest', 'tokyo'],
+      worldClockShowClocks: false,
     })
   })
 

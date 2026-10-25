@@ -206,6 +206,7 @@ describe('settings persistence', () => {
       sportsFollowedLeagues: ['EPL', 'NBA'],
       sportsRefreshMinutes: 15,
       worldClockCities: ['tokyo', 'sydney'],
+      worldClockShowClocks: false,
       customColors: {
         primary: DEFAULT_SETTINGS.customColors!.primary,
         primaryHover: DEFAULT_SETTINGS.customColors!.primaryHover,

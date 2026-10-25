@@ -341,6 +341,17 @@ describe('TimezoneClockWidget', () => {
     expect(addButton).toHaveFocus()
   })
 
+  it('shows only the map when clock cards are turned off', () => {
+    saveSettings({ ...DEFAULT_SETTINGS, worldClockCities: ['tokyo'], worldClockShowClocks: false })
+    renderWorldClock()
+
+    expect(screen.queryByRole('list', { name: 'World clocks' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    // Cities can still be managed from the picker.
+    fireEvent.click(screen.getByRole('button', { name: 'Add city' }))
+    expect(screen.getByRole('dialog', { name: 'Choose a City' })).toBeInTheDocument()
+  })
+
   it('offers to add a city when the list is empty', () => {
     saveSettings({ ...DEFAULT_SETTINGS, worldClockCities: [] })
     renderWorldClock()

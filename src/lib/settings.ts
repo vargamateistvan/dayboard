@@ -126,6 +126,8 @@ export interface Settings {
   timerNotificationsEnabled: boolean
   /** Ids from WORLD_CLOCK_CITIES, in display order. */
   worldClockCities: string[]
+  /** Analog clock cards under the map; off shows the map alone. */
+  worldClockShowClocks: boolean
   customColors?: CustomColors
 }
 
@@ -276,6 +278,7 @@ export const DEFAULT_SETTINGS: Settings = {
   calendarNotificationsEnabled: true,
   timerNotificationsEnabled: true,
   worldClockCities: ['new-york', 'london', 'tokyo'],
+  worldClockShowClocks: true,
   customColors: DEFAULT_CUSTOM_COLORS,
 }
 
@@ -978,6 +981,7 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     flightsManualLatitude: normalizeFlightsCoordinate((rest as { flightsManualLatitude?: unknown }).flightsManualLatitude),
     flightsManualLongitude: normalizeFlightsCoordinate((rest as { flightsManualLongitude?: unknown }).flightsManualLongitude),
     worldClockCities: normalizeWorldClockCities(rest.worldClockCities, worldClockCity, worldClockTimeZone),
+    worldClockShowClocks: normalizeBoolean(rest.worldClockShowClocks, DEFAULT_SETTINGS.worldClockShowClocks),
     spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
     spotifyEmbedLinks: normalizeSavedMediaLinks(
       (rest as { spotifyEmbedLinks?: unknown }).spotifyEmbedLinks,
@@ -1133,6 +1137,7 @@ export function saveSettings(settings: Settings): void {
       calendarNotificationsEnabled: normalizedSettings.calendarNotificationsEnabled,
       timerNotificationsEnabled: normalizedSettings.timerNotificationsEnabled,
       worldClockCities: normalizedSettings.worldClockCities,
+      worldClockShowClocks: normalizedSettings.worldClockShowClocks,
       customColors: normalizedSettings.customColors,
     }),
   )
@@ -1366,6 +1371,10 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
     settings.worldClockCities.some((id) => typeof id !== 'string' || !getWorldClockCity(id))
   ) {
     errors.push('worldClockCities must be a list of known city ids')
+  }
+
+  if (typeof settings.worldClockShowClocks !== 'boolean') {
+    errors.push('worldClockShowClocks must be boolean')
   }
 
   if (settings.customColors) {

@@ -176,6 +176,9 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
   useEffect(() => scheduleEverySecond(() => setNow(new Date())), [])
 
   const cityIds = settings.worldClockCities
+  const showClocks = settings.worldClockShowClocks
+  // Nothing to edit when the cards are hidden; the picker still adds and removes cities.
+  const isEditingCards = isEditing && showClocks
   const cities = useMemo(
     () => cityIds.map(getWorldClockCity).filter((city): city is WorldClockCity => city !== undefined),
     [cityIds],
@@ -187,12 +190,12 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
   const sunTimes = useMemo(
     () =>
       new Map(
-        cities.map((city) => [
+        (showClocks ? cities : []).map((city) => [
           city.id,
           getSunTimes(new Date(minuteStart), city.latitude, city.longitude, city.timeZone),
         ]),
       ),
-    [cities, minuteStart],
+    [cities, minuteStart, showClocks],
   )
 
   const localOffset = getTimeZoneOffsetMinutes(now)
@@ -216,15 +219,15 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
-      <div className={[styles.toolbar, isEditing ? styles.toolbarActive : ''].join(' ')}>
-        {cities.length > 0 && (
+      <div className={[styles.toolbar, isEditingCards ? styles.toolbarActive : ''].join(' ')}>
+        {showClocks && cities.length > 0 && (
           <button
             type="button"
             className={[styles.toolbarButton, styles.editButton].join(' ')}
-            aria-pressed={isEditing}
+            aria-pressed={isEditingCards}
             onClick={() => setIsEditing((current) => !current)}
           >
-            {isEditing ? 'Done' : 'Edit'}
+            {isEditingCards ? 'Done' : 'Edit'}
           </button>
         )}
         <button
@@ -240,14 +243,16 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
 
       <WorldMap cities={cities} now={now} subsolar={subsolar} hourFormat={settings.clockHourFormat} />
 
-      {cities.length === 0 ? (
+      {cities.length === 0 && (
         <div className={styles.empty}>
           <button type="button" className={styles.emptyButton} onClick={() => setIsPickerOpen(true)}>
             <Plus size={16} aria-hidden="true" />
             Add a city
           </button>
         </div>
-      ) : (
+      )}
+
+      {cities.length > 0 && showClocks && (
         <ul className={styles.cards} aria-label="World clocks">
           {cities.map((city) => {
             const sun = sunTimes.get(city.id)
@@ -255,7 +260,7 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
             const offset = getTimeZoneOffsetMinutes(now, city.timeZone) - localOffset
             return (
               <li key={city.id} className={styles.card} aria-label={`${city.name}, ${time}`}>
-                {isEditing && (
+                {isEditingCards && (
                   <button
                     type="button"
                     className={styles.removeButton}
