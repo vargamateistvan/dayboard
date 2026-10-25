@@ -1,7 +1,6 @@
 import { createSavedMediaLink, normalizeSavedMediaLinks, type SavedMediaLink } from './mediaLinks'
 import { readStorage, writeStorage } from './storage'
 import { isSafeHttpUrl } from './urlSafety'
-import { findWorldClockCityByTimeZone, getWorldClockCity } from './worldClockCities'
 import {
   loadWidgetLayoutState,
   normalizeWidgetLayoutState,
@@ -124,8 +123,6 @@ export interface Settings {
   desktopNotificationsEnabled: boolean
   calendarNotificationsEnabled: boolean
   timerNotificationsEnabled: boolean
-  /** Ids from WORLD_CLOCK_CITIES, in display order. */
-  worldClockCities: string[]
   /** Analog clock cards under the map; off shows the map alone. */
   worldClockShowClocks: boolean
   customColors?: CustomColors
@@ -277,7 +274,6 @@ export const DEFAULT_SETTINGS: Settings = {
   desktopNotificationsEnabled: false,
   calendarNotificationsEnabled: true,
   timerNotificationsEnabled: true,
-  worldClockCities: ['new-york', 'london', 'tokyo'],
   worldClockShowClocks: true,
   customColors: DEFAULT_CUSTOM_COLORS,
 }
@@ -309,7 +305,9 @@ interface StoredSettings extends Partial<Omit<Settings, 'calendarFeeds'>> {
   stockSymbol?: unknown
   currencyBase?: unknown
   currencyTarget?: unknown
-  // Legacy single-city world clock (migrated to worldClockCities)
+  // World clock cities kept in settings by earlier versions; they now have
+  // their own storage key (see worldClockStorage.ts).
+  worldClockCities?: unknown
   worldClockCity?: unknown
   worldClockTimeZone?: unknown
 }
@@ -605,20 +603,6 @@ function normalizeFlightsUseDeviceLocation(value: unknown): boolean {
 
 function normalizeFlightsCoordinate(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
-}
-
-function normalizeWorldClockCities(value: unknown, legacyName: unknown, legacyTimeZone: unknown): string[] {
-  if (Array.isArray(value)) {
-    return [...new Set(value.filter((id): id is string => typeof id === 'string' && getWorldClockCity(id) !== undefined))]
-  }
-
-  // The world clock used to show a single, freely named city in a chosen time
-  // zone. Keep it first so upgrading users still see the city they picked.
-  const legacyCity =
-    typeof legacyTimeZone === 'string'
-      ? findWorldClockCityByTimeZone(legacyTimeZone.trim(), typeof legacyName === 'string' ? legacyName : undefined)
-      : undefined
-  return [...new Set([...(legacyCity ? [legacyCity.id] : []), ...DEFAULT_SETTINGS.worldClockCities])]
 }
 
 function normalizeEmbedUrl(value: unknown): string {
@@ -920,8 +904,10 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     calendarUrl,
     calendarUrls,
     calendarFeeds,
-    worldClockCity,
-    worldClockTimeZone,
+    // Dropped here so they don't ride along in `rest`; migrateWorldClockCities moves them.
+    worldClockCities: _worldClockCities,
+    worldClockCity: _worldClockCity,
+    worldClockTimeZone: _worldClockTimeZone,
     ...rest
   } = parsed
 
@@ -980,7 +966,6 @@ function normalizeStoredSettings(value: unknown): Settings | null {
     flightsUseDeviceLocation: normalizeFlightsUseDeviceLocation((rest as { flightsUseDeviceLocation?: unknown }).flightsUseDeviceLocation),
     flightsManualLatitude: normalizeFlightsCoordinate((rest as { flightsManualLatitude?: unknown }).flightsManualLatitude),
     flightsManualLongitude: normalizeFlightsCoordinate((rest as { flightsManualLongitude?: unknown }).flightsManualLongitude),
-    worldClockCities: normalizeWorldClockCities(rest.worldClockCities, worldClockCity, worldClockTimeZone),
     worldClockShowClocks: normalizeBoolean(rest.worldClockShowClocks, DEFAULT_SETTINGS.worldClockShowClocks),
     spotifyEmbedUrl: normalizeEmbedUrl((rest as { spotifyEmbedUrl?: unknown }).spotifyEmbedUrl),
     spotifyEmbedLinks: normalizeSavedMediaLinks(
@@ -1136,7 +1121,6 @@ export function saveSettings(settings: Settings): void {
       desktopNotificationsEnabled: normalizedSettings.desktopNotificationsEnabled,
       calendarNotificationsEnabled: normalizedSettings.calendarNotificationsEnabled,
       timerNotificationsEnabled: normalizedSettings.timerNotificationsEnabled,
-      worldClockCities: normalizedSettings.worldClockCities,
       worldClockShowClocks: normalizedSettings.worldClockShowClocks,
       customColors: normalizedSettings.customColors,
     }),
@@ -1366,13 +1350,6 @@ export function validateSettings(settings: Settings): { valid: boolean; errors: 
     errors.push('sportsRefreshMinutes must be between 1 and 1440')
   }
 
-  if (
-    !Array.isArray(settings.worldClockCities) ||
-    settings.worldClockCities.some((id) => typeof id !== 'string' || !getWorldClockCity(id))
-  ) {
-    errors.push('worldClockCities must be a list of known city ids')
-  }
-
   if (typeof settings.worldClockShowClocks !== 'boolean') {
     errors.push('worldClockShowClocks must be boolean')
   }
@@ -1512,9 +1489,7 @@ export function isValidSettings(value: unknown): value is Settings {
     Array.isArray(s.sportsFavoriteTeams) &&
     Array.isArray(s.sportsEnabledLeagues) &&
     Array.isArray(s.sportsFollowedLeagues) &&
-    typeof s.sportsRefreshMinutes === 'number' &&
-    // Settings saved before the multi-city world clock have no list yet; normalizing fills it in.
-    (s.worldClockCities === undefined || Array.isArray(s.worldClockCities))
+    typeof s.sportsRefreshMinutes === 'number'
   )
 }
 

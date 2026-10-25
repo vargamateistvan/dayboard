@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { DEFAULT_CUSTOM_COLORS, DEFAULT_SETTINGS, loadSettings, validateSettings } from '../settings'
+import { DEFAULT_CUSTOM_COLORS, DEFAULT_SETTINGS, loadSettings } from '../settings'
 
 function loadStored(value: Record<string, unknown>) {
   localStorage.setItem('dayboard:settings', JSON.stringify(value))
@@ -51,41 +51,9 @@ describe('stored settings validation', () => {
   })
 })
 
-describe('world clock cities', () => {
+describe('world clock settings', () => {
   afterEach(() => {
     localStorage.clear()
-  })
-
-  it('drops unknown and duplicate city ids', () => {
-    const settings = loadStored({ worldClockCities: ['paris', 'atlantis', 7, 'paris', 'tokyo'] })
-    expect(settings.worldClockCities).toEqual(['paris', 'tokyo'])
-  })
-
-  it('keeps an emptied list empty', () => {
-    expect(loadStored({ worldClockCities: [] }).worldClockCities).toEqual([])
-  })
-
-  it('migrates the single-city world clock, keeping its city first', () => {
-    const settings = loadStored({ worldClockCity: 'Budapest', worldClockTimeZone: 'Europe/Budapest' })
-    expect(settings.worldClockCities).toEqual(['budapest', ...DEFAULT_SETTINGS.worldClockCities])
-    expect(settings).not.toHaveProperty('worldClockCity')
-    expect(settings).not.toHaveProperty('worldClockTimeZone')
-  })
-
-  it('does not duplicate a migrated city that is already a default', () => {
-    const settings = loadStored({ worldClockCity: 'New York', worldClockTimeZone: 'America/New_York' })
-    expect(settings.worldClockCities).toEqual(DEFAULT_SETTINGS.worldClockCities)
-  })
-
-  it('migrates a legacy city by name within its time zone', () => {
-    const settings = loadStored({ worldClockCity: 'Boston', worldClockTimeZone: 'America/New_York' })
-    expect(settings.worldClockCities[0]).toBe('boston')
-  })
-
-  it('falls back to the defaults for a legacy time zone with no known city', () => {
-    expect(loadStored({ worldClockTimeZone: 'Mars/Phobos' }).worldClockCities).toEqual(
-      DEFAULT_SETTINGS.worldClockCities,
-    )
   })
 
   it('shows the clock cards unless they were turned off', () => {
@@ -94,12 +62,14 @@ describe('world clock cities', () => {
     expect(loadStored({ worldClockShowClocks: false }).worldClockShowClocks).toBe(false)
   })
 
-  it('reports unknown city ids as invalid', () => {
-    expect(validateSettings({ ...DEFAULT_SETTINGS, worldClockCities: ['tokyo'] }).errors).not.toContain(
-      'worldClockCities must be a list of known city ids',
-    )
-    expect(validateSettings({ ...DEFAULT_SETTINGS, worldClockCities: ['atlantis'] }).errors).toContain(
-      'worldClockCities must be a list of known city ids',
-    )
+  it('leaves city fields from earlier versions out of settings', () => {
+    const settings = loadStored({
+      worldClockCities: ['paris'],
+      worldClockCity: 'Budapest',
+      worldClockTimeZone: 'Europe/Budapest',
+    })
+    expect(settings).not.toHaveProperty('worldClockCities')
+    expect(settings).not.toHaveProperty('worldClockCity')
+    expect(settings).not.toHaveProperty('worldClockTimeZone')
   })
 })

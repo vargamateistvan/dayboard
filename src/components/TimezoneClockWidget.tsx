@@ -4,6 +4,7 @@ import { getSubsolarPoint, type GeoPoint } from '../lib/celestial'
 import { scheduleEverySecond } from '../lib/scheduleEverySecond'
 import type { ClockHourFormat } from '../lib/settings'
 import { useSettings } from '../lib/useSettings'
+import { useSyncedStorage } from '../lib/useSyncedStorage'
 import {
   buildMapDotPaths,
   buildTerminatorPath,
@@ -22,6 +23,11 @@ import {
   type ZonedTime,
 } from '../lib/worldClock'
 import { getWorldClockCity, type WorldClockCity } from '../lib/worldClockCities'
+import {
+  DEFAULT_WORLD_CLOCK_CITY_IDS,
+  normalizeWorldClockCityIds,
+  WORLD_CLOCK_CITIES_STORAGE_KEY,
+} from '../lib/worldClockStorage'
 import { WorldClockCityPicker } from './WorldClockCityPicker'
 import styles from './TimezoneClockWidget.module.css'
 
@@ -168,14 +174,18 @@ function WorldMap({ cities, now, subsolar, hourFormat }: WorldMapProps) {
 }
 
 export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidgetProps) {
-  const { settings, updateSettings } = useSettings()
+  const { settings } = useSettings()
+  const [cityIds, setCityIds] = useSyncedStorage<ReadonlyArray<string>>(
+    WORLD_CLOCK_CITIES_STORAGE_KEY,
+    normalizeWorldClockCityIds,
+    DEFAULT_WORLD_CLOCK_CITY_IDS,
+  )
   const [now, setNow] = useState(() => new Date())
   const [isEditing, setIsEditing] = useState(false)
   const [isPickerOpen, setIsPickerOpen] = useState(false)
 
   useEffect(() => scheduleEverySecond(() => setNow(new Date())), [])
 
-  const cityIds = settings.worldClockCities
   const showClocks = settings.worldClockShowClocks
   // Nothing to edit when the cards are hidden; the picker still adds and removes cities.
   const isEditingCards = isEditing && showClocks
@@ -201,14 +211,12 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
   const localOffset = getTimeZoneOffsetMinutes(now)
 
   const toggleCity = (id: string) => {
-    updateSettings({
-      worldClockCities: cityIds.includes(id) ? cityIds.filter((cityId) => cityId !== id) : [...cityIds, id],
-    })
+    setCityIds((current) => (current.includes(id) ? current.filter((cityId) => cityId !== id) : [...current, id]))
   }
 
   const removeCity = (id: string) => {
     const next = cityIds.filter((cityId) => cityId !== id)
-    updateSettings({ worldClockCities: next })
+    setCityIds(next)
     if (next.length === 0) {
       setIsEditing(false)
     }

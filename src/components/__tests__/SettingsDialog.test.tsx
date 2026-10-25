@@ -5,7 +5,6 @@ import { SettingsProvider } from '../../lib/useSettings'
 import { searchSportsTeams } from '../../lib/sports'
 import * as spotifyAuth from '../../lib/spotifyAuth'
 import { loadWidgetLayoutState } from '../../lib/useWidgetVisibility'
-import { DEFAULT_SETTINGS } from '../../lib/settings'
 
 vi.mock('../../lib/sports', () => ({
   searchSportsTeams: vi.fn(),
@@ -357,11 +356,7 @@ describe('SettingsDialog', () => {
     ])
   })
 
-  it('keeps world clock cities, which the widget manages, and saves the clock cards toggle', () => {
-    localStorage.setItem(
-      SETTINGS_STORAGE_KEY,
-      JSON.stringify({ ...DEFAULT_SETTINGS, worldClockCities: ['budapest', 'tokyo'] }),
-    )
+  it('saves the world clock cards toggle', () => {
     localStorage.setItem(
       LAYOUT_STORAGE_KEY,
       JSON.stringify({
@@ -380,7 +375,6 @@ describe('SettingsDialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(JSON.parse(localStorage.getItem(SETTINGS_STORAGE_KEY) ?? '{}')).toMatchObject({
-      worldClockCities: ['budapest', 'tokyo'],
       worldClockShowClocks: false,
     })
   })

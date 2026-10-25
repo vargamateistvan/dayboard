@@ -205,7 +205,6 @@ describe('settings persistence', () => {
       sportsEnabledLeagues: [...DEFAULT_SETTINGS.sportsEnabledLeagues],
       sportsFollowedLeagues: ['EPL', 'NBA'],
       sportsRefreshMinutes: 15,
-      worldClockCities: ['tokyo', 'sydney'],
       worldClockShowClocks: false,
       customColors: {
         primary: DEFAULT_SETTINGS.customColors!.primary,
@@ -276,7 +275,6 @@ describe('settings persistence', () => {
         flightsManualLatitude: 47.5,
         flightsManualLongitude: 19.0,
         showBuyMeACoffeeWidget: 'sometimes',
-        worldClockCities: ['atlantis', 'tokyo', 42, 'tokyo'],
         sportsFavoriteTeams: 'arsenal',
         sportsEnabledLeagues: [],
         sportsFollowedLeagues: 'premier league',
@@ -301,7 +299,6 @@ describe('settings persistence', () => {
     expect(loaded.calendarExtraInfoPreview).toBe(DEFAULT_SETTINGS.calendarExtraInfoPreview)
     expect(loaded.calendarShowAllDayEvents).toBe(DEFAULT_SETTINGS.calendarShowAllDayEvents)
     expect(loaded.calendarWeekStartsOn).toBe(DEFAULT_SETTINGS.calendarWeekStartsOn)
-    expect(loaded.worldClockCities).toEqual(['tokyo'])
     expect(loaded.sportsFavoriteTeams).toEqual(DEFAULT_SETTINGS.sportsFavoriteTeams)
     expect(loaded.sportsEnabledLeagues).toEqual(DEFAULT_SETTINGS.sportsEnabledLeagues)
     expect(loaded.sportsFollowedLeagues).toEqual(DEFAULT_SETTINGS.sportsFollowedLeagues)

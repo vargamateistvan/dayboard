@@ -7,6 +7,7 @@ import { PomodoroStats } from '../PomodoroStats'
 import { SettingsProvider } from '../../lib/useSettings'
 import { DEFAULT_SETTINGS, saveSettings } from '../../lib/settings'
 import { toLocalDayKey } from '../../lib/usePomodoroStats'
+import { WORLD_CLOCK_CITIES_STORAGE_KEY } from '../../lib/worldClockStorage'
 
 // Clock digits render in separate spans, so match on the element's full text.
 // The time box wraps a measured text span; return the outermost match (the box).
@@ -236,15 +237,16 @@ describe('ClockWidget', () => {
 })
 
 describe('TimezoneClockWidget', () => {
+  function seedCities(ids: string[]) {
+    localStorage.setItem(WORLD_CLOCK_CITIES_STORAGE_KEY, JSON.stringify(ids))
+  }
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-08-08T12:34:56Z'))
     localStorage.clear()
-    saveSettings({
-      ...DEFAULT_SETTINGS,
-      clockHourFormat: '24h',
-      worldClockCities: ['tokyo', 'new-delhi'],
-    })
+    saveSettings({ ...DEFAULT_SETTINGS, clockHourFormat: '24h' })
+    seedCities(['tokyo', 'new-delhi'])
   })
 
   afterEach(() => {
@@ -262,7 +264,7 @@ describe('TimezoneClockWidget', () => {
   }
 
   function savedCities(): unknown {
-    return JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}').worldClockCities
+    return JSON.parse(localStorage.getItem(WORLD_CLOCK_CITIES_STORAGE_KEY) ?? 'null')
   }
 
   it('shows a clock card for each city with its time, day offset and sun times', () => {
@@ -305,6 +307,8 @@ describe('TimezoneClockWidget', () => {
     fireEvent.click(within(picker).getByRole('button', { name: /Budapest/ }))
 
     expect(savedCities()).toEqual(['tokyo', 'new-delhi', 'budapest'])
+    // Cities stay out of settings, so adding one doesn't unmatch the selected preset.
+    expect(JSON.parse(localStorage.getItem('dayboard:settings') ?? '{}')).not.toHaveProperty('worldClockCities')
     expect(within(picker).getByRole('button', { name: /Budapest/ })).toHaveAttribute('aria-pressed', 'true')
 
     fireEvent.change(within(picker).getByRole('searchbox', { name: 'Search cities' }), { target: { value: 'tokyo' } })
@@ -342,7 +346,8 @@ describe('TimezoneClockWidget', () => {
   })
 
   it('shows only the map when clock cards are turned off', () => {
-    saveSettings({ ...DEFAULT_SETTINGS, worldClockCities: ['tokyo'], worldClockShowClocks: false })
+    saveSettings({ ...DEFAULT_SETTINGS, worldClockShowClocks: false })
+    seedCities(['tokyo'])
     renderWorldClock()
 
     expect(screen.queryByRole('list', { name: 'World clocks' })).not.toBeInTheDocument()
@@ -353,7 +358,7 @@ describe('TimezoneClockWidget', () => {
   })
 
   it('offers to add a city when the list is empty', () => {
-    saveSettings({ ...DEFAULT_SETTINGS, worldClockCities: [] })
+    seedCities([])
     renderWorldClock()
 
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
