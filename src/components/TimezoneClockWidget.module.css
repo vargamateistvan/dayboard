@@ -238,6 +238,18 @@
   scroll-snap-align: start;
 }
 
+/*
+  Centre the row while it fits. Auto margins rather than justify-content:
+  center, which would push the first cards out of reach once the row scrolls.
+*/
+.card:first-child {
+  margin-left: auto;
+}
+
+.card:last-child {
+  margin-right: auto;
+}
+
 .cardTitle {
   max-width: 100%;
   overflow: hidden;
