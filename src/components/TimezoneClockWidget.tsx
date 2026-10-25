@@ -216,7 +216,7 @@ export function TimezoneClockWidget({ isFullscreen = false }: TimezoneClockWidge
 
   return (
     <div className={[styles.widget, isFullscreen ? styles.fullscreen : ''].join(' ')}>
-      <div className={styles.toolbar}>
+      <div className={[styles.toolbar, isEditing ? styles.toolbarActive : ''].join(' ')}>
         {cities.length > 0 && (
           <button
             type="button"
